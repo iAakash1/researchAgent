@@ -6,6 +6,8 @@ code change — only an edit to the corresponding YAML file.
 
 from __future__ import annotations
 
+from enum import StrEnum
+
 from pydantic import BaseModel, Field, model_validator
 
 from researchagent.core.interfaces.llm import GenerationParams
@@ -74,3 +76,17 @@ class AgentConfig(BaseModel):
             return self.defaults
         explicit = override.model_dump(exclude_unset=True)
         return self.defaults.model_copy(update=explicit)
+
+
+class CheckpointerKind(StrEnum):
+    NONE = "none"
+    MEMORY = "memory"
+
+
+class WorkflowConfig(BaseModel):
+    """``config/workflow.yaml`` root."""
+
+    checkpointer: CheckpointerKind = CheckpointerKind.MEMORY
+    # Hard ceiling on node executions per run; the reviewer loop makes cycles possible,
+    # so this is the guard against a workflow that never converges.
+    recursion_limit: int = Field(default=25, ge=1, le=200)

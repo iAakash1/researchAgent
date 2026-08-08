@@ -59,8 +59,8 @@ port in `core/interfaces/`. Adding a provider = new adapter + one line of YAML.
 researchagent/agents/<name>/
     __init__.py
     agent.py      # BaseAgent subclass, @AGENTS.register("<name>")
-    schemas.py    # <Name>Input / <Name>Output
-    prompt.py     # loads prompts/<name>/<version>.md
+    schemas.py    # <Name>Input / <Name>Output (+ *Draft schemas for the model)
+    prompt.py     # message assembly from self.prompt (base resolves the version)
 prompts/<name>/v1.md
 tests/agents/<name>/test_agent.py
 config/agents.yaml   # add the entry
@@ -73,7 +73,7 @@ Gap Discovery → Reviewer → (reject ⇒ back to Planner with feedback) → Re
 
 ## Roadmap
 
-v0.1 skeleton ✅ · v0.2 Planner + LangGraph · v0.3 Discovery + Retrieval ·
+v0.1 skeleton ✅ · v0.2 Planner + LangGraph ✅ · v0.3 Discovery + Retrieval ·
 v0.4 Parsing · v0.5 RAG · v0.6 Verification · v0.7 Knowledge graph · v0.8 Reviewer +
 memory · v0.9 UI · v1.0 evaluation.
 

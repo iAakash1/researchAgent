@@ -7,8 +7,9 @@ text, finds gaps, critiques its own report, and exports a literature review with
 Everything runs on your machine through [Ollama](https://ollama.com). No API keys, no data
 leaving the host.
 
-> **Status: v0.1** — foundation only (config, LLM abstraction, agent contract, API, Docker
-> stack). Agents land from v0.2. See [ROADMAP](#roadmap).
+> **Status: v0.2** — the Planner agent runs end to end on a local model: a research goal
+> becomes research questions and a search strategy. Literature discovery lands in v0.3.
+> See [ROADMAP](#roadmap).
 
 ## Architecture
 
@@ -45,6 +46,18 @@ make dev
 
 Then `curl localhost:8000/health/ready` — it reports each provider's health and whether every
 configured model is actually pulled. Interactive docs at `localhost:8000/docs`.
+
+Plan a review:
+
+```bash
+curl -X POST localhost:8000/research/plan -H 'content-type: application/json' \
+  -d '{"goal":"Agentic AI in healthcare","constraints":{"year_from":2022}}'
+```
+
+You get research questions, a search strategy, inclusion/exclusion criteria and the
+methods, datasets and metrics the review expects to encounter. `POST /research/plan/stream`
+streams the same run as server-sent events; `GET /research/runs/{id}` reloads it from its
+checkpoint.
 
 ## Full stack with Docker
 
@@ -93,7 +106,7 @@ make format
 | Version | Delivers |
 |---|---|
 | v0.1 | Skeleton: config, LLM port, agent contract, API, Docker, CI |
-| v0.2 | Planner agent + LangGraph state orchestration |
+| v0.2 | Planner agent + LangGraph state orchestration, versioned prompts |
 | v0.3 | Literature discovery + retrieval (arXiv, OpenAlex, Crossref, Semantic Scholar, PubMed) |
 | v0.4 | PDF parsing and section-aware chunking |
 | v0.5 | Hybrid RAG over Qdrant with reranking and citation preservation |

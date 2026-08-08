@@ -13,9 +13,12 @@ defaults:
     backoff_multiplier: 2.0
     jitter: true
 
-agents: {}
-# Populated as agents land, e.g.:
-#   planner:
-#     model: reasoning
-#     options:
-#       max_research_questions: 5
+agents:
+  planner:
+    model: reasoning
+    prompt_version: v1
+    options:
+      min_research_questions: 3
+      max_research_questions: 5
+      max_queries: 8
+      max_keywords_per_question: 6

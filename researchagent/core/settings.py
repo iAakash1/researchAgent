@@ -89,6 +89,7 @@ class Settings(BaseSettings):
 
     project_root: Path = PROJECT_ROOT
     config_dir: Path = PROJECT_ROOT / "config"
+    prompts_dir: Path = PROJECT_ROOT / "prompts"
     data_dir: Path = PROJECT_ROOT / "data"
 
     api_host: str = "0.0.0.0"  # noqa: S104 - container-facing service

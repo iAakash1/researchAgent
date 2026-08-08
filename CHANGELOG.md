@@ -4,6 +4,36 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] — 2026-08-08
+
+Planner agent and LangGraph orchestration. The system now takes a research goal and
+returns an executable research plan.
+
+### Added
+- `core/prompts.py`: versioned prompt files (`prompts/<agent>/<version>.md`) split into
+  named sections, rendered with `string.Template` so prompt bodies can contain JSON.
+  Missing variables and unknown sections fail loudly.
+- `models/research.py`: `ResearchQuestion`, `SearchStrategy`, `ResearchPlan`.
+- `schemas/workflow.py`: `ResearchState` — the typed state threaded through the graph,
+  with an accumulating stage history.
+- `agents/planner/`: two-phase Planner (framing -> strategy). Ids, ordering,
+  deduplication and limits are applied deterministically, not left to the model.
+- `workflows/`: `AgentNode` adapter (agent -> LangGraph node), the compiled research
+  graph, and `WorkflowRunner` with invoke, SSE streaming and checkpoint retrieval.
+- `memory/checkpoints.py`: checkpointer registry (`none` / `memory`).
+- `config/workflow.yaml`; `planner` entry with options in `config/agents.yaml`.
+- API: `POST /research/plan`, `POST /research/plan/stream` (SSE), `GET /research/runs/{id}`.
+
+### Changed
+- `BaseAgent` now takes a `PromptLibrary` and exposes `self.prompt`, resolved from the
+  agent's name and the `prompt_version` pinned in config. Every agent is prompt-driven,
+  so wiring it once in the base removes it from all ten.
+- Workflow stages record failures into state instead of raising, so a failed run stays
+  checkpointed and inspectable. Unexpected exceptions are captured the same way and
+  logged with a traceback.
+
+[0.2.0]: https://github.com/iAakash1/researchAgent/releases/tag/v0.2.0
+
 ## [0.1.0] — 2026-08-08
 
 Foundation release. No agents yet — this is the architecture everything else builds on.

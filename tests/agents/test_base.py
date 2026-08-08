@@ -9,6 +9,7 @@ from researchagent.agents.base import AgentContext, BaseAgent
 from researchagent.config.schemas import AgentSpec
 from researchagent.core.events import Event, EventBus, EventType
 from researchagent.core.exceptions import AgentExecutionError, AgentInputError, OutputParsingError
+from researchagent.core.prompts import PromptLibrary
 from researchagent.core.retry import RetryPolicy
 from researchagent.services.llm_service import BoundLLM
 
@@ -33,9 +34,14 @@ class EchoAgent(BaseAgent[EchoInput, EchoOutput]):
     output_schema: ClassVar[type[BaseModel]] = EchoOutput
 
     def __init__(
-        self, llm: BoundLLM, spec: AgentSpec, *, event_bus: EventBus | None = None
+        self,
+        llm: BoundLLM,
+        spec: AgentSpec,
+        prompts: PromptLibrary,
+        *,
+        event_bus: EventBus | None = None,
     ) -> None:
-        super().__init__(llm, spec, event_bus=event_bus)
+        super().__init__(llm, spec, prompts, event_bus=event_bus)
         self.fail_times = 0
         self.executions = 0
 
@@ -48,8 +54,8 @@ class EchoAgent(BaseAgent[EchoInput, EchoOutput]):
 
 
 @pytest.fixture
-def agent(bound_llm: BoundLLM, event_bus: EventBus) -> EchoAgent:
-    return EchoAgent(bound_llm, AgentSpec(retry=NO_WAIT), event_bus=event_bus)
+def agent(bound_llm: BoundLLM, event_bus: EventBus, prompt_library: PromptLibrary) -> EchoAgent:
+    return EchoAgent(bound_llm, AgentSpec(retry=NO_WAIT), prompt_library, event_bus=event_bus)
 
 
 async def test_run_validates_and_returns_typed_result(agent: EchoAgent) -> None:
@@ -94,7 +100,9 @@ async def test_exhausted_retries_surface_as_agent_execution_error(agent: EchoAge
     assert excinfo.value.context["cause"] == "output_parsing_error"
 
 
-async def test_lifecycle_events_are_emitted(bound_llm: BoundLLM) -> None:
+async def test_lifecycle_events_are_emitted(
+    bound_llm: BoundLLM, prompt_library: PromptLibrary
+) -> None:
     bus = EventBus()
     seen: list[Event] = []
 
@@ -102,7 +110,7 @@ async def test_lifecycle_events_are_emitted(bound_llm: BoundLLM) -> None:
         seen.append(event)
 
     bus.subscribe(None, handler)
-    agent = EchoAgent(bound_llm, AgentSpec(retry=NO_WAIT), event_bus=bus)
+    agent = EchoAgent(bound_llm, AgentSpec(retry=NO_WAIT), prompt_library, event_bus=bus)
     agent.fail_times = 1
     context = AgentContext()
 
@@ -117,7 +125,9 @@ async def test_lifecycle_events_are_emitted(bound_llm: BoundLLM) -> None:
     assert all(event.run_id == context.run_id for event in seen)
 
 
-async def test_failure_emits_failed_event(bound_llm: BoundLLM) -> None:
+async def test_failure_emits_failed_event(
+    bound_llm: BoundLLM, prompt_library: PromptLibrary
+) -> None:
     bus = EventBus()
     seen: list[Event] = []
 
@@ -125,7 +135,9 @@ async def test_failure_emits_failed_event(bound_llm: BoundLLM) -> None:
         seen.append(event)
 
     bus.subscribe(EventType.AGENT_FAILED, handler)
-    agent = EchoAgent(bound_llm, AgentSpec(retry=RetryPolicy(max_attempts=1)), event_bus=bus)
+    agent = EchoAgent(
+        bound_llm, AgentSpec(retry=RetryPolicy(max_attempts=1)), prompt_library, event_bus=bus
+    )
     agent.fail_times = 1
 
     with pytest.raises(AgentExecutionError):
@@ -134,7 +146,9 @@ async def test_failure_emits_failed_event(bound_llm: BoundLLM) -> None:
     assert seen[0].payload["code"] == "output_parsing_error"
 
 
-def test_agent_without_contract_is_rejected(bound_llm: BoundLLM) -> None:
+def test_agent_without_contract_is_rejected(
+    bound_llm: BoundLLM, prompt_library: PromptLibrary
+) -> None:
     class Incomplete(BaseAgent[EchoInput, EchoOutput]):
         name: ClassVar[str] = "incomplete"
 
@@ -142,4 +156,4 @@ def test_agent_without_contract_is_rejected(bound_llm: BoundLLM) -> None:
             raise NotImplementedError
 
     with pytest.raises(TypeError, match="input_schema"):
-        Incomplete(bound_llm, AgentSpec())
+        Incomplete(bound_llm, AgentSpec(), prompt_library)

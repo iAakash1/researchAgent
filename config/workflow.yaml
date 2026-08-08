@@ -1,0 +1,9 @@
+# Workflow orchestration settings.
+
+# memory  — process-local; runs are inspectable and resumable until the API restarts.
+# none    — no persistence; GET /research/runs/{id} is unavailable.
+checkpointer: memory
+
+# Hard ceiling on node executions per run. The reviewer loop introduces cycles, so this
+# is the guard against a plan/review pair that never converges.
+recursion_limit: 25

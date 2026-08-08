@@ -45,6 +45,12 @@ class RegistryError(ConfigurationError):
     code = "registry_error"
 
 
+class PromptError(ConfigurationError):
+    """A prompt file is missing, malformed, or missing a required variable."""
+
+    code = "prompt_error"
+
+
 class ProviderError(ResearchAgentError):
     """An LLM provider failed to serve a request."""
 
@@ -92,3 +98,17 @@ class AgentInputError(AgentExecutionError):
 
     code = "agent_input_error"
     http_status = 400
+
+
+class WorkflowExecutionError(ResearchAgentError):
+    """A workflow run finished in a failed state."""
+
+    code = "workflow_execution_error"
+    http_status = 502
+
+
+class RunNotFoundError(ResearchAgentError):
+    """No checkpoint exists for the requested run id."""
+
+    code = "run_not_found"
+    http_status = 404

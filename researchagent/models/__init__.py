@@ -1,4 +1,18 @@
-"""Domain models: Paper, Citation, ResearchQuestion, ResearchGap, Experiment.
+"""Domain models: the nouns the system reasons about.
 
-Business objects, independent of storage and of any LLM. Populated from v0.3.
+Business objects, independent of storage, transport and any LLM.
 """
+
+from researchagent.models.research import (
+    QuestionPriority,
+    ResearchPlan,
+    ResearchQuestion,
+    SearchStrategy,
+)
+
+__all__ = [
+    "QuestionPriority",
+    "ResearchPlan",
+    "ResearchQuestion",
+    "SearchStrategy",
+]

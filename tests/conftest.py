@@ -6,8 +6,10 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel
 
+from researchagent.agents.registry import build_agent
 from researchagent.config.loader import ConfigLoader
-from researchagent.config.schemas import AgentConfig, AgentSpec, ModelCatalog
+from researchagent.config.schemas import AgentConfig, AgentSpec, ModelCatalog, WorkflowConfig
+from researchagent.container import Container
 from researchagent.core.events import EventBus
 from researchagent.core.interfaces.llm import (
     CompletionResponse,
@@ -18,8 +20,12 @@ from researchagent.core.interfaces.llm import (
     TokenUsage,
     TSchema,
 )
+from researchagent.core.prompts import PromptLibrary
 from researchagent.core.settings import Environment, Settings
+from researchagent.memory.checkpoints import build_checkpointer
 from researchagent.services.llm_service import BoundLLM, LLMService
+from researchagent.workflows.research import build_research_graph
+from researchagent.workflows.runner import WorkflowRunner
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -63,11 +69,14 @@ class FakeLLMProvider(LLMProvider):
         *,
         text: str = "fake response",
         structured: BaseModel | None = None,
+        structured_sequence: list[BaseModel] | None = None,
         fail_times: int = 0,
         error: Exception | None = None,
     ) -> None:
         self.text = text
         self.structured = structured
+        # Consumed in order, so a multi-phase agent can be driven phase by phase.
+        self.structured_sequence = list(structured_sequence or [])
         self.fail_times = fail_times
         self.error = error
         self.calls: list[list[Message]] = []
@@ -104,9 +113,13 @@ class FakeLLMProvider(LLMProvider):
     ) -> TSchema:
         self.calls.append(messages)
         self._maybe_fail()
-        if self.structured is None:
+        if self.structured_sequence:
+            reply = self.structured_sequence.pop(0)
+        elif self.structured is not None:
+            reply = self.structured
+        else:
             raise AssertionError("FakeLLMProvider needs `structured=` for structured calls")
-        return schema.model_validate(self.structured.model_dump())
+        return schema.model_validate(reply.model_dump())
 
     async def health(self) -> ProviderHealth:
         return ProviderHealth(provider=self.name, healthy=True, available_models=["fake-model"])
@@ -147,3 +160,48 @@ def llm_service(
     service = LLMService(model_catalog, settings, event_bus=event_bus)
     monkeypatch.setattr(service, "_provider", lambda _name: fake_provider)
     yield service
+
+
+@pytest.fixture
+def prompt_library() -> PromptLibrary:
+    return PromptLibrary(REPO_ROOT / "prompts")
+
+
+@pytest.fixture
+def container(
+    settings: Settings,
+    config_loader: ConfigLoader,
+    model_catalog: ModelCatalog,
+    agent_config: AgentConfig,
+    event_bus: EventBus,
+    prompt_library: PromptLibrary,
+    fake_provider: FakeLLMProvider,
+    monkeypatch: pytest.MonkeyPatch,
+) -> Container:
+    """A fully wired container whose only fake is the LLM provider."""
+    service = LLMService(model_catalog, settings, event_bus=event_bus)
+    monkeypatch.setattr(service, "_provider", lambda _name: fake_provider)
+
+    workflow_config = config_loader.load("workflow", WorkflowConfig)
+    planner = build_agent(
+        "planner",
+        agent_config=agent_config,
+        llm_service=service,
+        prompts=prompt_library,
+        event_bus=event_bus,
+    )
+    graph = build_research_graph(
+        planner=planner, checkpointer=build_checkpointer(workflow_config.checkpointer)
+    )
+
+    return Container(
+        settings=settings,
+        config_loader=config_loader,
+        model_catalog=model_catalog,
+        agent_config=agent_config,
+        workflow_config=workflow_config,
+        prompt_library=prompt_library,
+        event_bus=event_bus,
+        llm_service=service,
+        workflow_runner=WorkflowRunner(graph, workflow_config),
+    )

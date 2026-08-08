@@ -24,6 +24,7 @@ from researchagent.core.exceptions import (
     ResearchAgentError,
 )
 from researchagent.core.logging import get_logger, log_context
+from researchagent.core.prompts import PromptLibrary, PromptTemplate
 from researchagent.core.retry import retry_async
 from researchagent.services.llm_service import BoundLLM
 
@@ -61,14 +62,28 @@ class BaseAgent[TInput: BaseModel, TOutput: BaseModel](ABC):
         self,
         llm: BoundLLM,
         spec: AgentSpec,
+        prompts: PromptLibrary,
         *,
         event_bus: EventBus | None = None,
     ) -> None:
         self._require_contract()
         self.llm = llm
         self.spec = spec
+        self._prompts = prompts
+        self._prompt: PromptTemplate | None = None
         self._event_bus = event_bus
         self.logger = get_logger(f"agent.{self.name}")
+
+    @property
+    def prompt(self) -> PromptTemplate:
+        """The agent's prompt at the version pinned in ``config/agents.yaml``.
+
+        Loaded on first use so agents that need no prompt (and their tests) never
+        require a prompt file to exist.
+        """
+        if self._prompt is None:
+            self._prompt = self._prompts.load(self.name, self.spec.prompt_version)
+        return self._prompt
 
     async def run(
         self,

@@ -12,6 +12,7 @@ from fastapi import Depends, Request
 from researchagent.container import Container
 from researchagent.core.settings import Settings
 from researchagent.services.llm_service import LLMService
+from researchagent.workflows.runner import WorkflowRunner
 
 
 def get_container(request: Request) -> Container:
@@ -26,6 +27,13 @@ def get_llm_service(container: Annotated[Container, Depends(get_container)]) -> 
     return container.llm_service
 
 
+def get_workflow_runner(
+    container: Annotated[Container, Depends(get_container)],
+) -> WorkflowRunner:
+    return container.workflow_runner
+
+
 ContainerDep = Annotated[Container, Depends(get_container)]
 SettingsDep = Annotated[Settings, Depends(get_settings_dep)]
 LLMServiceDep = Annotated[LLMService, Depends(get_llm_service)]
+WorkflowRunnerDep = Annotated[WorkflowRunner, Depends(get_workflow_runner)]
