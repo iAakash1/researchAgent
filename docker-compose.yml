@@ -1,0 +1,96 @@
+name: researchagent
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: researchagent-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: researchagent-postgres
+    environment:
+      POSTGRES_USER: ${RESEARCHAGENT_POSTGRES__USER:-researchagent}
+      POSTGRES_PASSWORD: ${RESEARCHAGENT_POSTGRES__PASSWORD:-researchagent}
+      POSTGRES_DB: ${RESEARCHAGENT_POSTGRES__DATABASE:-researchagent}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${RESEARCHAGENT_POSTGRES__USER:-researchagent}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: researchagent-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    restart: unless-stopped
+
+  neo4j:
+    image: neo4j:5-community
+    container_name: researchagent-neo4j
+    environment:
+      NEO4J_AUTH: ${RESEARCHAGENT_NEO4J__USER:-neo4j}/${RESEARCHAGENT_NEO4J__PASSWORD:-researchagent}
+      NEO4J_PLUGINS: '["apoc"]'
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    container_name: researchagent-api
+    env_file:
+      - .env
+    environment:
+      # Container-network overrides; every other value comes from .env.
+      RESEARCHAGENT_OLLAMA__BASE_URL: http://ollama:11434
+      RESEARCHAGENT_POSTGRES__HOST: postgres
+      RESEARCHAGENT_QDRANT__HOST: qdrant
+      RESEARCHAGENT_NEO4J__URI: bolt://neo4j:7687
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./config:/app/config:ro
+      - ./prompts:/app/prompts:ro
+      - researchagent-data:/app/data
+    depends_on:
+      ollama:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  ollama-models:
+  postgres-data:
+  qdrant-data:
+  neo4j-data:
+  researchagent-data:

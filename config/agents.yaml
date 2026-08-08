@@ -1,0 +1,21 @@
+# Per-agent wiring. `model` refers to an alias in models.yaml.
+# Entries are layered over `defaults`, so only differences are listed.
+
+defaults:
+  model: reasoning
+  prompt_version: v1
+  timeout_seconds: 300
+  enabled: true
+  retry:
+    max_attempts: 3
+    initial_delay_seconds: 1.0
+    max_delay_seconds: 30.0
+    backoff_multiplier: 2.0
+    jitter: true
+
+agents: {}
+# Populated as agents land, e.g.:
+#   planner:
+#     model: reasoning
+#     options:
+#       max_research_questions: 5

@@ -1,0 +1,35 @@
+# Model catalogue. Agents reference aliases, never model tags.
+# Swapping Qwen for Llama is an edit here plus `ollama pull` — no code change.
+
+default: reasoning
+
+models:
+  reasoning:
+    provider: ollama
+    model: qwen3:8b
+    description: Planning, synthesis, gap discovery, review — long context, slower.
+    params:
+      temperature: 0.3
+      top_p: 0.9
+      context_window: 32768
+      max_output_tokens: 4096
+
+  extraction:
+    provider: ollama
+    model: qwen3:8b
+    description: Structured field extraction — near-deterministic, schema-constrained.
+    params:
+      temperature: 0.0
+      top_p: 0.9
+      seed: 42
+      context_window: 16384
+      max_output_tokens: 2048
+
+  fast:
+    provider: ollama
+    model: llama3.2:3b
+    description: Cheap classification and routing decisions.
+    params:
+      temperature: 0.1
+      context_window: 8192
+      max_output_tokens: 1024
