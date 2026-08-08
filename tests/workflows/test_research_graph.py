@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, ClassVar
 
 import pytest
@@ -8,11 +9,13 @@ from pydantic import BaseModel
 
 from researchagent.agents.base import AgentContext, BaseAgent
 from researchagent.agents.planner.schemas import PlannerInput, PlannerOutput
-from researchagent.config.schemas import CheckpointerKind, WorkflowConfig
+from researchagent.config.schemas import CheckpointerKind, DiscoverySettings, WorkflowConfig
 from researchagent.core.exceptions import OutputParsingError, RunNotFoundError
+from researchagent.core.interfaces.paper_source import PaperSource, SearchQuery, SourceHealth
 from researchagent.core.prompts import PromptLibrary
 from researchagent.core.retry import RetryPolicy
 from researchagent.memory.checkpoints import build_checkpointer
+from researchagent.models.paper import Paper, SourceName
 from researchagent.models.research import (
     QuestionPriority,
     ResearchPlan,
@@ -20,7 +23,10 @@ from researchagent.models.research import (
     SearchStrategy,
 )
 from researchagent.schemas.workflow import RunStatus, StageStatus, WorkflowStage
+from researchagent.services.deduplication import PaperDeduplicator
+from researchagent.services.discovery_service import DiscoveryService
 from researchagent.services.llm_service import BoundLLM
+from researchagent.services.ranking import HeuristicScorer
 from researchagent.workflows.research import build_research_graph
 from researchagent.workflows.runner import WorkflowRunner
 
@@ -71,9 +77,54 @@ def planner(bound_llm: BoundLLM, prompt_library: PromptLibrary) -> StubPlanner:
     return StubPlanner(bound_llm, AgentSpec(retry=RetryPolicy(max_attempts=1)), prompt_library)
 
 
+class StubSource(PaperSource):
+    """Returns a fixed paper set; the graph is under test, not any provider."""
+
+    name = SourceName.MANUAL
+
+    def __init__(self, papers: list[Paper] | None = None) -> None:
+        self.papers = papers or []
+        self.searches: list[SearchQuery] = []
+
+    async def search(self, query: SearchQuery) -> list[Paper]:
+        self.searches.append(query)
+        return list(self.papers)
+
+    async def get_paper(self, identifier: str) -> Paper | None:
+        return None
+
+    async def download_pdf(self, paper: Paper, destination: Path) -> Path:
+        raise NotImplementedError
+
+    async def health(self) -> SourceHealth:
+        return SourceHealth(source=self.name, healthy=True)
+
+    async def aclose(self) -> None:
+        return None
+
+
 @pytest.fixture
-def runner(planner: StubPlanner) -> WorkflowRunner:
-    graph = build_research_graph(planner=planner, checkpointer=InMemorySaver())
+def source() -> StubSource:
+    return StubSource(
+        [
+            Paper(
+                id="arxiv:2401.00001",
+                title="Coordination mechanisms for clinical multi-agent systems",
+                provider=SourceName.ARXIV,
+                year=2024,
+            )
+        ]
+    )
+
+
+@pytest.fixture
+def discovery(source: StubSource) -> DiscoveryService:
+    return DiscoveryService([source], PaperDeduplicator(), HeuristicScorer(), DiscoverySettings())
+
+
+@pytest.fixture
+def runner(planner: StubPlanner, discovery: DiscoveryService) -> WorkflowRunner:
+    graph = build_research_graph(planner=planner, discovery=discovery, checkpointer=InMemorySaver())
     return WorkflowRunner(graph, CONFIG)
 
 
@@ -87,15 +138,40 @@ async def test_successful_run_completes_with_a_plan(runner: WorkflowRunner) -> N
     assert state.failure is None
 
 
-async def test_history_records_the_stage(runner: WorkflowRunner) -> None:
+async def test_history_records_every_stage(runner: WorkflowRunner) -> None:
     state = await runner.run("Agentic AI in healthcare")
 
-    assert len(state.history) == 1
-    record = state.history[0]
-    assert record.stage is WorkflowStage.PLANNING
-    assert record.agent == "planner"
-    assert record.status is StageStatus.OK
-    assert record.latency_ms >= 0
+    assert [record.stage for record in state.history] == [
+        WorkflowStage.PLANNING,
+        WorkflowStage.DISCOVERY,
+    ]
+    assert [record.agent for record in state.history] == ["planner", "discovery_service"]
+    assert all(record.status is StageStatus.OK for record in state.history)
+    assert all(record.latency_ms >= 0 for record in state.history)
+
+
+async def test_planner_failure_halts_before_discovery(
+    runner: WorkflowRunner, planner: StubPlanner, source: StubSource
+) -> None:
+    """The conditional edge exists so a failed plan never sends garbage to the indexes."""
+    planner.error = OutputParsingError("model returned junk")
+
+    state = await runner.run("Agentic AI in healthcare")
+
+    assert state.status is RunStatus.FAILED
+    assert source.searches == []
+    assert [record.stage for record in state.history] == [WorkflowStage.PLANNING]
+
+
+async def test_discovery_receives_the_plan_queries(
+    runner: WorkflowRunner, source: StubSource
+) -> None:
+    state = await runner.run("Agentic AI in healthcare")
+
+    assert [query.text for query in source.searches] == ["agentic ai healthcare"]
+    assert state.candidates
+    assert state.discovery is not None
+    assert state.discovery.candidates == 1
 
 
 async def test_goal_and_constraints_reach_the_agent(
@@ -133,9 +209,11 @@ async def test_agent_failure_is_recorded_not_raised(
 async def test_stream_emits_one_update_per_node(runner: WorkflowRunner) -> None:
     updates = [update async for update in runner.stream("Agentic AI in healthcare")]
 
-    assert [u.node for u in updates] == [WorkflowStage.PLANNING.value]
-    assert updates[0].status is RunStatus.COMPLETED
-    assert updates[0].stage is WorkflowStage.PLANNING
+    assert [u.node for u in updates] == [
+        WorkflowStage.PLANNING.value,
+        WorkflowStage.DISCOVERY.value,
+    ]
+    assert updates[-1].status is RunStatus.COMPLETED
 
 
 async def test_stream_reports_failure(runner: WorkflowRunner, planner: StubPlanner) -> None:
@@ -171,8 +249,10 @@ async def test_runs_are_isolated_by_run_id(runner: WorkflowRunner) -> None:
     assert (await runner.get_state("b")).goal == "Agentic AI in radiology"
 
 
-async def test_graph_without_checkpointer_reports_it(planner: StubPlanner) -> None:
-    graph = build_research_graph(planner=planner, checkpointer=None)
+async def test_graph_without_checkpointer_reports_it(
+    planner: StubPlanner, discovery: DiscoveryService
+) -> None:
+    graph = build_research_graph(planner=planner, discovery=discovery, checkpointer=None)
     runner = WorkflowRunner(graph, WorkflowConfig(checkpointer=CheckpointerKind.NONE))
 
     state = await runner.run("Agentic AI in healthcare")

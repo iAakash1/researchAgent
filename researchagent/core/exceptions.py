@@ -74,6 +74,54 @@ class ProviderUnavailableError(ProviderError):
     retryable = True
 
 
+class PaperSourceError(ResearchAgentError):
+    """A literature provider failed to serve a request."""
+
+    code = "paper_source_error"
+    http_status = 502
+
+    def __init__(self, message: str, *, source: str, **context: Any) -> None:
+        super().__init__(message, source=source, **context)
+        self.source = source
+
+
+class SourceUnavailableError(PaperSourceError):
+    """Provider unreachable, timed out, or returned a server error."""
+
+    code = "source_unavailable"
+    http_status = 503
+    retryable = True
+
+
+class SourceRateLimitedError(PaperSourceError):
+    """Provider asked us to slow down (HTTP 429)."""
+
+    code = "source_rate_limited"
+    http_status = 429
+    retryable = True
+
+
+class SourceResponseError(PaperSourceError):
+    """Provider replied, but the payload could not be parsed into a Paper."""
+
+    code = "source_response_error"
+    http_status = 502
+
+
+class PaperNotFoundError(ResearchAgentError):
+    """No paper matches the requested identifier."""
+
+    code = "paper_not_found"
+    http_status = 404
+
+
+class RepositoryError(ResearchAgentError):
+    """Persistence failed (unreadable record, unwritable path)."""
+
+    code = "repository_error"
+    http_status = 500
+
+
 class OutputParsingError(ResearchAgentError):
     """The model returned text that does not satisfy the requested schema."""
 

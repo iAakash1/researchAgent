@@ -8,7 +8,13 @@ from pydantic import BaseModel
 
 from researchagent.agents.registry import build_agent
 from researchagent.config.loader import ConfigLoader
-from researchagent.config.schemas import AgentConfig, AgentSpec, ModelCatalog, WorkflowConfig
+from researchagent.config.schemas import (
+    AgentConfig,
+    AgentSpec,
+    ModelCatalog,
+    SourcesConfig,
+    WorkflowConfig,
+)
 from researchagent.container import Container
 from researchagent.core.events import EventBus
 from researchagent.core.interfaces.llm import (
@@ -22,8 +28,14 @@ from researchagent.core.interfaces.llm import (
 )
 from researchagent.core.prompts import PromptLibrary
 from researchagent.core.settings import Environment, Settings
+from researchagent.integrations.manual import ManualPaperSource
 from researchagent.memory.checkpoints import build_checkpointer
+from researchagent.repositories.paper_repository import JsonPaperRepository
+from researchagent.services.deduplication import PaperDeduplicator
+from researchagent.services.discovery_service import DiscoveryService
 from researchagent.services.llm_service import BoundLLM, LLMService
+from researchagent.services.ranking import HeuristicScorer
+from researchagent.services.retrieval_service import RetrievalService
 from researchagent.workflows.research import build_research_graph
 from researchagent.workflows.runner import WorkflowRunner
 
@@ -176,13 +188,26 @@ def container(
     event_bus: EventBus,
     prompt_library: PromptLibrary,
     fake_provider: FakeLLMProvider,
+    manual_source: ManualPaperSource,
+    paper_repository: JsonPaperRepository,
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Container:
-    """A fully wired container whose only fake is the LLM provider."""
+    """A fully wired container. The LLM is faked; the only paper source is the real
+    manual library, so no test ever touches a remote index."""
     service = LLMService(model_catalog, settings, event_bus=event_bus)
     monkeypatch.setattr(service, "_provider", lambda _name: fake_provider)
 
+    discovery_service = DiscoveryService(
+        [manual_source],
+        PaperDeduplicator(),
+        HeuristicScorer(),
+        config_loader.load("sources", SourcesConfig).discovery_settings(),
+        repository=paper_repository,
+    )
+
     workflow_config = config_loader.load("workflow", WorkflowConfig)
+    sources_config = config_loader.load("sources", SourcesConfig)
     planner = build_agent(
         "planner",
         agent_config=agent_config,
@@ -191,7 +216,9 @@ def container(
         event_bus=event_bus,
     )
     graph = build_research_graph(
-        planner=planner, checkpointer=build_checkpointer(workflow_config.checkpointer)
+        planner=planner,
+        discovery=discovery_service,
+        checkpointer=build_checkpointer(workflow_config.checkpointer),
     )
 
     return Container(
@@ -200,8 +227,30 @@ def container(
         model_catalog=model_catalog,
         agent_config=agent_config,
         workflow_config=workflow_config,
+        sources_config=sources_config,
         prompt_library=prompt_library,
         event_bus=event_bus,
         llm_service=service,
+        paper_sources=[manual_source],
+        paper_repository=paper_repository,
+        discovery_service=discovery_service,
+        retrieval_service=RetrievalService(
+            {manual_source.name: manual_source}, paper_repository, tmp_path / "downloads"
+        ),
         workflow_runner=WorkflowRunner(graph, workflow_config),
     )
+
+
+MANUAL_LIBRARY = REPO_ROOT / "storage" / "papers" / "raw" / "manual"
+
+
+@pytest.fixture
+def manual_source() -> ManualPaperSource:
+    """Points at the real committed collection — this provider is tested against real PDFs."""
+    return ManualPaperSource(MANUAL_LIBRARY)
+
+
+@pytest.fixture
+def paper_repository(tmp_path: Path) -> JsonPaperRepository:
+    """Always a temp directory: tests must never write into storage/papers/metadata."""
+    return JsonPaperRepository(tmp_path / "metadata")

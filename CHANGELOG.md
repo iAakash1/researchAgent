@@ -4,6 +4,47 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] — 2026-08-08
+
+Literature discovery and retrieval. The system now finds real papers across five public
+indexes plus the local collection, normalises them into one schema, deduplicates, ranks
+and persists them.
+
+### Added
+- `core/interfaces/paper_source.py` and `core/interfaces/paper_repository.py`: ports for
+  literature providers and paper persistence.
+- `models/paper.py`: provider-agnostic `Paper`, `Author`, `PaperIdentifiers`
+  (DOI/arXiv/OpenAlex/S2/PubMed, normalised); `models/library.py`: `PaperRecord` with
+  monotonic `ProcessingStatus` flags — the plug point for parsing, RAG, extraction and
+  the knowledge graph.
+- Six adapters behind one port: arXiv (Atom XML), OpenAlex (inverted-index abstracts
+  reconstructed), Crossref (JATS stripped), Semantic Scholar, PubMed (two-step
+  E-utilities), and a manual source over `storage/papers/raw/manual/`.
+- `integrations/http.py`: shared client with per-provider rate limiting, uniform error
+  mapping and atomic streaming downloads.
+- `services/deduplication.py`: DOI → arXiv id → shared identifier → title similarity,
+  with conflicting identifiers vetoing a title match. Duplicates are merged, not dropped.
+- `services/ranking.py`: `PaperScorer` port plus a lexical `HeuristicScorer` that reports
+  a per-signal breakdown; replaced by embedding reranking in v0.5.
+- `services/discovery_service.py` (fan-out, partial-failure tolerant) and
+  `services/retrieval_service.py` (explicit, separate PDF download).
+- `repositories/paper_repository.py`: atomic JSON sidecars under
+  `storage/papers/metadata/`; the source PDFs are never touched.
+- `workflows/edges.py` and `ServiceNode`: the graph is now
+  `planning →(ok)→ discovery → END`, halting on failure.
+- `config/sources.yaml`; API `GET /library/papers|summary|sources`,
+  `POST /library/retrieve`; `scripts/index_library.py` (`make index`).
+
+### Changed
+- `workflows/nodes.py` factored into a shared `StageNode` base with `AgentNode` and
+  `ServiceNode`, so deterministic stages get identical bookkeeping without pretending to
+  be LLM agents.
+- `PaperRecord.processing` flags now merge monotonically on save. Previously a stored
+  record's flags always won, which would have silently discarded progress reported by a
+  later stage.
+
+[0.3.0]: https://github.com/iAakash1/researchAgent/releases/tag/v0.3.0
+
 ## [0.2.0] — 2026-08-08
 
 Planner agent and LangGraph orchestration. The system now takes a research goal and

@@ -10,8 +10,11 @@ from typing import Annotated
 from fastapi import Depends, Request
 
 from researchagent.container import Container
+from researchagent.core.interfaces.paper_repository import PaperRepository
 from researchagent.core.settings import Settings
+from researchagent.services.discovery_service import DiscoveryService
 from researchagent.services.llm_service import LLMService
+from researchagent.services.retrieval_service import RetrievalService
 from researchagent.workflows.runner import WorkflowRunner
 
 
@@ -33,7 +36,28 @@ def get_workflow_runner(
     return container.workflow_runner
 
 
+def get_paper_repository(
+    container: Annotated[Container, Depends(get_container)],
+) -> PaperRepository:
+    return container.paper_repository
+
+
+def get_discovery_service(
+    container: Annotated[Container, Depends(get_container)],
+) -> DiscoveryService:
+    return container.discovery_service
+
+
+def get_retrieval_service(
+    container: Annotated[Container, Depends(get_container)],
+) -> RetrievalService:
+    return container.retrieval_service
+
+
 ContainerDep = Annotated[Container, Depends(get_container)]
 SettingsDep = Annotated[Settings, Depends(get_settings_dep)]
 LLMServiceDep = Annotated[LLMService, Depends(get_llm_service)]
 WorkflowRunnerDep = Annotated[WorkflowRunner, Depends(get_workflow_runner)]
+PaperRepositoryDep = Annotated[PaperRepository, Depends(get_paper_repository)]
+DiscoveryServiceDep = Annotated[DiscoveryService, Depends(get_discovery_service)]
+RetrievalServiceDep = Annotated[RetrievalService, Depends(get_retrieval_service)]

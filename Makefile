@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 UV := uv
 
-.PHONY: help install dev test lint format typecheck check up down logs models clean
+.PHONY: help install dev test lint format typecheck check up down logs models index clean
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -38,6 +38,9 @@ logs: ## Tail API logs
 
 models: ## Pull the models referenced by config/models.yaml
 	./scripts/pull_models.sh
+
+index: ## Write metadata sidecars for the manual paper collection
+	$(UV) run python scripts/index_library.py
 
 clean: ## Remove caches
 	rm -rf .pytest_cache .mypy_cache .ruff_cache htmlcov .coverage

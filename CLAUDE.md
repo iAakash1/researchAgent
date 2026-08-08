@@ -73,7 +73,7 @@ Gap Discovery → Reviewer → (reject ⇒ back to Planner with feedback) → Re
 
 ## Roadmap
 
-v0.1 skeleton ✅ · v0.2 Planner + LangGraph ✅ · v0.3 Discovery + Retrieval ·
+v0.1 skeleton ✅ · v0.2 Planner + LangGraph ✅ · v0.3 Discovery + Retrieval ✅ ·
 v0.4 Parsing · v0.5 RAG · v0.6 Verification · v0.7 Knowledge graph · v0.8 Reviewer +
 memory · v0.9 UI · v1.0 evaluation.
 

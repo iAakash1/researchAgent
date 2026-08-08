@@ -1,0 +1,58 @@
+# Literature providers. Disabling one is a config change, never a code change.
+
+# Crossref and OpenAlex serve identified clients from a faster pool; NCBI asks for a
+# contact address too. Set this to your own address before running heavy discovery.
+contact_email: null
+
+results_per_query: 15      # per query, per provider
+max_queries: 8             # plan queries actually executed
+max_candidates: 60         # ranked candidates returned to the workflow
+require_retrievable: false # true = discard papers with no reachable PDF
+
+manual_library_dir: storage/papers/raw/manual
+download_dir: storage/papers/raw/downloaded
+metadata_dir: storage/papers/metadata
+
+deduplication:
+  title_similarity_threshold: 0.93
+  length_ratio_floor: 0.7
+  compare_titles: true
+
+ranking:
+  weights:
+    title_match: 0.35
+    abstract_match: 0.25
+    keyword_overlap: 0.15
+    recency: 0.15
+    citations: 0.10
+  recency_half_life_years: 4.0
+  citation_saturation: 500
+
+retrieval:
+  max_concurrent_downloads: 4
+  skip_existing: true
+
+sources:
+  manual:
+    enabled: true
+    requests_per_second: 50.0   # local filesystem
+  arxiv:
+    enabled: true
+    requests_per_second: 0.5    # arXiv asks for one request per 3 seconds
+    max_results: 25
+  openalex:
+    enabled: true
+    requests_per_second: 5.0
+    max_results: 25
+  crossref:
+    enabled: true
+    requests_per_second: 3.0
+    max_results: 25
+  semantic_scholar:
+    enabled: true
+    requests_per_second: 1.0    # shared pool without an API key; 429s are common
+    max_results: 25
+  pubmed:
+    enabled: false              # enable for biomedical goals; NCBI caps at 3 req/s
+    requests_per_second: 2.0
+    max_results: 25

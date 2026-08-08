@@ -16,12 +16,14 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 
 from researchagent.models.research import ResearchPlan
+from researchagent.services.ranking import ScoredPaper
 
 
 class WorkflowStage(StrEnum):
     """Pipeline stages that have a node. Grows one member per released stage."""
 
     PLANNING = "planning"
+    DISCOVERY = "discovery"
 
 
 class RunStatus(StrEnum):
@@ -66,6 +68,20 @@ class StageFailure(BaseModel):
     message: str
 
 
+class DiscoveryReport(BaseModel):
+    """Summary of one discovery pass, including providers that failed.
+
+    Kept in state because a shortlist assembled while two indexes were down is a
+    materially different result, and the reviewer must be able to see that.
+    """
+
+    sources_queried: list[str] = Field(default_factory=list)
+    sources_failed: list[str] = Field(default_factory=list)
+    papers_returned: int = 0
+    duplicates_removed: int = 0
+    candidates: int = 0
+
+
 class ResearchState(BaseModel):
     """State threaded through the whole research workflow."""
 
@@ -83,6 +99,10 @@ class ResearchState(BaseModel):
     current_stage: WorkflowStage | None = None
 
     plan: ResearchPlan | None = None
+    # Ranked discovery output. Papers themselves live in the repository; state carries
+    # the run's shortlist so later stages need no second lookup.
+    candidates: list[ScoredPaper] = Field(default_factory=list)
+    discovery: DiscoveryReport | None = None
 
     history: Annotated[list[StageRecord], operator.add] = Field(default_factory=list)
     failure: StageFailure | None = None

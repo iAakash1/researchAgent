@@ -14,12 +14,14 @@ from researchagent.core.exceptions import RunNotFoundError, WorkflowExecutionErr
 from researchagent.core.logging import get_logger
 from researchagent.models.research import ResearchPlan
 from researchagent.schemas.workflow import (
+    DiscoveryReport,
     ResearchConstraints,
     ResearchState,
     RunStatus,
     StageFailure,
     StageRecord,
 )
+from researchagent.services.ranking import ScoredPaper
 
 router = APIRouter(prefix="/research", tags=["research"])
 logger = get_logger(__name__)
@@ -37,6 +39,8 @@ class PlanResponse(BaseModel):
     run_id: str
     status: RunStatus
     plan: ResearchPlan | None
+    candidates: list[ScoredPaper] = Field(default_factory=list)
+    discovery: DiscoveryReport | None = None
     history: list[StageRecord]
     failure: StageFailure | None = None
 
@@ -46,6 +50,8 @@ class PlanResponse(BaseModel):
             run_id=state.run_id,
             status=state.status,
             plan=state.plan,
+            candidates=state.candidates,
+            discovery=state.discovery,
             history=state.history,
             failure=state.failure,
         )

@@ -11,13 +11,16 @@ the checkpointer, and can be resumed.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+import time
+from abc import ABC, abstractmethod
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel
 
 from researchagent.agents.base import AgentContext, AgentResult, BaseAgent
+from researchagent.core.constants import SECONDS_PER_MILLISECOND
 from researchagent.core.exceptions import AgentExecutionError, ResearchAgentError
 from researchagent.core.logging import get_logger
 from researchagent.schemas.workflow import (
@@ -34,7 +37,96 @@ logger = get_logger(__name__)
 StateUpdate = dict[str, Any]
 
 
-class AgentNode:
+class StageNode(ABC):
+    """Shared stage bookkeeping: timing, history, failure capture, status transitions.
+
+    Subclasses only say *what* the stage does. Everything a stage must do identically —
+    so that the audit trail and failure semantics never drift between stages — lives here.
+    """
+
+    def __init__(self, stage: WorkflowStage, component: str) -> None:
+        self._stage = stage
+        self._component = component
+
+    @property
+    def stage(self) -> WorkflowStage:
+        return self._stage
+
+    @abstractmethod
+    async def _execute(self, state: ResearchState) -> tuple[StateUpdate, float, int]:
+        """Run the stage. Returns (state update, latency_ms, attempts)."""
+
+    async def __call__(self, state: ResearchState) -> StateUpdate:
+        try:
+            payload, latency_ms, attempts = await self._execute(state)
+        except ResearchAgentError as exc:
+            return self._failure_update(_code_of(exc), exc.message)
+        except Exception as exc:  # noqa: BLE001 - workflow boundary, see below
+            # An unexpected exception must not take the whole run with it: the graph
+            # would unwind and every earlier stage's work would be lost. Record it as a
+            # stage failure so the run stays checkpointed and inspectable — but log the
+            # traceback, because unlike a ResearchAgentError this is a bug.
+            logger.bind(run_id=state.run_id, component=self._component).exception(
+                "stage_crashed", stage=self._stage.value, error_type=type(exc).__name__
+            )
+            return self._failure_update("unexpected_error", f"{type(exc).__name__}: {exc}")
+
+        update: StateUpdate = {
+            "status": RunStatus.RUNNING,
+            "current_stage": self._stage,
+            "history": [
+                StageRecord(
+                    stage=self._stage,
+                    agent=self._component,
+                    status=StageStatus.OK,
+                    latency_ms=latency_ms,
+                    attempts=attempts,
+                )
+            ],
+            "updated_at": datetime.now(UTC),
+        }
+        # The stage mapper wins: only it knows whether its stage is terminal, so it may
+        # promote RUNNING to COMPLETED. Bookkeeping fields are its to overwrite too.
+        update.update(payload)
+        return update
+
+    def _context(self, state: ResearchState) -> AgentContext:
+        return AgentContext(
+            run_id=state.run_id,
+            session_id=state.session_id,
+            metadata={"stage": self._stage.value, "iteration": state.iteration},
+        )
+
+    def _failure_update(self, code: str, message: str) -> StateUpdate:
+        logger.error(
+            "stage_failed",
+            stage=self._stage.value,
+            component=self._component,
+            error_code=code,
+            error=message,
+        )
+        return {
+            "status": RunStatus.FAILED,
+            "current_stage": self._stage,
+            "failure": StageFailure(
+                stage=self._stage,
+                agent=self._component,
+                code=code,
+                message=message,
+            ),
+            "history": [
+                StageRecord(
+                    stage=self._stage,
+                    agent=self._component,
+                    status=StageStatus.FAILED,
+                    latency_ms=0.0,
+                )
+            ],
+            "updated_at": datetime.now(UTC),
+        }
+
+
+class AgentNode(StageNode):
     """Wraps one agent as a LangGraph node.
 
     ``to_input`` projects the state onto the agent's input contract; ``to_update``
@@ -49,85 +141,37 @@ class AgentNode:
         to_input: Callable[[ResearchState], BaseModel],
         to_update: Callable[[AgentResult[Any]], StateUpdate],
     ) -> None:
+        super().__init__(stage, agent.name)
         self._agent = agent
-        self._stage = stage
         self._to_input = to_input
         self._to_update = to_update
 
-    @property
-    def stage(self) -> WorkflowStage:
-        return self._stage
+    async def _execute(self, state: ResearchState) -> tuple[StateUpdate, float, int]:
+        result = await self._agent.run(self._to_input(state), self._context(state))
+        return self._to_update(result), result.latency_ms, result.attempts
 
-    async def __call__(self, state: ResearchState) -> StateUpdate:
-        context = AgentContext(
-            run_id=state.run_id,
-            session_id=state.session_id,
-            metadata={"stage": self._stage.value, "iteration": state.iteration},
-        )
 
-        try:
-            result = await self._agent.run(self._to_input(state), context)
-        except ResearchAgentError as exc:
-            return self._failure_update(_code_of(exc), exc.message)
-        except Exception as exc:  # noqa: BLE001 - workflow boundary, see below
-            # An unexpected exception must not take the whole run with it: the graph
-            # would unwind and every earlier stage's work would be lost. Record it as a
-            # stage failure so the run stays checkpointed and inspectable — but log the
-            # traceback, because unlike a ResearchAgentError this is a bug.
-            self._logger_for(state).exception(
-                "stage_crashed", stage=self._stage.value, error_type=type(exc).__name__
-            )
-            return self._failure_update("unexpected_error", f"{type(exc).__name__}: {exc}")
+class ServiceNode(StageNode):
+    """Wraps a deterministic service call as a LangGraph node.
 
-        update: StateUpdate = {
-            "status": RunStatus.RUNNING,
-            "current_stage": self._stage,
-            "history": [
-                StageRecord(
-                    stage=self._stage,
-                    agent=self._agent.name,
-                    status=StageStatus.OK,
-                    latency_ms=result.latency_ms,
-                    attempts=result.attempts,
-                )
-            ],
-            "updated_at": datetime.now(UTC),
-        }
-        # The stage mapper wins: only it knows whether its stage is terminal, so it may
-        # promote RUNNING to COMPLETED. Bookkeeping fields are its to overwrite too.
-        update.update(self._to_update(result))
-        return update
+    Not every stage reasons. Discovery queries indexes, retrieval downloads files — those
+    are services, and dressing them up as LLM agents would be dishonest and would drag an
+    unused model binding and prompt along with them.
+    """
 
-    def _logger_for(self, state: ResearchState) -> Any:
-        return logger.bind(run_id=state.run_id, agent=self._agent.name)
+    def __init__(
+        self,
+        stage: WorkflowStage,
+        component: str,
+        handler: Callable[[ResearchState], Awaitable[StateUpdate]],
+    ) -> None:
+        super().__init__(stage, component)
+        self._handler = handler
 
-    def _failure_update(self, code: str, message: str) -> StateUpdate:
-        logger.error(
-            "stage_failed",
-            stage=self._stage.value,
-            agent=self._agent.name,
-            error_code=code,
-            error=message,
-        )
-        return {
-            "status": RunStatus.FAILED,
-            "current_stage": self._stage,
-            "failure": StageFailure(
-                stage=self._stage,
-                agent=self._agent.name,
-                code=code,
-                message=message,
-            ),
-            "history": [
-                StageRecord(
-                    stage=self._stage,
-                    agent=self._agent.name,
-                    status=StageStatus.FAILED,
-                    latency_ms=0.0,
-                )
-            ],
-            "updated_at": datetime.now(UTC),
-        }
+    async def _execute(self, state: ResearchState) -> tuple[StateUpdate, float, int]:
+        started = time.perf_counter()
+        update = await self._handler(state)
+        return update, (time.perf_counter() - started) * SECONDS_PER_MILLISECOND, 1
 
 
 def _code_of(exc: ResearchAgentError) -> str:

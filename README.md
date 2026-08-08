@@ -7,8 +7,9 @@ text, finds gaps, critiques its own report, and exports a literature review with
 Everything runs on your machine through [Ollama](https://ollama.com). No API keys, no data
 leaving the host.
 
-> **Status: v0.2** — the Planner agent runs end to end on a local model: a research goal
-> becomes research questions and a search strategy. Literature discovery lands in v0.3.
+> **Status: v0.3** — a research goal becomes a plan, then real papers: six providers
+> (arXiv, OpenAlex, Crossref, Semantic Scholar, PubMed and your own PDF collection)
+> searched, deduplicated, ranked and stored. PDF parsing lands in v0.4.
 > See [ROADMAP](#roadmap).
 
 ## Architecture
@@ -54,10 +55,20 @@ curl -X POST localhost:8000/research/plan -H 'content-type: application/json' \
   -d '{"goal":"Agentic AI in healthcare","constraints":{"year_from":2022}}'
 ```
 
-You get research questions, a search strategy, inclusion/exclusion criteria and the
-methods, datasets and metrics the review expects to encounter. `POST /research/plan/stream`
-streams the same run as server-sent events; `GET /research/runs/{id}` reloads it from its
-checkpoint.
+You get research questions, a search strategy, and a ranked set of candidate papers
+discovered across every enabled provider. `POST /research/plan/stream` streams the same
+run as server-sent events; `GET /research/runs/{id}` reloads it from its checkpoint.
+
+### Your own papers
+
+Drop PDFs into `storage/papers/raw/manual/` and they take part in discovery alongside
+arXiv and OpenAlex — matched, ranked and deduplicated against them. Where the same paper
+is also indexed online, the records merge, so a local file gains its real DOI, year,
+venue and citation count. Files are read only, never moved or modified.
+
+```bash
+make index    # write metadata sidecars to storage/papers/metadata/
+```
 
 ## Full stack with Docker
 
@@ -107,7 +118,7 @@ make format
 |---|---|
 | v0.1 | Skeleton: config, LLM port, agent contract, API, Docker, CI |
 | v0.2 | Planner agent + LangGraph state orchestration, versioned prompts |
-| v0.3 | Literature discovery + retrieval (arXiv, OpenAlex, Crossref, Semantic Scholar, PubMed) |
+| v0.3 | Literature discovery + retrieval: six providers, dedup, ranking, JSON library |
 | v0.4 | PDF parsing and section-aware chunking |
 | v0.5 | Hybrid RAG over Qdrant with reranking and citation preservation |
 | v0.6 | Verification agent — every extracted claim checked against source text |
