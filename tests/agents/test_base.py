@@ -143,7 +143,7 @@ async def test_failure_emits_failed_event(
     with pytest.raises(AgentExecutionError):
         await agent.run({"goal": "x"}, AgentContext())
 
-    assert seen[0].payload["code"] == "output_parsing_error"
+    assert seen[0].payload.code == "output_parsing_error"  # type: ignore[union-attr]
 
 
 def test_agent_without_contract_is_rejected(

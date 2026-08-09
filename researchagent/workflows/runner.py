@@ -63,7 +63,7 @@ class WorkflowRunner:
         with log_context(run_id=state.run_id):
             logger.info("workflow_started", goal=state.goal[:120])
             raw = await self._graph.ainvoke(state, config=self._invoke_config(state.run_id))
-            final = ResearchState.model_validate(raw)
+            final = _finalise(ResearchState.model_validate(raw))
             logger.info(
                 "workflow_finished",
                 status=final.status.value,
@@ -97,7 +97,12 @@ class WorkflowRunner:
         snapshot = await self._graph.aget_state(self._invoke_config(run_id))
         if not snapshot.values:
             raise RunNotFoundError("No checkpointed state for this run", run_id=run_id)
-        return ResearchState.model_validate(snapshot.values)
+
+        state = ResearchState.model_validate(snapshot.values)
+        # `snapshot.next` lists pending nodes; empty means the graph stopped. Settling
+        # here as well keeps a reloaded run from reporting RUNNING when the same run was
+        # returned as COMPLETED — the stored and returned truths must agree.
+        return _finalise(state) if not snapshot.next else state
 
     @property
     def checkpointing_enabled(self) -> bool:
@@ -127,6 +132,19 @@ class WorkflowRunner:
             configurable={"thread_id": run_id},
             recursion_limit=self._config.recursion_limit,
         )
+
+
+def _finalise(state: ResearchState) -> ResearchState:
+    """Settle the terminal status once the graph has stopped running.
+
+    Individual stages must not have to know whether they are last — that would make the
+    final stage's code change every time a stage is appended. When ``ainvoke`` returns,
+    the graph is finished by definition, so a run still marked RUNNING with no recorded
+    failure has completed.
+    """
+    if state.status is RunStatus.RUNNING and state.failure is None:
+        return state.model_copy(update={"status": RunStatus.COMPLETED})
+    return state
 
 
 def _to_update(node: str, update: Any) -> WorkflowUpdate:

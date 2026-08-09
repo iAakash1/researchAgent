@@ -31,6 +31,7 @@ from researchagent.schemas.workflow import (
     StageStatus,
     WorkflowStage,
 )
+from researchagent.workflows.guards import Guard, GuardResult
 
 logger = get_logger(__name__)
 
@@ -44,9 +45,12 @@ class StageNode(ABC):
     so that the audit trail and failure semantics never drift between stages — lives here.
     """
 
-    def __init__(self, stage: WorkflowStage, component: str) -> None:
+    def __init__(
+        self, stage: WorkflowStage, component: str, guards: list[Guard] | None = None
+    ) -> None:
         self._stage = stage
         self._component = component
+        self._guards = guards or []
 
     @property
     def stage(self) -> WorkflowStage:
@@ -57,6 +61,10 @@ class StageNode(ABC):
         """Run the stage. Returns (state update, latency_ms, attempts)."""
 
     async def __call__(self, state: ResearchState) -> StateUpdate:
+        blocked = self._first_unmet_guard(state)
+        if blocked is not None:
+            return self._blocked_update(blocked)
+
         try:
             payload, latency_ms, attempts = await self._execute(state)
         except ResearchAgentError as exc:
@@ -89,6 +97,42 @@ class StageNode(ABC):
         # promote RUNNING to COMPLETED. Bookkeeping fields are its to overwrite too.
         update.update(payload)
         return update
+
+    def _first_unmet_guard(self, state: ResearchState) -> GuardResult | None:
+        """Prerequisites are checked before the stage body, never inside it."""
+        for guard in self._guards:
+            result = guard.check(state)
+            if not result.allowed:
+                return result
+        return None
+
+    def _blocked_update(self, result: GuardResult) -> StateUpdate:
+        """A blocked stage is recorded, not silently skipped and not an exception.
+
+        Whether blocking ends the run depends on why: a stage whose inputs are simply
+        absent (no PDFs to parse) leaves a healthy run, while a stage blocked by an
+        earlier failure keeps that failure.
+        """
+        logger.info(
+            "stage_blocked",
+            stage=self._stage.value,
+            component=self._component,
+            reason=result.reason,
+            missing=list(result.missing),
+        )
+        return {
+            "current_stage": self._stage,
+            "history": [
+                StageRecord(
+                    stage=self._stage,
+                    agent=self._component,
+                    status=StageStatus.BLOCKED,
+                    latency_ms=0.0,
+                    note=result.reason,
+                )
+            ],
+            "updated_at": datetime.now(UTC),
+        }
 
     def _context(self, state: ResearchState) -> AgentContext:
         return AgentContext(
@@ -140,8 +184,9 @@ class AgentNode(StageNode):
         *,
         to_input: Callable[[ResearchState], BaseModel],
         to_update: Callable[[AgentResult[Any]], StateUpdate],
+        guards: list[Guard] | None = None,
     ) -> None:
-        super().__init__(stage, agent.name)
+        super().__init__(stage, agent.name, guards)
         self._agent = agent
         self._to_input = to_input
         self._to_update = to_update
@@ -164,8 +209,9 @@ class ServiceNode(StageNode):
         stage: WorkflowStage,
         component: str,
         handler: Callable[[ResearchState], Awaitable[StateUpdate]],
+        guards: list[Guard] | None = None,
     ) -> None:
-        super().__init__(stage, component)
+        super().__init__(stage, component, guards)
         self._handler = handler
 
     async def _execute(self, state: ResearchState) -> tuple[StateUpdate, float, int]:

@@ -29,7 +29,8 @@ api  →  workflows  →  agents  →  services  →  integrations
 | `core/` | settings, logging, exceptions, registry, events, retry, **interfaces (ports)** | import any other `researchagent` package |
 | `config/` | YAML loading + typed config schemas | contain behaviour |
 | `schemas/` | agent I/O contracts, workflow state | contain logic |
-| `models/` | domain objects (Paper, Citation, ResearchGap) | know about storage or LLMs |
+| `models/` | domain objects (Paper, PaperDocument, Section, Evidence) | know about storage or LLMs |
+| `services/validation/` | one validator per question, returning `ValidationResult` | raise for an expected negative |
 | `repositories/` | all DB access (Postgres, Qdrant, Neo4j) | be called from agents directly |
 | `integrations/` | outbound adapters, one per external system | be imported by agents |
 | `services/` | reusable capabilities agents compose | make control-flow decisions |
@@ -39,6 +40,29 @@ api  →  workflows  →  agents  →  services  →  integrations
 
 **Vendor SDKs may only be imported inside `integrations/`.** Everything else depends on a
 port in `core/interfaces/`. Adding a provider = new adapter + one line of YAML.
+
+## Zero-trust engineering principle
+
+Every subsystem must assume upstream outputs may be incomplete, incorrect, inconsistent,
+stale, or malformed.
+
+No subsystem may consume raw upstream outputs directly. Every subsystem validates,
+normalises, and produces its own canonical representation before exposing data to
+downstream components.
+
+The system becomes progressively more trustworthy at each pipeline stage.
+
+- **Evidence** over inference. Every asserted fact carries a `SourceLocation` — document,
+  page, section, paragraph — so it can be re-checked, not re-believed.
+- **Validation** over assumption. Stages exchange `Validated[T]`, never bare objects.
+  `ValidationResult` carries success, grounded confidence, issues and evidence.
+- **Measurement** over guesswork. A `ConfidenceSignal` cannot be constructed without the
+  `observation` it was derived from. No signals means `Confidence.unknown()`, not 0.5.
+- **Guards** over defensive code. Prerequisites are declared in `workflows/guards.py` and
+  checked before a stage runs; a stage never defends itself against bad ordering.
+- **Recording** over raising. Stage failures become state (`StageFailure`,
+  `DocumentOutcome`), so one bad paper costs one paper and the run stays inspectable.
+- **Architecture** over convenience.
 
 ## Non-negotiables
 
@@ -52,6 +76,10 @@ port in `core/interfaces/`. Adding a provider = new adapter + one line of YAML.
 - `logging.get_logger(__name__)`, never `print`. Structured events, not f-strings.
 - Errors: raise a `ResearchAgentError` subclass with context. Never swallow.
 - Type hints everywhere; `mypy --strict` must pass.
+- No dict-based communication between subsystems — event payloads and stage contracts are
+  explicit models. Canonical artefacts (`PaperDocument`, `Evidence`, `ValidationResult`)
+  are frozen.
+- Errors declare `Recoverability` (retryable / recoverable / fatal) and a `remedy`.
 
 ## Adding an agent (the shape is always identical)
 
@@ -68,14 +96,19 @@ config/agents.yaml   # add the entry
 
 ## Workflow (target)
 
-Planner → Discovery → Retrieval → Parser → Analysis → Verification → Synthesis →
-Gap Discovery → Reviewer → (reject ⇒ back to Planner with feedback) → Report.
+Planner → Discovery → Document Intelligence → Knowledge Extraction → RAG →
+Knowledge Graph → Analysis → Verification → Reviewer →
+(reject ⇒ back to Planner with feedback) → Report.
+
+Each stage validates the previous one. Contracts between stages:
+`ResearchPlan → ScoredPaper → PaperDocument → KnowledgeRecord → VerifiedKnowledge → ResearchReport`.
 
 ## Roadmap
 
 v0.1 skeleton ✅ · v0.2 Planner + LangGraph ✅ · v0.3 Discovery + Retrieval ✅ ·
-v0.4 Parsing · v0.5 RAG · v0.6 Verification · v0.7 Knowledge graph · v0.8 Reviewer +
-memory · v0.9 UI · v1.0 evaluation.
+v0.4 Document Intelligence + Zero-Trust Foundation ✅ · v0.5 Knowledge Extraction ·
+v0.6 Chunking + Embeddings + RAG · v0.7 Knowledge Graph · v0.8 Analysis ·
+v0.9 Verification · v1.0 Research Intelligence Platform + agent evaluation.
 
 Packages for later phases exist with a docstring stating their responsibility and are
 empty until their version lands. That is intentional — do not fill them early.

@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from researchagent.config.schemas import AgentSpec
 from researchagent.core.constants import AGENT_KEY, RUN_ID_KEY, SECONDS_PER_MILLISECOND
-from researchagent.core.events import Event, EventBus, EventType
+from researchagent.core.events import AgentPayload, Event, EventBus, EventType
 from researchagent.core.exceptions import (
     AgentExecutionError,
     AgentInputError,
@@ -95,7 +95,7 @@ class BaseAgent[TInput: BaseModel, TOutput: BaseModel](ABC):
         started = time.perf_counter()
 
         with log_context(**{AGENT_KEY: self.name, RUN_ID_KEY: context.run_id}):
-            await self._emit(EventType.AGENT_STARTED, context, {})
+            await self._emit(EventType.AGENT_STARTED, context, AgentPayload(agent=self.name))
             try:
                 output, attempts = await retry_async(
                     lambda: self.execute(validated, context),
@@ -114,7 +114,12 @@ class BaseAgent[TInput: BaseModel, TOutput: BaseModel](ABC):
                 await self._emit(
                     EventType.AGENT_FAILED,
                     context,
-                    {"error": str(exc), "code": exc.code, "latency_ms": latency_ms},
+                    AgentPayload(
+                        agent=self.name,
+                        error=str(exc),
+                        code=exc.code,
+                        latency_ms=latency_ms,
+                    ),
                 )
                 raise AgentExecutionError(
                     f"Agent {self.name!r} failed", agent=self.name, cause=exc.code
@@ -125,7 +130,7 @@ class BaseAgent[TInput: BaseModel, TOutput: BaseModel](ABC):
             await self._emit(
                 EventType.AGENT_COMPLETED,
                 context,
-                {"latency_ms": latency_ms, "attempts": attempts},
+                AgentPayload(agent=self.name, latency_ms=latency_ms, attempts=attempts),
             )
 
         return self._result_model()(
@@ -179,21 +184,16 @@ class BaseAgent[TInput: BaseModel, TOutput: BaseModel](ABC):
         await self._emit(
             EventType.AGENT_RETRIED,
             context,
-            {"attempt": attempt, "error": str(error)},
+            AgentPayload(agent=self.name, attempts=attempt, error=str(error)),
         )
 
     async def _emit(
-        self, event_type: EventType, context: AgentContext, payload: dict[str, Any]
+        self, event_type: EventType, context: AgentContext, payload: AgentPayload
     ) -> None:
         if self._event_bus is None:
             return
         await self._event_bus.publish(
-            Event(
-                type=event_type,
-                source=self.name,
-                run_id=context.run_id,
-                payload={"agent": self.name, **payload},
-            )
+            Event(type=event_type, source=self.name, run_id=context.run_id, payload=payload)
         )
 
     @staticmethod

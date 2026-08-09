@@ -18,11 +18,18 @@ from researchagent.models.paper import Paper
 _UNSAFE_PATH_CHARS = re.compile(r"[^A-Za-z0-9._-]+")
 
 _PIPELINE_FLAGS = (
+    "discovered",
     "downloaded",
+    "validated",
     "parsed",
+    "sectioned",
+    "references_extracted",
+    "figures_extracted",
+    "tables_extracted",
+    "ready_for_extraction",
+    "extracted",
     "chunked",
     "embedded",
-    "extracted",
     "verified",
     "indexed_in_graph",
 )
@@ -31,11 +38,20 @@ _PIPELINE_FLAGS = (
 class ProcessingStatus(BaseModel):
     """Pipeline progress for one paper. Every flag is owned by exactly one version."""
 
+    # Ordered by pipeline position. Each flag is owned by exactly one release, and is
+    # only ever advanced — see `merge`.
+    discovered: bool = True
     downloaded: bool = False
+    validated: bool = False
     parsed: bool = False
+    sectioned: bool = False
+    references_extracted: bool = False
+    figures_extracted: bool = False
+    tables_extracted: bool = False
+    ready_for_extraction: bool = False
+    extracted: bool = False
     chunked: bool = False
     embedded: bool = False
-    extracted: bool = False
     verified: bool = False
     indexed_in_graph: bool = False
 
@@ -44,6 +60,15 @@ class ProcessingStatus(BaseModel):
 
     def mark(self, **flags: object) -> ProcessingStatus:
         return self.model_copy(update={**flags, "updated_at": datetime.now(UTC)})
+
+    @property
+    def stage_reached(self) -> str:
+        """The furthest pipeline stage completed — for dashboards and progress queries."""
+        reached = "pending"
+        for flag in _PIPELINE_FLAGS:
+            if getattr(self, flag):
+                reached = flag
+        return reached
 
     def merge(self, other: ProcessingStatus) -> ProcessingStatus:
         """Union of progress from two views of the same paper.

@@ -4,6 +4,50 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] — 2026-08-09
+
+Document Intelligence Engine and Zero-Trust Foundation. The system stops thinking in PDFs
+and starts thinking in validated `PaperDocument` objects.
+
+### Added — zero-trust foundation
+- `core/validation.py`: `ValidationResult`, `ValidationIssue`, `Severity`, and a
+  `Confidence` that cannot be constructed without the observations behind it — a
+  `ConfidenceSignal` requires its `observation`, and no signals means `unknown()`.
+- `core/evidence.py`: `Evidence`, `SourceLocation`, `BoundingBox`. Every asserted fact is
+  traceable to document, page, section and paragraph. `EXTRACTED_TEXT` evidence must carry
+  its verbatim quote; absence is recorded rather than omitted.
+- `core/interfaces/validator.py`: `Validator[T]` port — pure, synchronous, never raises
+  for an expected negative.
+- `schemas/validated.py`: `Validated[T]`, `ValidatedPaper`, `ValidatedDocument`,
+  `DocumentOutcome`. Artefacts cross stage boundaries wrapped in the verdict that admitted
+  them.
+- `workflows/guards.py`: declarative prerequisites (`requires_plan`, `requires_candidates`,
+  `requires_local_pdfs`, `run_not_failed`) checked by `StageNode` before a stage body runs.
+- `Recoverability` (retryable / recoverable / fatal) and `remedy` on every domain error.
+
+### Added — document intelligence
+- `models/layout.py` (raw positioned blocks) and `models/document.py` (canonical
+  `PaperDocument`: sections, paragraphs, figures, tables, references, citations,
+  statistics, provenance) — all frozen.
+- `integrations/pymupdf/`: the only module importing a PDF library. Produces layout only.
+- `services/document/`: section detection (relative typography, canonical-kind mapping),
+  reference and citation extraction, figure/table caption detection, self-metadata
+  extraction, assembly, and the error-isolating pipeline.
+- `services/validation/document.py`: PDF, section, reference, citation and metadata
+  validators. The metadata validator cross-checks the PDF against the discovered record
+  and reports disagreement instead of preferring one witness.
+- `repositories/document_repository.py`, `config/documents.yaml`, and the
+  `document_intelligence` workflow stage.
+
+### Changed
+- Event payloads are typed models (`AgentPayload`, `DocumentPayload`, `ValidationPayload`,
+  …) with `extra="forbid"`; dictionaries no longer cross the event bus.
+- `ProcessingStatus` gained the document stages and a `stage_reached` summary.
+- `WorkflowRunner` settles the terminal status when the graph stops, so no stage needs to
+  know it is last — and a reloaded checkpoint reports the same status the run returned.
+
+[0.4.0]: https://github.com/iAakash1/researchAgent/releases/tag/v0.4.0
+
 ## [0.3.0] — 2026-08-08
 
 Literature discovery and retrieval. The system now finds real papers across five public

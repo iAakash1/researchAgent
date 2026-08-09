@@ -23,6 +23,7 @@ from datetime import UTC, datetime
 from pydantic import BaseModel, Field
 
 from researchagent.config.schemas import DiscoverySettings
+from researchagent.core.events import DiscoveryPayload, EventBus, EventType, PaperPayload
 from researchagent.core.exceptions import PaperSourceError
 from researchagent.core.interfaces.paper_repository import PaperRepository
 from researchagent.core.interfaces.paper_source import PaperSource, SearchQuery
@@ -74,12 +75,14 @@ class DiscoveryService:
         settings: DiscoverySettings,
         *,
         repository: PaperRepository | None = None,
+        event_bus: EventBus | None = None,
     ) -> None:
         self._sources = sources
         self._deduplicator = deduplicator
         self._scorer = scorer
         self._settings = settings
         self._repository = repository
+        self._event_bus = event_bus
 
     @property
     def source_names(self) -> list[SourceName]:
@@ -124,12 +127,43 @@ class DiscoveryService:
             candidates=len(candidates),
             failed_sources=[s.value for s in _failed(reports)],
         )
-        return DiscoveryResult(
+        result = DiscoveryResult(
             candidates=candidates,
             reports=reports,
             total_returned=len(papers),
             duplicates_removed=deduplicated.duplicates_removed,
         )
+        await self._emit(result, run_id)
+        return result
+
+    async def _emit(self, result: DiscoveryResult, run_id: str | None) -> None:
+        if self._event_bus is None:
+            return
+        await self._event_bus.emit(
+            EventType.DISCOVERY_COMPLETED,
+            DiscoveryPayload(
+                sources_queried=tuple(r.source.value for r in result.reports),
+                sources_failed=tuple(s.value for s in result.sources_failed),
+                papers_returned=result.total_returned,
+                duplicates_removed=result.duplicates_removed,
+                candidates=len(result.candidates),
+            ),
+            run_id=run_id,
+            source="discovery_service",
+        )
+        for candidate in result.candidates:
+            paper = candidate.paper
+            await self._event_bus.emit(
+                EventType.PAPER_MERGED if paper.also_seen_in else EventType.PAPER_DISCOVERED,
+                PaperPayload(
+                    paper_id=paper.id,
+                    provider=paper.provider.value,
+                    title=paper.title[:200],
+                    merged_from=tuple(s.value for s in paper.also_seen_in),
+                ),
+                run_id=run_id,
+                source="discovery_service",
+            )
 
     def _build_queries(self, plan: ResearchPlan) -> list[SearchQuery]:
         keywords = [kw for question in plan.research_questions for kw in question.keywords]

@@ -1,0 +1,27 @@
+# Document intelligence engine.
+
+documents_dir: storage/papers/documents
+
+# Heading detection. Sizes are relative to each document's own modal body font, so these
+# work across two-column ACM papers and single-column preprints alike.
+sections:
+  heading_size_ratio: 1.08
+  max_heading_words: 12
+  max_heading_chars: 120
+  min_confidence: 0.35
+
+# What counts as an acceptable document. A PDF failing these is rejected with a remedy
+# rather than passed downstream as an empty shell.
+validation:
+  min_pages: 1
+  min_characters_per_page: 200   # below this it is almost certainly a scan
+  max_empty_page_ratio: 0.5
+  min_sections: 2
+  min_body_words: 500
+  title_similarity_threshold: 0.75
+  min_citation_resolution: 0.5
+
+pipeline:
+  max_concurrent_documents: 4
+  skip_unchanged: true           # re-parse only when the PDF bytes changed
+  max_documents_per_run: 25

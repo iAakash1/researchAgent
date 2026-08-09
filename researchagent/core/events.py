@@ -1,8 +1,13 @@
 """In-process async event bus.
 
-Producers (agents, workflow nodes) publish facts; consumers (metrics, SSE streaming,
-persistence) subscribe. Producers never import consumers, so adding observability
-never touches agent code.
+Producers (agents, services, workflow nodes) publish facts; consumers (metrics, SSE
+streaming, persistence) subscribe. Producers never import consumers, so adding
+observability never touches pipeline code.
+
+Payloads are typed models, not dictionaries. A subscriber that has to guess which keys
+an event carries is a subscriber that breaks silently when a producer is refactored —
+and the telemetry that matters most is the telemetry nobody is watching until it is
+needed.
 
 A subscriber that raises is logged and skipped: observability must not break the run.
 """
@@ -14,7 +19,6 @@ from collections import defaultdict
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -29,9 +33,104 @@ class EventType(StrEnum):
     AGENT_COMPLETED = "agent.completed"
     AGENT_FAILED = "agent.failed"
     AGENT_RETRIED = "agent.retried"
+
     LLM_CALL_COMPLETED = "llm.call.completed"
+
     WORKFLOW_STARTED = "workflow.started"
     WORKFLOW_COMPLETED = "workflow.completed"
+    STAGE_BLOCKED = "workflow.stage.blocked"
+
+    PAPER_DISCOVERED = "paper.discovered"
+    PAPER_MERGED = "paper.merged"
+    DISCOVERY_COMPLETED = "discovery.completed"
+
+    DOCUMENT_LOADED = "document.loaded"
+    DOCUMENT_PARSED = "document.parsed"
+    DOCUMENT_READY = "document.ready"
+    PARSING_FAILED = "document.parsing.failed"
+    SECTIONS_DETECTED = "document.sections.detected"
+    REFERENCES_EXTRACTED = "document.references.extracted"
+
+    VALIDATION_PASSED = "validation.passed"
+    VALIDATION_FAILED = "validation.failed"
+    EVIDENCE_GENERATED = "evidence.generated"
+
+
+class EventPayload(BaseModel):
+    """Base for every event body. Subclass rather than reaching for a dict.
+
+    ``extra="forbid"`` is load-bearing: without it a dict payload validates into an empty
+    base instance and every field is silently dropped, which is worse than the untyped
+    dict it replaced.
+    """
+
+    model_config = {"frozen": True, "extra": "forbid"}
+
+
+class AgentPayload(EventPayload):
+    agent: str
+    latency_ms: float | None = None
+    attempts: int | None = None
+    error: str | None = None
+    code: str | None = None
+
+
+class LLMCallPayload(EventPayload):
+    alias: str
+    model: str
+    latency_ms: float
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+
+
+class StagePayload(EventPayload):
+    stage: str
+    reason: str | None = None
+    missing: tuple[str, ...] = ()
+
+
+class PaperPayload(EventPayload):
+    paper_id: str
+    provider: str
+    title: str | None = None
+    merged_from: tuple[str, ...] = ()
+
+
+class DiscoveryPayload(EventPayload):
+    sources_queried: tuple[str, ...] = ()
+    sources_failed: tuple[str, ...] = ()
+    papers_returned: int = 0
+    duplicates_removed: int = 0
+    candidates: int = 0
+
+
+class DocumentPayload(EventPayload):
+    paper_id: str
+    pages: int | None = None
+    sections: int | None = None
+    references: int | None = None
+    figures: int | None = None
+    tables: int | None = None
+    citations: int | None = None
+    duration_ms: float | None = None
+    error_code: str | None = None
+    error_message: str | None = None
+
+
+class ValidationPayload(EventPayload):
+    validator: str
+    subject_id: str
+    subject_type: str
+    success: bool
+    confidence: float
+    issue_codes: tuple[str, ...] = ()
+
+
+class EvidencePayload(EventPayload):
+    document_id: str
+    produced_by: str
+    count: int
+    kinds: tuple[str, ...] = ()
 
 
 class Event(BaseModel):
@@ -40,7 +139,7 @@ class Event(BaseModel):
     model_config = {"frozen": True}
 
     type: EventType
-    payload: dict[str, Any] = Field(default_factory=dict)
+    payload: EventPayload = Field(default_factory=EventPayload)
     run_id: str | None = None
     source: str | None = None
     event_id: str = Field(default_factory=lambda: str(uuid4()))
@@ -88,6 +187,17 @@ class EventBus:
                     error=str(result),
                     error_type=type(result).__name__,
                 )
+
+    async def emit(
+        self,
+        event_type: EventType,
+        payload: EventPayload,
+        *,
+        run_id: str | None = None,
+        source: str | None = None,
+    ) -> None:
+        """Convenience for the common publish; keeps call sites to one line."""
+        await self.publish(Event(type=event_type, payload=payload, run_id=run_id, source=source))
 
     def subscriber_count(self, event_type: EventType | None = None) -> int:
         return len(self._subscribers.get(event_type, []))

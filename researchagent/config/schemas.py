@@ -187,3 +187,44 @@ class SourcesConfig(BaseModel):
             max_candidates=self.max_candidates,
             require_retrievable=self.require_retrievable,
         )
+
+
+class SectionDetectionConfig(BaseModel):
+    """Heading-detection thresholds. Relative to each document's own body font, so these
+    hold across two-column ACM papers and single-column preprints alike."""
+
+    heading_size_ratio: float = Field(default=1.08, gt=1.0)
+    max_heading_words: int = Field(default=12, ge=1)
+    max_heading_chars: int = Field(default=120, ge=10)
+    min_paragraph_chars: int = Field(default=2, ge=1)
+    min_confidence: float = Field(default=0.35, ge=0.0, le=1.0)
+
+
+class DocumentValidationConfig(BaseModel):
+    """What counts as an acceptable document."""
+
+    min_pages: int = Field(default=1, ge=1)
+    # Below this, a "digital" PDF is almost certainly a scan; OCR is out of scope.
+    min_characters_per_page: int = Field(default=200, ge=0)
+    max_empty_page_ratio: float = Field(default=0.5, ge=0.0, le=1.0)
+    min_sections: int = Field(default=2, ge=0)
+    min_body_words: int = Field(default=500, ge=0)
+    # Title agreement below this is reported: the index and the PDF disagree.
+    title_similarity_threshold: float = Field(default=0.75, ge=0.0, le=1.0)
+    min_citation_resolution: float = Field(default=0.5, ge=0.0, le=1.0)
+
+
+class DocumentPipelineSettings(BaseModel):
+    max_concurrent_documents: int = Field(default=4, ge=1, le=16)
+    # Re-parsing is deterministic; skip when the stored document came from the same bytes.
+    skip_unchanged: bool = True
+    max_documents_per_run: int = Field(default=25, ge=1, le=500)
+
+
+class DocumentsConfig(BaseModel):
+    """``config/documents.yaml`` root: the document intelligence engine's tuning."""
+
+    documents_dir: Path = Path("storage/papers/documents")
+    sections: SectionDetectionConfig = Field(default_factory=SectionDetectionConfig)
+    validation: DocumentValidationConfig = Field(default_factory=DocumentValidationConfig)
+    pipeline: DocumentPipelineSettings = Field(default_factory=DocumentPipelineSettings)

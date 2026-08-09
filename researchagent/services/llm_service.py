@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 
 from researchagent.config.schemas import ModelCatalog, ModelSpec
-from researchagent.core.events import Event, EventBus, EventType
+from researchagent.core.events import EventBus, EventType, LLMCallPayload
 from researchagent.core.interfaces.llm import (
     CompletionResponse,
     GenerationParams,
@@ -87,18 +87,16 @@ class BoundLLM:
     async def _emit(self, response: CompletionResponse) -> None:
         if self._event_bus is None:
             return
-        await self._event_bus.publish(
-            Event(
-                type=EventType.LLM_CALL_COMPLETED,
-                source=f"{self.provider_name}:{self.alias}",
-                payload={
-                    "alias": self.alias,
-                    "model": response.model,
-                    "latency_ms": response.latency_ms,
-                    "prompt_tokens": response.usage.prompt_tokens,
-                    "completion_tokens": response.usage.completion_tokens,
-                },
-            )
+        await self._event_bus.emit(
+            EventType.LLM_CALL_COMPLETED,
+            LLMCallPayload(
+                alias=self.alias,
+                model=response.model,
+                latency_ms=response.latency_ms,
+                prompt_tokens=response.usage.prompt_tokens,
+                completion_tokens=response.usage.completion_tokens,
+            ),
+            source=f"{self.provider_name}:{self.alias}",
         )
 
 

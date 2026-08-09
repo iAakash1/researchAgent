@@ -12,17 +12,34 @@ from pathlib import Path
 
 from researchagent.agents.registry import build_agent
 from researchagent.config.loader import ConfigLoader
-from researchagent.config.schemas import AgentConfig, ModelCatalog, SourcesConfig, WorkflowConfig
+from researchagent.config.schemas import (
+    AgentConfig,
+    DocumentsConfig,
+    ModelCatalog,
+    SourcesConfig,
+    WorkflowConfig,
+)
 from researchagent.core.events import EventBus
 from researchagent.core.interfaces.paper_source import PaperSource
 from researchagent.core.logging import configure_logging, get_logger
 from researchagent.core.prompts import PromptLibrary
 from researchagent.core.settings import Settings, get_settings
+from researchagent.integrations.pymupdf import PyMuPDFLoader
 from researchagent.integrations.sources import build_enabled_sources
 from researchagent.memory.checkpoints import build_checkpointer
+from researchagent.repositories.document_repository import JsonDocumentRepository
 from researchagent.repositories.paper_repository import JsonPaperRepository
 from researchagent.services.deduplication import PaperDeduplicator
 from researchagent.services.discovery_service import DiscoveryService
+from researchagent.services.document import (
+    CitationExtractor,
+    DocumentAssembler,
+    DocumentIntelligenceService,
+    FigureTableDetector,
+    MetadataExtractor,
+    ReferenceExtractor,
+    SectionDetector,
+)
 from researchagent.services.llm_service import LLMService
 from researchagent.services.ranking import HeuristicScorer
 from researchagent.services.retrieval_service import RetrievalService
@@ -42,6 +59,7 @@ class Container:
     agent_config: AgentConfig
     workflow_config: WorkflowConfig
     sources_config: SourcesConfig
+    documents_config: DocumentsConfig
     prompt_library: PromptLibrary
     event_bus: EventBus
     llm_service: LLMService
@@ -49,6 +67,8 @@ class Container:
     paper_repository: JsonPaperRepository
     discovery_service: DiscoveryService
     retrieval_service: RetrievalService
+    document_repository: JsonDocumentRepository
+    document_service: DocumentIntelligenceService
     workflow_runner: WorkflowRunner
 
     async def aclose(self) -> None:
@@ -67,6 +87,7 @@ def build_container(settings: Settings | None = None) -> Container:
     agent_config = loader.load("agents", AgentConfig)
     workflow_config = loader.load("workflow", WorkflowConfig)
     sources_config = loader.load("sources", SourcesConfig)
+    documents_config = loader.load("documents", DocumentsConfig)
 
     prompt_library = PromptLibrary(settings.prompts_dir)
     event_bus = EventBus()
@@ -82,12 +103,32 @@ def build_container(settings: Settings | None = None) -> Container:
         HeuristicScorer(sources_config.ranking),
         sources_config.discovery_settings(),
         repository=paper_repository,
+        event_bus=event_bus,
     )
     retrieval_service = RetrievalService(
         {source.name: source for source in paper_sources},
         paper_repository,
         _resolve(sources_config.download_dir, settings.project_root),
         sources_config.retrieval,
+    )
+
+    document_repository = JsonDocumentRepository(
+        _resolve(documents_config.documents_dir, settings.project_root)
+    )
+    document_service = DocumentIntelligenceService(
+        PyMuPDFLoader(),
+        DocumentAssembler(
+            SectionDetector(documents_config.sections),
+            ReferenceExtractor(),
+            CitationExtractor(),
+            FigureTableDetector(),
+            MetadataExtractor(),
+        ),
+        document_repository,
+        paper_repository,
+        documents_config.pipeline,
+        documents_config.validation,
+        event_bus=event_bus,
     )
 
     planner = build_agent(
@@ -100,6 +141,7 @@ def build_container(settings: Settings | None = None) -> Container:
     graph = build_research_graph(
         planner=planner,
         discovery=discovery_service,
+        documents=document_service,
         checkpointer=build_checkpointer(workflow_config.checkpointer),
     )
 
@@ -119,6 +161,7 @@ def build_container(settings: Settings | None = None) -> Container:
         agent_config=agent_config,
         workflow_config=workflow_config,
         sources_config=sources_config,
+        documents_config=documents_config,
         prompt_library=prompt_library,
         event_bus=event_bus,
         llm_service=llm_service,
@@ -126,6 +169,8 @@ def build_container(settings: Settings | None = None) -> Container:
         paper_repository=paper_repository,
         discovery_service=discovery_service,
         retrieval_service=retrieval_service,
+        document_repository=document_repository,
+        document_service=document_service,
         workflow_runner=WorkflowRunner(graph, workflow_config),
     )
 

@@ -11,6 +11,7 @@ from researchagent.config.loader import ConfigLoader
 from researchagent.config.schemas import (
     AgentConfig,
     AgentSpec,
+    DocumentsConfig,
     ModelCatalog,
     SourcesConfig,
     WorkflowConfig,
@@ -29,10 +30,21 @@ from researchagent.core.interfaces.llm import (
 from researchagent.core.prompts import PromptLibrary
 from researchagent.core.settings import Environment, Settings
 from researchagent.integrations.manual import ManualPaperSource
+from researchagent.integrations.pymupdf import PyMuPDFLoader
 from researchagent.memory.checkpoints import build_checkpointer
+from researchagent.repositories.document_repository import JsonDocumentRepository
 from researchagent.repositories.paper_repository import JsonPaperRepository
 from researchagent.services.deduplication import PaperDeduplicator
 from researchagent.services.discovery_service import DiscoveryService
+from researchagent.services.document import (
+    CitationExtractor,
+    DocumentAssembler,
+    DocumentIntelligenceService,
+    FigureTableDetector,
+    MetadataExtractor,
+    ReferenceExtractor,
+    SectionDetector,
+)
 from researchagent.services.llm_service import BoundLLM, LLMService
 from researchagent.services.ranking import HeuristicScorer
 from researchagent.services.retrieval_service import RetrievalService
@@ -190,6 +202,8 @@ def container(
     fake_provider: FakeLLMProvider,
     manual_source: ManualPaperSource,
     paper_repository: JsonPaperRepository,
+    document_repository: JsonDocumentRepository,
+    document_assembler: DocumentAssembler,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Container:
@@ -197,6 +211,17 @@ def container(
     manual library, so no test ever touches a remote index."""
     service = LLMService(model_catalog, settings, event_bus=event_bus)
     monkeypatch.setattr(service, "_provider", lambda _name: fake_provider)
+
+    documents_config = config_loader.load("documents", DocumentsConfig)
+    document_service = DocumentIntelligenceService(
+        PyMuPDFLoader(),
+        document_assembler,
+        document_repository,
+        paper_repository,
+        documents_config.pipeline,
+        documents_config.validation,
+        event_bus=event_bus,
+    )
 
     discovery_service = DiscoveryService(
         [manual_source],
@@ -218,6 +243,7 @@ def container(
     graph = build_research_graph(
         planner=planner,
         discovery=discovery_service,
+        documents=document_service,
         checkpointer=build_checkpointer(workflow_config.checkpointer),
     )
 
@@ -228,6 +254,7 @@ def container(
         agent_config=agent_config,
         workflow_config=workflow_config,
         sources_config=sources_config,
+        documents_config=documents_config,
         prompt_library=prompt_library,
         event_bus=event_bus,
         llm_service=service,
@@ -237,6 +264,8 @@ def container(
         retrieval_service=RetrievalService(
             {manual_source.name: manual_source}, paper_repository, tmp_path / "downloads"
         ),
+        document_repository=document_repository,
+        document_service=document_service,
         workflow_runner=WorkflowRunner(graph, workflow_config),
     )
 
@@ -254,3 +283,35 @@ def manual_source() -> ManualPaperSource:
 def paper_repository(tmp_path: Path) -> JsonPaperRepository:
     """Always a temp directory: tests must never write into storage/papers/metadata."""
     return JsonPaperRepository(tmp_path / "metadata")
+
+
+@pytest.fixture
+def document_repository(tmp_path: Path) -> JsonDocumentRepository:
+    return JsonDocumentRepository(tmp_path / "documents")
+
+
+@pytest.fixture
+def document_assembler() -> DocumentAssembler:
+    return DocumentAssembler(
+        SectionDetector(),
+        ReferenceExtractor(),
+        CitationExtractor(),
+        FigureTableDetector(),
+        MetadataExtractor(),
+    )
+
+
+@pytest.fixture
+def document_service(
+    document_assembler: DocumentAssembler,
+    document_repository: JsonDocumentRepository,
+    paper_repository: JsonPaperRepository,
+    event_bus: EventBus,
+) -> DocumentIntelligenceService:
+    return DocumentIntelligenceService(
+        PyMuPDFLoader(),
+        document_assembler,
+        document_repository,
+        paper_repository,
+        event_bus=event_bus,
+    )

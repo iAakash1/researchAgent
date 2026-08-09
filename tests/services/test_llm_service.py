@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from researchagent.config.schemas import ModelCatalog
-from researchagent.core.events import Event, EventBus, EventType
+from researchagent.core.events import Event, EventBus, EventType, LLMCallPayload
 from researchagent.core.interfaces.llm import GenerationParams, Message
 from researchagent.core.registry import RegistryError
 from researchagent.core.settings import Settings
@@ -66,8 +66,10 @@ async def test_completion_publishes_an_event(fake_provider: FakeLLMProvider) -> 
     handle = BoundLLM("a", catalog.spec_for("a"), fake_provider, event_bus=bus)
     await handle.complete([Message.user("hi")])
 
-    assert received[0].payload["alias"] == "a"
-    assert received[0].payload["prompt_tokens"] == 10
+    payload = received[0].payload
+    assert isinstance(payload, LLMCallPayload)
+    assert payload.alias == "a"
+    assert payload.prompt_tokens == 10
 
 
 async def test_verify_models_available_flags_unpulled_models(

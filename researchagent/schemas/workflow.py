@@ -24,6 +24,7 @@ class WorkflowStage(StrEnum):
 
     PLANNING = "planning"
     DISCOVERY = "discovery"
+    DOCUMENT_INTELLIGENCE = "document_intelligence"
 
 
 class RunStatus(StrEnum):
@@ -36,6 +37,9 @@ class RunStatus(StrEnum):
 class StageStatus(StrEnum):
     OK = "ok"
     FAILED = "failed"
+    # Prerequisites were not met. Distinct from FAILED: nothing went wrong, the stage
+    # simply had nothing valid to work on.
+    BLOCKED = "blocked"
 
 
 class ResearchConstraints(BaseModel):
@@ -55,6 +59,7 @@ class StageRecord(BaseModel):
     status: StageStatus
     latency_ms: float
     attempts: int = 1
+    note: str | None = None
     recorded_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
@@ -82,6 +87,26 @@ class DiscoveryReport(BaseModel):
     candidates: int = 0
 
 
+class DocumentReport(BaseModel):
+    """Summary of the document intelligence stage, including what could not be parsed."""
+
+    attempted: int = 0
+    succeeded: int = 0
+    failed: int = 0
+    mean_confidence: float = 0.0
+    ready_for_extraction: tuple[str, ...] = ()
+    failures: tuple[DocumentFailure, ...] = ()
+
+
+class DocumentFailure(BaseModel):
+    """Why one paper did not become a usable document."""
+
+    paper_id: str
+    code: str
+    message: str
+    remedy: str | None = None
+
+
 class ResearchState(BaseModel):
     """State threaded through the whole research workflow."""
 
@@ -103,6 +128,9 @@ class ResearchState(BaseModel):
     # the run's shortlist so later stages need no second lookup.
     candidates: list[ScoredPaper] = Field(default_factory=list)
     discovery: DiscoveryReport | None = None
+    # Canonical documents are large; state carries the per-paper verdicts and the
+    # documents themselves live in the document repository.
+    documents: DocumentReport | None = None
 
     history: Annotated[list[StageRecord], operator.add] = Field(default_factory=list)
     failure: StageFailure | None = None

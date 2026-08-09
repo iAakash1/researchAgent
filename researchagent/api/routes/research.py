@@ -15,6 +15,7 @@ from researchagent.core.logging import get_logger
 from researchagent.models.research import ResearchPlan
 from researchagent.schemas.workflow import (
     DiscoveryReport,
+    DocumentReport,
     ResearchConstraints,
     ResearchState,
     RunStatus,
@@ -41,6 +42,7 @@ class PlanResponse(BaseModel):
     plan: ResearchPlan | None
     candidates: list[ScoredPaper] = Field(default_factory=list)
     discovery: DiscoveryReport | None = None
+    documents: DocumentReport | None = None
     history: list[StageRecord]
     failure: StageFailure | None = None
 
@@ -52,6 +54,7 @@ class PlanResponse(BaseModel):
             plan=state.plan,
             candidates=state.candidates,
             discovery=state.discovery,
+            documents=state.documents,
             history=state.history,
             failure=state.failure,
         )
