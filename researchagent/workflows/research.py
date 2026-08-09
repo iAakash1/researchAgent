@@ -153,6 +153,8 @@ def knowledge_extraction_node(service: KnowledgeIntelligenceService) -> ServiceN
                 rejected_ungrounded=sum(o.rejections.ungrounded for o in result.outcomes),
                 rejected_invalid=sum(o.rejections.invalid for o in result.outcomes),
                 grounding_rate=result.grounding_rate,
+                acceptance_rate=result.acceptance_rate,
+                documents_measured=result.measured_documents,
                 kinds_present=tuple(kind.value for kind in kinds),
             ),
         }

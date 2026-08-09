@@ -16,6 +16,7 @@ from researchagent.config.schemas import (
     AgentConfig,
     DocumentsConfig,
     EvidenceConfig,
+    GraphConfig,
     KnowledgeConfig,
     ModelCatalog,
     RetrievalConfig,
@@ -24,12 +25,15 @@ from researchagent.config.schemas import (
 )
 from researchagent.core.events import EventBus
 from researchagent.core.interfaces.embeddings import EmbeddingModel
+from researchagent.core.interfaces.graph_repository import GraphRepository
 from researchagent.core.interfaces.paper_source import PaperSource
 from researchagent.core.interfaces.retrieval import KnowledgeRetriever
 from researchagent.core.interfaces.vector_store import VectorStore
 from researchagent.core.logging import configure_logging, get_logger
 from researchagent.core.prompts import PromptLibrary
 from researchagent.core.settings import Settings, get_settings
+from researchagent.integrations.memory_graph import InMemoryGraphRepository
+from researchagent.integrations.neo4j import Neo4jGraphRepository
 from researchagent.integrations.pymupdf import PyMuPDFLoader
 from researchagent.integrations.sources import build_enabled_sources
 from researchagent.memory.checkpoints import build_checkpointer
@@ -60,6 +64,10 @@ from researchagent.services.evidence import (
     RepositoryDocumentRetriever,
     StoredBundleRetriever,
 )
+from researchagent.services.graph.builder import GraphBuilder
+from researchagent.services.graph.mapper import GraphMapper
+from researchagent.services.graph.queries import GraphQueries
+from researchagent.services.graph.validator import GraphValidator
 from researchagent.services.knowledge import KnowledgeIntelligenceService, RelationBuilder
 from researchagent.services.knowledge.registry import build_extractors
 from researchagent.services.llm_service import LLMService
@@ -120,12 +128,19 @@ class Container:
     knowledge_indexer: KnowledgeIndexer
     retrieval_arms: dict[str, KnowledgeRetriever]
     active_knowledge_retriever: KnowledgeRetriever
+    # v0.8. A derived index: the knowledge and evidence repositories stay authoritative,
+    # and `graph_builder.build()` reconstructs everything below from them.
+    graph_config: GraphConfig
+    graph_repository: GraphRepository
+    graph_builder: GraphBuilder
+    graph_queries: GraphQueries
     workflow_runner: WorkflowRunner
 
     async def aclose(self) -> None:
         await self.llm_service.aclose()
         await self.embedding_model.aclose()
         await self.vector_store.aclose()
+        await self.graph_repository.aclose()
         for source in self.paper_sources:
             await source.aclose()
 
@@ -136,7 +151,9 @@ def build_container(settings: Settings | None = None) -> Container:
     configure_logging(settings)
 
     loader = ConfigLoader(settings.config_dir)
-    model_catalog = loader.load("models", ModelCatalog)
+    model_catalog = loader.load("models", ModelCatalog).with_provider_override(
+        settings.llm_provider, settings.llm_model
+    )
     agent_config = loader.load("agents", AgentConfig)
     workflow_config = loader.load("workflow", WorkflowConfig)
     sources_config = loader.load("sources", SourcesConfig)
@@ -250,6 +267,23 @@ def build_container(settings: Settings | None = None) -> Container:
         event_bus=event_bus,
     )
 
+    graph_config = loader.load("graph", GraphConfig)
+    graph_repository = _build_graph_repository(graph_config, settings)
+    graph_builder = GraphBuilder(
+        knowledge_repository,
+        graph_repository,
+        GraphMapper(
+            schema_version=graph_config.schema_identity.version,
+            extraction_version=graph_config.schema_identity.extraction_version,
+            relation_version=graph_config.schema_identity.relation_version,
+        ),
+        GraphValidator(require_provenance=graph_config.build.require_provenance),
+        ContradictionDetector(evidence_config.contradictions),
+        paper_repository,
+        event_bus=event_bus,
+    )
+    graph_queries = GraphQueries(graph_repository)
+
     planner = build_agent(
         "planner",
         agent_config=agent_config,
@@ -310,9 +344,29 @@ def build_container(settings: Settings | None = None) -> Container:
         knowledge_indexer=knowledge_indexer,
         retrieval_arms=retrieval_arms,
         active_knowledge_retriever=active_knowledge_retriever,
+        graph_config=graph_config,
+        graph_repository=graph_repository,
+        graph_builder=graph_builder,
+        graph_queries=graph_queries,
         workflow_runner=WorkflowRunner(graph, workflow_config),
     )
 
 
 def _resolve(path: Path, project_root: Path) -> Path:
     return path if path.is_absolute() else project_root / path
+
+
+def _build_graph_repository(config: GraphConfig, settings: Settings) -> GraphRepository:
+    """Choose the graph backend.
+
+    Kept here rather than in a registry because there are exactly two and one of them is a
+    test seam. Credentials come from ``Settings``; ``config/graph.yaml`` holds no secrets.
+    """
+    if config.backend == "neo4j":
+        return Neo4jGraphRepository(
+            uri=settings.neo4j.uri,
+            user=settings.neo4j.user,
+            password=settings.neo4j.password.get_secret_value(),
+            database=config.neo4j.database,
+        )
+    return InMemoryGraphRepository()

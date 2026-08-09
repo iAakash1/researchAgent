@@ -11,6 +11,7 @@ from collections.abc import Callable
 from researchagent.core.interfaces.llm import LLMProvider
 from researchagent.core.registry import Registry
 from researchagent.core.settings import Settings
+from researchagent.integrations.groq import GroqProvider
 from researchagent.integrations.ollama import OllamaProvider
 
 LLMProviderFactory = Callable[[Settings], LLMProvider]
@@ -26,7 +27,18 @@ def _build_ollama(settings: Settings) -> LLMProvider:
     )
 
 
+def _build_groq(settings: Settings) -> LLMProvider:
+    """Optional provider. ``require_groq_key`` raises a ConfigurationError naming the fix
+    rather than falling back to Ollama — a run must never quietly change its own engine."""
+    return GroqProvider(
+        api_key=settings.require_groq_key(),
+        base_url=settings.groq.base_url,
+        request_timeout_seconds=settings.groq.request_timeout_seconds,
+    )
+
+
 LLM_PROVIDERS.add("ollama", _build_ollama)
+LLM_PROVIDERS.add("groq", _build_groq)
 
 
 def build_llm_provider(name: str, settings: Settings) -> LLMProvider:

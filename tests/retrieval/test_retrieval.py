@@ -630,3 +630,60 @@ def _record(
             index_version="v1",
         ),
     )
+
+
+class TestZeroWeightedFusion:
+    """A fusion weight of zero is a valid ablation endpoint, not a crash.
+
+    ConfidenceSignal requires weight > 0 by design — a signal carrying no weight is not a
+    signal. Fusion therefore has to omit a zero-weighted component rather than record it
+    as one that was observed and then ignored. Found by the hybrid weight ablation, which
+    sweeps the endpoints.
+    """
+
+    def _objects(self) -> list[KnowledgeObject]:
+        return [an_object(f"Object {index}") for index in range(4)]
+
+    @pytest.mark.parametrize(
+        "strategy", [FusionStrategy.WEIGHTED_SCORE, FusionStrategy.RECIPROCAL_RANK]
+    )
+    @pytest.mark.parametrize(("lexical", "dense"), [(0.0, 1.0), (1.0, 0.0)])
+    async def test_a_zero_weight_omits_the_component_instead_of_raising(
+        self, strategy: FusionStrategy, lexical: float, dense: float
+    ) -> None:
+        objects = self._objects()
+        hybrid = HybridKnowledgeRetriever(
+            [
+                RetrieverComponent(
+                    StubRetriever(objects, label="lex"), ComponentRole.LEXICAL, lexical
+                ),
+                RetrieverComponent(
+                    StubRetriever(list(reversed(objects)), label="dense"),
+                    ComponentRole.DENSE,
+                    dense,
+                ),
+            ],
+            FusionSettings(strategy=strategy),
+        )
+
+        result = await hybrid.retrieve(ResearchQuery(text="anything", limit=4))
+
+        assert result.hits
+        for hit in result.hits:
+            assert all(signal.weight > 0 for signal in hit.signals)
+            assert 0.0 <= hit.score <= 1.0
+
+    async def test_two_zero_weights_return_results_without_signals(self) -> None:
+        """Degenerate but reachable: neither component contributes, so nothing is claimed."""
+        objects = self._objects()
+        hybrid = HybridKnowledgeRetriever(
+            [
+                RetrieverComponent(StubRetriever(objects, label="lex"), ComponentRole.LEXICAL, 0.0),
+                RetrieverComponent(StubRetriever(objects, label="dense"), ComponentRole.DENSE, 0.0),
+            ],
+            FusionSettings(strategy=FusionStrategy.WEIGHTED_SCORE),
+        )
+
+        result = await hybrid.retrieve(ResearchQuery(text="anything", limit=4))
+
+        assert result.hits == ()

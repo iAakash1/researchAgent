@@ -231,6 +231,52 @@ class KnowledgeObject(BaseModel):
         return self.primary_location.describe()
 
 
+class ExtractionStats(BaseModel):
+    """How the objects on a ``PaperKnowledge`` came to exist.
+
+    Persisted with the knowledge rather than recomputed, because the counts only exist
+    while the extractors are running. Without this, reusing cached knowledge produced
+    objects with no record of how many proposals they came from — a numerator with no
+    denominator, which is what made the corpus grounding rate exceed 1.0.
+
+    ``None`` on knowledge extracted before this field existed: that is *unknown*, not
+    zero, and the aggregate treats it as such.
+    """
+
+    model_config = {"frozen": True}
+
+    proposed: int = Field(ge=0, description="Drafts the extractors returned")
+    grounded: int = Field(ge=0, description="Drafts whose quote was located in the document")
+    accepted: int = Field(ge=0, description="Grounded drafts that also passed validation")
+    rejected_ungrounded: int = Field(default=0, ge=0)
+    rejected_invalid: int = Field(default=0, ge=0)
+    rejection_codes: tuple[str, ...] = ()
+
+    @model_validator(mode="after")
+    def _counts_must_reconcile(self) -> ExtractionStats:
+        """A rate can only be trusted if its own inputs are consistent."""
+        if self.grounded > self.proposed:
+            raise ValueError(f"grounded ({self.grounded}) cannot exceed proposed ({self.proposed})")
+        if self.accepted > self.grounded:
+            raise ValueError(f"accepted ({self.accepted}) cannot exceed grounded ({self.grounded})")
+        return self
+
+    @property
+    def grounding_rate(self) -> float:
+        """Share of proposals the document's own text supported.
+
+        The denominator is proposals, the numerator is *grounded* drafts — the direct
+        hallucination measure. Validation rejections are a separate quality signal and
+        belong in ``acceptance_rate``, not here.
+        """
+        return self.grounded / self.proposed if self.proposed else 0.0
+
+    @property
+    def acceptance_rate(self) -> float:
+        """Share of proposals that became knowledge, after grounding *and* validation."""
+        return self.accepted / self.proposed if self.proposed else 0.0
+
+
 class PaperKnowledge(BaseModel):
     """Everything known about one paper, with the verdict that admitted it."""
 
@@ -243,6 +289,8 @@ class PaperKnowledge(BaseModel):
     objects: tuple[KnowledgeObject, ...] = ()
     relations: tuple[KnowledgeRelation, ...] = ()
     extracted_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    # None means the counters were not recorded, not that they were zero.
+    extraction: ExtractionStats | None = None
 
     def of_kind(self, kind: KnowledgeKind) -> tuple[KnowledgeObject, ...]:
         return tuple(item for item in self.objects if item.kind is kind)

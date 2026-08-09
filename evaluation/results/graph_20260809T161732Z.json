@@ -1,0 +1,43 @@
+{
+  "report": {
+    "version": "s1-x1-r1-cd1deb5a496ac",
+    "papers": 12,
+    "papers_skipped": [],
+    "nodes": 233,
+    "edges_proposed": 271,
+    "edges_accepted": 271,
+    "edges_rejected": 0,
+    "rejection_reasons": {},
+    "contradictions": 0,
+    "provenance_coverage": 1.0,
+    "stats": {
+      "version": "s1-x1-r1-cd1deb5a496ac",
+      "nodes": 233,
+      "edges": 271,
+      "nodes_by_kind": {
+        "Paper": 12,
+        "Method": 72,
+        "Dataset": 44,
+        "Metric": 31,
+        "Limitation": 42,
+        "FutureWork": 17,
+        "Result": 15
+      },
+      "edges_by_kind": {
+        "MENTIONS": 222,
+        "EVALUATED_ON": 37,
+        "MEASURED_BY": 4,
+        "LIMITS": 5,
+        "REPORTED_ON": 3
+      }
+    },
+    "duration_ms": 12.418,
+    "succeeded": true,
+    "error": null
+  },
+  "run_at": "2026-08-09T16:17:32.400017+00:00",
+  "idempotent": true,
+  "generations_after_rebuild": 1,
+  "shared_entities": 1,
+  "contradiction_pairs": 0
+}

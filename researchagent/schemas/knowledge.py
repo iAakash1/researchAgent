@@ -5,7 +5,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from researchagent.core.validation import ValidationResult
-from researchagent.models.knowledge import PaperKnowledge
+from researchagent.models.knowledge import ExtractionStats, PaperKnowledge
 from researchagent.schemas.validated import Validated
 
 ValidatedKnowledge = Validated[PaperKnowledge]
@@ -53,9 +53,24 @@ class KnowledgeOutcome(BaseModel):
         return len(self.knowledge.objects) if self.knowledge else 0
 
     @property
-    def grounding_rate(self) -> float:
-        """Share of proposals that survived grounding and validation."""
-        return self.object_count / self.drafts_proposed if self.drafts_proposed else 0.0
+    def stats(self) -> ExtractionStats | None:
+        return self.knowledge.extraction if self.knowledge else None
+
+    @property
+    def grounding_rate(self) -> float | None:
+        """Share of proposals the document supported, or ``None`` when unmeasured.
+
+        ``None`` rather than ``0.0``: a paper whose counters were never recorded has an
+        unknown rate, and reporting that as zero would claim every proposal was rejected.
+        Same reasoning as ``Confidence.unknown()``.
+        """
+        stats = self.stats
+        return stats.grounding_rate if stats is not None else None
+
+    @property
+    def acceptance_rate(self) -> float | None:
+        stats = self.stats
+        return stats.acceptance_rate if stats is not None else None
 
 
 class KnowledgeBatchResult(BaseModel):
@@ -80,9 +95,37 @@ class KnowledgeBatchResult(BaseModel):
         return sum(outcome.rejections.total for outcome in self.outcomes)
 
     @property
-    def grounding_rate(self) -> float:
-        proposed = sum(outcome.drafts_proposed for outcome in self.outcomes)
-        return round(self.total_objects / proposed, 4) if proposed else 0.0
+    def measured(self) -> tuple[ExtractionStats, ...]:
+        """Only outcomes that actually recorded their counters.
+
+        Mixing measured numerators with unmeasured denominators is what produced a
+        corpus grounding rate of 1.24. An unmeasured paper contributes to neither side.
+        """
+        return tuple(outcome.stats for outcome in self.outcomes if outcome.stats is not None)
+
+    @property
+    def measured_documents(self) -> int:
+        """How many papers the rate below is actually computed over."""
+        return len(self.measured)
+
+    @property
+    def unmeasured_documents(self) -> int:
+        return len(self.outcomes) - self.measured_documents
+
+    @property
+    def grounding_rate(self) -> float | None:
+        proposed = sum(stats.proposed for stats in self.measured)
+        if not proposed:
+            return None
+        grounded = sum(stats.grounded for stats in self.measured)
+        return round(grounded / proposed, 4)
+
+    @property
+    def acceptance_rate(self) -> float | None:
+        proposed = sum(stats.proposed for stats in self.measured)
+        if not proposed:
+            return None
+        return round(sum(stats.accepted for stats in self.measured) / proposed, 4)
 
     @property
     def knowledge(self) -> list[PaperKnowledge]:

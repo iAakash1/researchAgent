@@ -20,6 +20,7 @@ dependencies = [
     "langgraph>=1.2.10",
     "pymupdf>=1.28.2",
     "qdrant-client>=1.19.0",
+    "neo4j>=6.2.0",
 ]
 
 [project.optional-dependencies]
@@ -55,8 +56,10 @@ ignore = ["ANN401"]
 [tool.ruff.lint.per-file-ignores]
 # Tests may assert, and their fixtures don't need return annotations.
 "tests/*" = ["ANN", "S101"]
-# Scripts are command-line entry points: printing is how they report.
-"scripts/*" = ["T201"]
+# Scripts are command-line entry points: printing is how they report, and a single
+# blocking mkdir when writing a results file is correct there — swapping in an async
+# filesystem library would add a dependency to save nothing.
+"scripts/*" = ["T201", "ASYNC240"]
 
 [tool.mypy]
 python_version = "3.12"

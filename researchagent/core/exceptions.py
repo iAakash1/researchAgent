@@ -42,10 +42,26 @@ class ResearchAgentError(Exception):
     http_status: int = 500
     recoverability: Recoverability = Recoverability.FATAL
     remedy: str | None = None
+    # A provider-supplied floor on how long to wait before retrying, when the upstream
+    # says so explicitly (e.g. an HTTP ``retry-after``). Our own backoff curve is a guess;
+    # this is not, so the retry helper takes whichever is longer.
+    retry_after_seconds: float | None = None
 
     def __init__(self, message: str, **context: Any) -> None:
         super().__init__(message)
         self.message = message
+        # A call site often knows a narrower fix than the class does ("update the model id
+        # in config/models.yaml" beats "check the provider is running"). Passing
+        # ``remedy=`` overrides the class default instead of landing in the context.
+        override = context.pop("remedy", None)
+        if override is not None:
+            self.remedy = str(override)
+        wait = context.get("retry_after")
+        if wait is not None:
+            try:
+                self.retry_after_seconds = float(wait)
+            except (TypeError, ValueError):
+                self.retry_after_seconds = None
         self.context = context
 
     @property
@@ -112,6 +128,29 @@ class ProviderUnavailableError(ProviderError):
     http_status = 503
     recoverability = Recoverability.RETRYABLE
     remedy = "Check the provider is running and the model is pulled"
+
+
+class ProviderAuthenticationError(ProviderError):
+    """The provider rejected our credentials.
+
+    Fatal, never retryable: repeating a request with a bad or missing key produces the
+    same rejection and burns rate limit doing it. Secrets are never placed in the
+    message or the context.
+    """
+
+    code = "provider_authentication_error"
+    http_status = 401
+    recoverability = Recoverability.FATAL
+    remedy = "Set a valid GROQ_API_KEY in the environment (never in YAML or code)"
+
+
+class ProviderRateLimitedError(ProviderError):
+    """The provider asked us to slow down."""
+
+    code = "provider_rate_limited"
+    http_status = 429
+    recoverability = Recoverability.RETRYABLE
+    remedy = "Back off and retry; lower concurrency if it persists"
 
 
 class PaperSourceError(ResearchAgentError):
@@ -291,3 +330,30 @@ class IndexIncompatibleError(ResearchAgentError):
     http_status = 409
     recoverability = Recoverability.FATAL
     remedy = "Rebuild the index with the configured embedding model"
+
+
+class GraphNotBuiltError(ResearchAgentError):
+    """A graph query arrived before any generation was built.
+
+    Distinct from an empty result: "nothing has been built" and "nothing matched" call for
+    different actions, and collapsing them would let a caller report an empty corpus as a
+    finding.
+    """
+
+    code = "graph_not_built"
+    http_status = 409
+    recoverability = Recoverability.RECOVERABLE
+    remedy = "POST /graph/build to derive the graph from the knowledge repository"
+
+
+class GraphStoreError(ResearchAgentError):
+    """The graph store could not serve a request.
+
+    Recoverable, never fatal: the graph is a derived index, so an unreachable Neo4j costs
+    graph queries and nothing else. The knowledge and evidence repositories are untouched.
+    """
+
+    code = "graph_store_error"
+    http_status = 503
+    recoverability = Recoverability.RECOVERABLE
+    remedy = "Check Neo4j is reachable; the graph can be rebuilt from the repositories"

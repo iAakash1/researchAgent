@@ -4,7 +4,12 @@ Ground truth is human-reviewed, never model-generated: a benchmark whose labels 
 a language model measures agreement with that model, not retrieval quality.
 """
 
-from researchagent.evaluation.benchmark import ArmResult, BenchmarkReport, RetrievalBenchmark
+from researchagent.evaluation.benchmark import (
+    ArmResult,
+    BenchmarkReport,
+    RetrievalBenchmark,
+    RunIdentity,
+)
 from researchagent.evaluation.gold import (
     GoldJudgement,
     GoldQuery,
@@ -32,6 +37,7 @@ __all__ = [
     "RetrievalBenchmark",
     "RetrievalMetrics",
     "ReviewStatus",
+    "RunIdentity",
     "evaluate",
     "mean_metrics",
     "ndcg_at_k",

@@ -28,7 +28,12 @@ from researchagent.core.interfaces.paper_repository import PaperRepository
 from researchagent.core.logging import get_logger, log_context
 from researchagent.core.validation import Confidence, ValidationResult, aggregate
 from researchagent.models.document import PaperDocument
-from researchagent.models.knowledge import KnowledgeKind, KnowledgeObject, PaperKnowledge
+from researchagent.models.knowledge import (
+    ExtractionStats,
+    KnowledgeKind,
+    KnowledgeObject,
+    PaperKnowledge,
+)
 from researchagent.repositories.document_repository import JsonDocumentRepository
 from researchagent.repositories.knowledge_repository import JsonKnowledgeRepository
 from researchagent.schemas.knowledge import (
@@ -187,18 +192,27 @@ class KnowledgeIntelligenceService:
             )
         )
 
-        proposed = [obj for outcome in extraction_outcomes for obj in outcome.objects]
+        grounded = [obj for outcome in extraction_outcomes for obj in outcome.objects]
         ungrounded = sum(outcome.drafts_rejected_ungrounded for outcome in extraction_outcomes)
 
-        accepted, object_verdicts, rejected_codes = self._validate_objects(proposed)
+        accepted, object_verdicts, rejected_codes = self._validate_objects(grounded)
         accepted = _deduplicate(accepted)
         relations = self._relations.build(tuple(accepted))
 
+        stats = ExtractionStats(
+            proposed=sum(o.drafts_proposed for o in extraction_outcomes),
+            grounded=len(grounded),
+            accepted=len(accepted),
+            rejected_ungrounded=ungrounded,
+            rejected_invalid=len(grounded) - len(accepted),
+            rejection_codes=tuple(sorted(set(rejected_codes))),
+        )
         knowledge = PaperKnowledge(
             paper_id=document.paper_id,
             document_sha256=document.provenance.source_sha256,
             objects=tuple(accepted),
             relations=relations,
+            extraction=stats,
         )
         verdict = self._validate_knowledge(knowledge, extraction_outcomes, object_verdicts)
 
@@ -213,11 +227,11 @@ class KnowledgeIntelligenceService:
             knowledge=knowledge,
             validation=verdict,
             rejections=RejectionReport(
-                ungrounded=ungrounded,
-                invalid=len(proposed) - len(accepted),
-                by_code=tuple(sorted(set(rejected_codes))),
+                ungrounded=stats.rejected_ungrounded,
+                invalid=stats.rejected_invalid,
+                by_code=stats.rejection_codes,
             ),
-            drafts_proposed=sum(o.drafts_proposed for o in extraction_outcomes),
+            drafts_proposed=stats.proposed,
             extractor_errors=tuple(
                 f"{o.extractor}: {o.error}" for o in extraction_outcomes if o.error
             ),
@@ -318,11 +332,23 @@ class KnowledgeIntelligenceService:
             return None
 
         logger.debug("knowledge_reused", paper_id=document.paper_id)
+        stats = stored.value.extraction
         return KnowledgeOutcome(
             paper_id=document.paper_id,
             succeeded=stored.validation.success,
             knowledge=stored.value,
             validation=stored.validation,
+            # Restored from the artefact, so a cached paper reports the same counters it
+            # reported when it was extracted rather than silently contributing a
+            # numerator with no denominator.
+            drafts_proposed=stats.proposed if stats else 0,
+            rejections=RejectionReport(
+                ungrounded=stats.rejected_ungrounded,
+                invalid=stats.rejected_invalid,
+                by_code=stats.rejection_codes,
+            )
+            if stats
+            else RejectionReport(),
         )
 
     async def _advance_processing(self, document: PaperDocument, verdict: ValidationResult) -> None:

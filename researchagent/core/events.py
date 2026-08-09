@@ -57,6 +57,8 @@ class EventType(StrEnum):
     BUNDLE_MERGED = "bundle.merged"
     RETRIEVAL_PERFORMED = "retrieval.performed"
     INDEX_BUILT = "index.built"
+    GRAPH_BUILT = "graph.built"
+    GRAPH_EDGE_REJECTED = "graph.edge.rejected"
     CONTRADICTION_DETECTED = "contradiction.detected"
     KNOWLEDGE_REJECTED = "knowledge.rejected"
 
@@ -159,6 +161,15 @@ class IndexPayload(EventPayload):
     model_fingerprint: str
     objects: int = 0
     embedding_ms: float = 0.0
+
+
+class GraphPayload(EventPayload):
+    graph_version: str
+    nodes: int = 0
+    edges: int = 0
+    rejected_edges: int = 0
+    contradictions: int = 0
+    provenance_coverage: float = 0.0
 
 
 class ValidationPayload(EventPayload):

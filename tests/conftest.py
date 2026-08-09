@@ -13,6 +13,7 @@ from researchagent.config.schemas import (
     AgentSpec,
     DocumentsConfig,
     EvidenceConfig,
+    GraphConfig,
     KnowledgeConfig,
     ModelCatalog,
     RetrievalConfig,
@@ -33,6 +34,7 @@ from researchagent.core.interfaces.llm import (
 from researchagent.core.prompts import PromptLibrary
 from researchagent.core.settings import Environment, Settings
 from researchagent.integrations.manual import ManualPaperSource
+from researchagent.integrations.memory_graph import InMemoryGraphRepository
 from researchagent.integrations.memory_store import InMemoryVectorStore
 from researchagent.integrations.ollama import NullEmbeddingModel
 from researchagent.integrations.pymupdf import PyMuPDFLoader
@@ -64,6 +66,10 @@ from researchagent.services.evidence import (
     RepositoryDocumentRetriever,
     StoredBundleRetriever,
 )
+from researchagent.services.graph.builder import GraphBuilder
+from researchagent.services.graph.mapper import GraphMapper
+from researchagent.services.graph.queries import GraphQueries
+from researchagent.services.graph.validator import GraphValidator
 from researchagent.services.knowledge import KnowledgeIntelligenceService, RelationBuilder
 from researchagent.services.knowledge.registry import build_extractors
 from researchagent.services.llm_service import BoundLLM, LLMService
@@ -235,6 +241,12 @@ def container(
 ) -> Container:
     """A fully wired container. The LLM is faked; the only paper source is the real
     manual library, so no test ever touches a remote index."""
+    graph_config = config_loader.load("graph", GraphConfig)
+    graph_repository = InMemoryGraphRepository()
+
+    graph_config = config_loader.load("graph", GraphConfig)
+    graph_repository = InMemoryGraphRepository()
+
     service = LLMService(model_catalog, settings, event_bus=event_bus)
     monkeypatch.setattr(service, "_provider", lambda _name: fake_provider)
 
@@ -362,6 +374,20 @@ def container(
         knowledge_indexer=knowledge_indexer,
         retrieval_arms=retrieval_arms,
         active_knowledge_retriever=active_knowledge_retriever,
+        # In-memory graph backend: the suite exercises the full graph stack without a
+        # running Neo4j, which is what keeps `uv run pytest` offline.
+        graph_config=graph_config,
+        graph_repository=graph_repository,
+        graph_builder=GraphBuilder(
+            knowledge_repository,
+            graph_repository,
+            GraphMapper(),
+            GraphValidator(),
+            ContradictionDetector(),
+            paper_repository,
+            event_bus=event_bus,
+        ),
+        graph_queries=GraphQueries(graph_repository),
         workflow_runner=WorkflowRunner(graph, workflow_config),
     )
 

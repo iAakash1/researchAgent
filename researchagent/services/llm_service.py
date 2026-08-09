@@ -11,6 +11,7 @@ from collections.abc import AsyncIterator
 
 from researchagent.config.schemas import ModelCatalog, ModelSpec
 from researchagent.core.events import EventBus, EventType, LLMCallPayload
+from researchagent.core.exceptions import ConfigurationError
 from researchagent.core.interfaces.llm import (
     CompletionResponse,
     GenerationParams,
@@ -125,21 +126,50 @@ class LLMService:
         spec = self._catalog.spec_for(resolved)
         return BoundLLM(resolved, spec, self._provider(spec.provider), event_bus=self._event_bus)
 
+    def configured_providers(self) -> tuple[frozenset[str], frozenset[str]]:
+        """Split the catalogue's providers into (configured, unconfigured).
+
+        A provider is unconfigured when building it raises a ``ConfigurationError`` — an
+        optional remote backend with no credentials. That is an absence, not a failure:
+        reporting it as unhealthy would leave a purely local, offline install permanently
+        un-ready, which contradicts the local-first default.
+        """
+        configured: set[str] = set()
+        unconfigured: set[str] = set()
+        for name in {spec.provider for spec in self._catalog.models.values()}:
+            try:
+                self._provider(name)
+            except ConfigurationError:
+                unconfigured.add(name)
+            else:
+                configured.add(name)
+        return frozenset(configured), frozenset(unconfigured)
+
+    def active_aliases(self) -> dict[str, ModelSpec]:
+        """Catalogue entries whose provider is usable in this environment."""
+        configured, _ = self.configured_providers()
+        return {
+            alias: spec
+            for alias, spec in self._catalog.models.items()
+            if spec.provider in configured
+        }
+
     async def health(self) -> list[ProviderHealth]:
-        """Probe every provider referenced by the catalog."""
-        names = {spec.provider for spec in self._catalog.models.values()}
-        return [await self._provider(name).health() for name in sorted(names)]
+        """Probe every configured provider referenced by the catalog."""
+        configured, _ = self.configured_providers()
+        return [await self._provider(name).health() for name in sorted(configured)]
 
     async def verify_models_available(self) -> dict[str, bool]:
-        """Map each alias to whether its model tag is actually pulled locally."""
+        """Map each active alias to whether its model tag is actually available."""
+        active = self.active_aliases()
         available: dict[str, set[str]] = {}
-        for name in {spec.provider for spec in self._catalog.models.values()}:
+        for name in {spec.provider for spec in active.values()}:
             health = await self._provider(name).health()
             available[name] = set(health.available_models)
 
         return {
             alias: spec.model_name in available.get(spec.provider, set())
-            for alias, spec in self._catalog.models.items()
+            for alias, spec in active.items()
         }
 
     async def aclose(self) -> None:

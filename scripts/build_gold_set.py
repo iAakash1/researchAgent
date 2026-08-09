@@ -1,179 +1,688 @@
 #!/usr/bin/env python
-"""Resolve hand-written relevance judgements into a versioned gold set.
+"""Build the retrieval gold set from the validated corpus.
 
-The judgements below were written by reading the extracted knowledge corpus and deciding,
-per query, which objects answer it. No model was asked to label anything: this script only
-resolves the chosen names to the ids they currently have.
+    uv run python scripts/build_gold_set.py [--out PATH]
 
-Every entry is written as `draft`. A human must read the resolved objects and flip the
-status to `reviewed` before the benchmark treats the numbers as real.
+Ground truth is derived by *reading the corpus* — the judgements below were written by
+inspecting the extracted KnowledgeObjects and deciding, per query, which ones answer it.
+No model was asked to produce a relevance label: a benchmark whose labels came from a
+language model measures agreement with that model, not retrieval quality.
 
-    uv run python scripts/build_gold_set.py
+Every object id is verified against the repository before the file is written, so a query
+referring to something extraction no longer produces fails loudly instead of quietly
+scoring zero.
+
+Everything is emitted as `draft`. Promoting a query to `reviewed` is a human act: read the
+objects, confirm or amend the judgements, then set the status and `reviewed_by`. Only
+reviewed queries may back a claim about retrieval quality.
 """
 
 from __future__ import annotations
 
 import asyncio
-import json
 import pathlib
 import sys
 
-from researchagent.evaluation.gold import (
-    GoldJudgement,
-    GoldQuery,
-    GoldSet,
-    Relevance,
-    ReviewStatus,
-)
+from researchagent.container import build_container
+from researchagent.evaluation import GoldJudgement, GoldQuery, GoldSet, Relevance
 from researchagent.models.knowledge import KnowledgeKind
-
-HIGH, MED, LOW = Relevance.HIGHLY_RELEVANT, Relevance.RELEVANT, Relevance.MARGINAL
-
-# query id -> (question, kind filter, {object name: (grade, rationale)})
-JUDGEMENTS: dict[str, tuple[str, tuple[KnowledgeKind, ...], dict[str, tuple[Relevance, str]]]] = {
-    "GQ1": (
-        "What triggers metastable failures in distributed systems?",
-        (),
-        {
-            "Trigger vs. Root Cause": (HIGH, "Directly distinguishes trigger from root cause"),
-            "trigger_type_percentage on Table 1": (HIGH, "Measured distribution of trigger types"),
-            "load_spike_trigger_percentage on Table 1": (
-                HIGH,
-                "Load spikes as a trigger, measured",
-            ),
-            "Change of Policy during Overload": (MED, "Policy change is a named trigger path"),
-            "retry case study": (MED, "Retries are a documented trigger"),
-            "load shedding": (LOW, "Mitigation of the overload that triggers failure"),
-        },
-    ),
-    "GQ2": (
-        "Which techniques mitigate overload in distributed systems?",
-        (KnowledgeKind.METHOD,),
-        {
-            "Circuit Breaker Pattern": (HIGH, "Canonical overload mitigation"),
-            "Prioritization": (HIGH, "Prioritising work under overload"),
-            "Adaptive Policies": (HIGH, "Policies that adapt to load"),
-            "Autoscaling": (MED, "Capacity response to load"),
-            "Lower Priority for Retried Queries": (MED, "Retry-specific mitigation"),
-            "Fast Error Paths": (LOW, "Reduces cost of failures under load"),
-        },
-    ),
-    "GQ3": (
-        "What metrics measure system performance under load?",
-        (KnowledgeKind.METRIC,),
-        {
-            "goodput": (HIGH, "The primary throughput metric in this literature"),
-            "latency": (HIGH, "Primary latency metric"),
-            "Queue Length": (MED, "Queue depth as a load indicator"),
-            "GC Duration": (MED, "Pause time under load"),
-            "PrintGCApplication-StoppedTime": (LOW, "A specific GC measurement"),
-        },
-    ),
-    "GQ4": (
-        "What limitations do the authors acknowledge in modelling metastable failures?",
-        (KnowledgeKind.LIMITATION,),
-        {
-            "Simplified models may not capture metastability": (HIGH, "Explicit modelling limit"),
-            "Perfect fidelity in models is not achievable": (HIGH, "Explicit modelling limit"),
-            "Precise simulation of complex systems is computationally expensive": (
-                MED,
-                "Cost limit on simulation",
-            ),
-            "Limited information in reports": (LOW, "Data limitation, not a modelling one"),
-        },
-    ),
-    "GQ5": (
-        "What future research directions are proposed for metastable failures?",
-        (KnowledgeKind.FUTURE_WORK,),
-        {
-            "Designing systems to avoid metastable failures": (HIGH, "Named future direction"),
-            "Accurately modeling and reproducing metastable failures": (HIGH, "Named direction"),
-            "Estimating the probability of novel metastable failures": (HIGH, "Named direction"),
-            "Identifying vulnerabilities in existing systems": (MED, "Named direction"),
-            "Develop solutions to metastable failures.": (MED, "Named direction, second paper"),
-            "Understanding the impact of system changes on sustaining effects": (
-                MED,
-                "Named direction",
-            ),
-        },
-    ),
-    "GQ6": (
-        "How do caches contribute to metastable failure?",
-        (),
-        {
-            "Read-Through Cache": (HIGH, "Cache design implicated in the failure mode"),
-            "read-through cache": (HIGH, "Same concept, extracted separately"),
-            "look-aside cache": (HIGH, "The look-aside cache case study"),
-        },
-    ),
-}
 
 GOLD_PATH = pathlib.Path("evaluation/gold/retrieval_v1.json")
 
+HIGH, REL, MARG = Relevance.HIGHLY_RELEVANT, Relevance.RELEVANT, Relevance.MARGINAL
 
-async def main() -> int:
-    knowledge_dir = pathlib.Path("storage/papers/knowledge")
-    if not knowledge_dir.is_dir():  # noqa: ASYNC240 - CLI entry point, no event loop concerns
-        print("no knowledge corpus on disk; run the v0.5 pipeline first", file=sys.stderr)
-        return 1
+# (query id, text, kinds, [(object id, relevance, rationale)], intent note)
+QUERIES: list[tuple[str, str, tuple[KnowledgeKind, ...], list[tuple[str, Relevance, str]], str]] = [
+    # ---- method intent -----------------------------------------------------
+    (
+        "GQ1",
+        "What techniques mitigate overload in distributed systems?",
+        (KnowledgeKind.METHOD,),
+        [
+            (
+                "manual:01#method:prioritization:1",
+                HIGH,
+                "Priorities retain efficiency under exhaustion",
+            ),
+            (
+                "manual:01#method:circuit-breaker-pattern:8",
+                HIGH,
+                "Blocks requests to break the loop",
+            ),
+            (
+                "manual:01#method:autoscaling:6",
+                HIGH,
+                "Adds capacity to escape the metastable state",
+            ),
+            (
+                "manual:01#method:change-of-policy-during-overload:0",
+                HIGH,
+                "Directly named overload policy",
+            ),
+            (
+                "manual:01#method:lower-priority-for-retried-queries:12",
+                REL,
+                "Stops retries perpetuating overload",
+            ),
+            ("manual:01#method:server-policy:11", REL, "Switches to a goodput-maximising policy"),
+            ("manual:01#method:adaptive-policies:9", REL, "Adaptive retry/failover decisions"),
+            (
+                "manual:01#method:read-through-cache:13",
+                MARG,
+                "Raises hit rate, indirectly reduces load",
+            ),
+        ],
+        "method",
+    ),
+    (
+        "GQ2",
+        "How does TCP avoid congestion collapse?",
+        (KnowledgeKind.METHOD,),
+        [
+            ("manual:03#method:slow-start:5", HIGH, "The core congestion-avoidance algorithm"),
+            (
+                "manual:03#method:packet-conservation-principle:1",
+                HIGH,
+                "The stability principle behind it",
+            ),
+            ("manual:03#method:acks-as-clock:4", HIGH, "Self-clocking is the mechanism"),
+            ("manual:03#method:conservation-of-packets:2", REL, "Restatement of the principle"),
+            ("manual:03#method:slow-start-window-increase:7", REL, "The window increase rule"),
+            (
+                "manual:03#method:window-based-transport-protocol:0",
+                MARG,
+                "The protocol family, not the fix",
+            ),
+        ],
+        "method",
+    ),
+    (
+        "GQ3",
+        "What guard mechanisms prevent error cascades between agents?",
+        (KnowledgeKind.METHOD,),
+        [
+            ("manual:11#method:control-flow-guard:6", HIGH, "Named guard against cascades"),
+            ("manual:11#method:governance-layer:1", HIGH, "Governance constrains agent actions"),
+            ("manual:11#method:middleware-module:0", REL, "Interception point for the guard"),
+            ("manual:12#method:acp:0", REL, "Agent Control Protocol governs agent behaviour"),
+            (
+                "manual:10#method:self-verification-step:4",
+                MARG,
+                "Verification catches errors before spread",
+            ),
+        ],
+        "method",
+    ),
+    # ---- dataset intent ----------------------------------------------------
+    (
+        "GQ4",
+        "Which benchmark datasets are used to evaluate multi-agent LLM systems?",
+        (KnowledgeKind.DATASET,),
+        [
+            ("manual:10#dataset:mast-data:0", HIGH, "The paper's own failure-taxonomy dataset"),
+            ("manual:10#dataset:mast-data-human:1", HIGH, "Human-annotated variant"),
+            ("manual:10#dataset:programdev-v2:4", REL, "Task suite the systems are run on"),
+            ("manual:10#dataset:olympiadbench:7", REL, "Reasoning benchmark used"),
+            ("manual:07#dataset:ms-marco:0", REL, "Retrieval benchmark in ProtocolBench"),
+            ("manual:07#dataset:2wikimulti:1", REL, "Multi-hop QA benchmark"),
+            (
+                "manual:06#dataset:ai-nativebench:0",
+                MARG,
+                "Agent benchmark, not multi-agent specifically",
+            ),
+        ],
+        "dataset",
+    ),
+    (
+        "GQ5",
+        "Which multi-agent frameworks were studied?",
+        (KnowledgeKind.DATASET,),
+        [
+            ("manual:10#dataset:metagpt:2", HIGH, "Named framework under study"),
+            ("manual:10#dataset:chatdev:3", HIGH, "Named framework under study"),
+            ("manual:10#dataset:ag2-(mathchat):8", HIGH, "Named framework under study"),
+        ],
+        "dataset",
+    ),
+    (
+        "GQ6",
+        "What example applications reproduce metastable failures?",
+        (KnowledgeKind.DATASET, KnowledgeKind.METHOD),
+        [
+            (
+                "manual:02#method:example-applications:2",
+                HIGH,
+                "Explicitly a set of reproducing applications",
+            ),
+            ("manual:02#dataset:java-program:0", HIGH, "The multi-threaded reproducer"),
+            (
+                "manual:02#dataset:rps-(requests-per-second):1",
+                REL,
+                "The load knob used to induce failure",
+            ),
+            ("manual:01#dataset:retry-case-study:8", REL, "Case study of a retry-driven failure"),
+            ("manual:01#dataset:kraken:13", MARG, "Named system in the discussion"),
+        ],
+        "dataset",
+    ),
+    # ---- metric intent -----------------------------------------------------
+    (
+        "GQ7",
+        "Which metrics indicate a system is in a metastable state?",
+        (KnowledgeKind.METRIC,),
+        [
+            ("manual:01#metric:goodput:0", HIGH, "Throughput of useful work — the defining signal"),
+            ("manual:01#metric:latency:1", HIGH, "Latency is the other characteristic metric"),
+            ("manual:02#metric:queue-length:0", HIGH, "Queue growth marks the sustaining loop"),
+            ("manual:02#metric:gc-duration:1", REL, "GC pauses amplify the loop"),
+            (
+                "manual:02#metric:queue-length-vs.-gc-duration-correlation:2",
+                REL,
+                "The correlation is the evidence",
+            ),
+            (
+                "manual:01#method:minimum-queueing-latency:10",
+                MARG,
+                "Uses queueing latency as the signal",
+            ),
+        ],
+        "metric",
+    ),
+    (
+        "GQ8",
+        "What client-side metrics does gRPC expose for retries?",
+        (KnowledgeKind.METRIC,),
+        [
+            ("manual:15#metric:grpc-client-attempt-started:0", HIGH, "Counts retry attempts"),
+            ("manual:15#metric:grpc-client-attempt-duration:1", HIGH, "Per-attempt duration"),
+            (
+                "manual:15#metric:grpc-client-call-duration:4",
+                HIGH,
+                "Whole-call duration across retries",
+            ),
+            (
+                "manual:15#metric:grpc-client-sent-total-compressed-message-size:2",
+                REL,
+                "Client-side volume",
+            ),
+            (
+                "manual:15#metric:grpc-client-received-total-compressed-message-si:3",
+                REL,
+                "Client-side volume",
+            ),
+        ],
+        "metric",
+    ),
+    (
+        "GQ9",
+        "How is agent naming and directory performance measured?",
+        (KnowledgeKind.METRIC,),
+        [
+            ("manual:13#metric:latency:4", HIGH, "Lookup latency"),
+            ("manual:13#metric:write-overhead:0", HIGH, "Cost of updates to the index"),
+            ("manual:13#metric:write-frequency:1", HIGH, "How often the index changes"),
+            ("manual:13#metric:fault-tolerance:5", REL, "Resilience of the directory"),
+            (
+                "manual:13#metric:governance-complexity:2",
+                MARG,
+                "Governance rather than performance",
+            ),
+        ],
+        "metric",
+    ),
+    # ---- result intent -----------------------------------------------------
+    (
+        "GQ10",
+        "What proportion of metastable failures are caused by load spikes?",
+        (KnowledgeKind.RESULT,),
+        [
+            (
+                "manual:02#result:load_spike_trigger_percentage-on-table-1:1",
+                HIGH,
+                "The measured share, directly",
+            ),
+            (
+                "manual:02#result:trigger_type_percentage-on-table-1:0",
+                HIGH,
+                "The trigger distribution it sits in",
+            ),
+        ],
+        "result",
+    ),
+    (
+        "GQ11",
+        "What failure rates were measured for multi-agent frameworks?",
+        (KnowledgeKind.RESULT,),
+        [
+            (
+                "manual:10#result:failure-rate-on-metagpt-and-chatdev-frameworks:0",
+                HIGH,
+                "The measured rate",
+            ),
+            ("manual:10#metric:failure-rate:0", REL, "The metric being reported"),
+        ],
+        "result",
+    ),
+    (
+        "GQ12",
+        "What throughput did the protocol sustain under attack?",
+        (KnowledgeKind.RESULT,),
+        [
+            (
+                "manual:12#result:throughput-on-experiment-1:-cooldown-evasion-att:2",
+                HIGH,
+                "Throughput under the attack",
+            ),
+            (
+                "manual:12#result:requests_processed_before_first_block-on-experim:4",
+                HIGH,
+                "Requests before first block",
+            ),
+            ("manual:12#dataset:cooldown-evasion-attack:3", REL, "The attack scenario measured"),
+        ],
+        "result",
+    ),
+    (
+        "GQ13",
+        "How much bandwidth was recovered by the congestion fix?",
+        (KnowledgeKind.RESULT,),
+        [
+            ("manual:03#result:bandwidth-utilization:5", HIGH, "The measured utilisation"),
+            ("manual:03#result:retransmission-rate:6", HIGH, "Retransmissions before/after"),
+            ("manual:03#metric:bandwidth-utilization:0", REL, "The metric definition"),
+            ("manual:03#result:window-open-time:3", MARG, "Related timing measurement"),
+        ],
+        "result",
+    ),
+    # ---- limitation intent -------------------------------------------------
+    (
+        "GQ14",
+        "What are the limitations of modelling and simulating metastable failures?",
+        (KnowledgeKind.LIMITATION,),
+        [
+            (
+                "manual:01#limitation:simplified-models-may-not-capture-metastability:0",
+                HIGH,
+                "Abstraction hides the effect",
+            ),
+            (
+                "manual:01#limitation:perfect-fidelity-in-models-is-not-achievable:1",
+                HIGH,
+                "Fidelity ceiling",
+            ),
+            (
+                "manual:01#limitation:precise-simulation-of-complex-systems-is-computa:2",
+                HIGH,
+                "Simulation cost",
+            ),
+            (
+                "manual:01#limitation:reconfiguration-as-a-recovery-strategy-has-limit:3",
+                REL,
+                "Recovery strategy limits",
+            ),
+            (
+                "manual:02#limitation:limited-information-in-reports:1",
+                REL,
+                "Incident reports are incomplete",
+            ),
+        ],
+        "limitation",
+    ),
+    (
+        "GQ15",
+        "What limitations do LLM benchmarks acknowledge?",
+        (KnowledgeKind.LIMITATION,),
+        [
+            (
+                "manual:06#limitation:non-determinism-of-llms:0",
+                HIGH,
+                "Non-determinism undermines repeatability",
+            ),
+            (
+                "manual:06#limitation:opacity-of-model-updates:1",
+                HIGH,
+                "Models change under the benchmark",
+            ),
+            ("manual:06#limitation:prompt-sensitivity:4", HIGH, "Results move with the prompt"),
+            (
+                "manual:06#limitation:metric-bias-in-correctness-measurement:3",
+                HIGH,
+                "The metric itself is biased",
+            ),
+            (
+                "manual:06#limitation:generalizability-to-future-models-and-domains:2",
+                REL,
+                "External validity",
+            ),
+            ("manual:07#limitation:model-fixed-in-experiments:2", REL, "Single model tested"),
+            ("manual:07#limitation:limited-scenarios:0", REL, "Scenario coverage"),
+        ],
+        "limitation",
+    ),
+    (
+        "GQ16",
+        "What security risks are identified in agent protocol specifications?",
+        (KnowledgeKind.LIMITATION,),
+        [
+            ("manual:05b#limitation:arbitrary-code-execution-risk:4", HIGH, "Code execution risk"),
+            ("manual:05b#limitation:untrusted-tool-behavior:5", HIGH, "Tools cannot be trusted"),
+            (
+                "manual:05b#limitation:no-unauthorized-data-transmission:2",
+                HIGH,
+                "Data exfiltration constraint",
+            ),
+            (
+                "manual:05b#limitation:security-enforcement:0",
+                REL,
+                "Enforcement is left to implementors",
+            ),
+            (
+                "manual:05b#limitation:user-consent-for-tool-invocation:6",
+                REL,
+                "Consent requirement",
+            ),
+            ("manual:05b#limitation:data-protection-requirements:3", REL, "Data protection"),
+        ],
+        "limitation",
+    ),
+    # ---- future work intent ------------------------------------------------
+    (
+        "GQ17",
+        "What future work is proposed on metastable failures?",
+        (KnowledgeKind.FUTURE_WORK,),
+        [
+            (
+                "manual:01#future_work:designing-systems-to-avoid-metastable-failures:0",
+                HIGH,
+                "Frameworks to avoid them",
+            ),
+            (
+                "manual:01#future_work:estimating-the-probability-of-novel-metastable-f:1",
+                HIGH,
+                "Finding unknown failures",
+            ),
+            (
+                "manual:01#future_work:accurately-modeling-and-reproducing-metastable-f:4",
+                HIGH,
+                "Modelling and reproduction",
+            ),
+            (
+                "manual:01#future_work:identifying-vulnerabilities-in-existing-systems:2",
+                REL,
+                "Vulnerability discovery",
+            ),
+            (
+                "manual:01#future_work:resolving-metastable-failures-with-elastic-cloud:3",
+                REL,
+                "Elastic capacity",
+            ),
+            (
+                "manual:02#future_work:develop-solutions-to-metastable-failures.:1",
+                REL,
+                "Calls for solutions",
+            ),
+            (
+                "manual:02#future_work:encourage-further-research-on-metastable-failure:0",
+                MARG,
+                "A call for research",
+            ),
+        ],
+        "future_work",
+    ),
+    (
+        "GQ18",
+        "What future directions are proposed for agent governance?",
+        (KnowledgeKind.FUTURE_WORK,),
+        [
+            (
+                "manual:12#future_work:make-governance-detectable,-measurable,-and-form:2",
+                HIGH,
+                "Formalising governance",
+            ),
+            (
+                "manual:12#future_work:mitigate-cross-agent-coordination-attacks:0",
+                HIGH,
+                "Coordination attacks",
+            ),
+            (
+                "manual:11#future_work:develop-more-governance-mechanisms:2",
+                HIGH,
+                "More governance mechanisms",
+            ),
+            ("manual:13#future_work:global-governance:1", REL, "Governance at index scale"),
+            (
+                "manual:12#future_work:improve-acp's-efficiency-and-scalability:1",
+                MARG,
+                "Efficiency, not governance",
+            ),
+        ],
+        "future_work",
+    ),
+    # ---- cross-paper comparison -------------------------------------------
+    (
+        "GQ19",
+        "How do different papers characterise the triggers of cascading failure?",
+        (),
+        [
+            (
+                "manual:01#method:trigger-vs.-root-cause:7",
+                HIGH,
+                "Distinguishes trigger from root cause",
+            ),
+            (
+                "manual:02#result:trigger_type_percentage-on-table-1:0",
+                HIGH,
+                "Measured trigger distribution",
+            ),
+            ("manual:02#method:identification-and-classification:1", HIGH, "Taxonomy of triggers"),
+            (
+                "manual:03#method:packet-conservation-failure:3",
+                REL,
+                "Failure mode in a different domain",
+            ),
+            ("manual:11#method:control-flow-guard:6", REL, "Cascade prevention in agent systems"),
+            (
+                "manual:02#result:load_spike_trigger_percentage-on-table-1:1",
+                REL,
+                "One trigger, quantified",
+            ),
+        ],
+        "cross_paper",
+    ),
+    (
+        "GQ20",
+        "Which papers evaluate retry behaviour and what do they conclude?",
+        (),
+        [
+            (
+                "manual:01#method:lower-priority-for-retried-queries:12",
+                HIGH,
+                "Retry policy recommendation",
+            ),
+            ("manual:01#dataset:retry-case-study:8", HIGH, "The retry case study"),
+            (
+                "manual:15#limitation:no-default-retry-policy:0",
+                HIGH,
+                "gRPC has no default retry policy",
+            ),
+            ("manual:15#limitation:disable-retries:1", REL, "Retries can be disabled"),
+            ("manual:01#method:adaptive-policies:9", REL, "Adaptive retry decisions"),
+            ("manual:15#metric:grpc-client-attempt-started:0", REL, "Retry attempts are measured"),
+        ],
+        "cross_paper",
+    ),
+    (
+        "GQ21",
+        "What evaluation harnesses do agent benchmark papers build?",
+        (),
+        [
+            ("manual:07#method:protocolbench:0", HIGH, "The harness itself"),
+            ("manual:07#method:scenario-harness:3", HIGH, "Named scenario harness"),
+            ("manual:06#method:ai-nativebench:1", HIGH, "The benchmark system"),
+            (
+                "manual:06#method:trace-first-evaluation-methodology:0",
+                HIGH,
+                "Its evaluation methodology",
+            ),
+            ("manual:07#method:protocolrouterbench:5", REL, "Router-specific harness"),
+            ("manual:10#method:mast-development-process:2", REL, "Taxonomy construction process"),
+            ("manual:07#method:logging-&-metrics-stack:4", MARG, "Supporting infrastructure"),
+        ],
+        "cross_paper",
+    ),
+    # ---- method -> dataset relationship ------------------------------------
+    (
+        "GQ22",
+        "Which datasets was AI-NativeBench evaluated on?",
+        (),
+        [
+            ("manual:06#dataset:markdown-validator:1", HIGH, "One of the two task datasets"),
+            ("manual:06#dataset:landing-page-generator:2", HIGH, "The other task dataset"),
+            ("manual:06#dataset:ai-nativebench:0", REL, "The suite these sit in"),
+            ("manual:06#method:ai-nativebench:1", REL, "The method being evaluated"),
+        ],
+        "method_dataset",
+    ),
+    (
+        "GQ23",
+        "Which datasets does the ACP reference implementation exercise?",
+        (),
+        [
+            (
+                "manual:12#dataset:go-reference-implementation:0",
+                HIGH,
+                "The implementation under test",
+            ),
+            ("manual:12#dataset:multi-org-demo:1", HIGH, "Deployment scenario"),
+            ("manual:12#dataset:payment-agent:2", HIGH, "Agent scenario"),
+            ("manual:12#dataset:cooldown-evasion-attack:3", REL, "Attack scenario exercised"),
+            (
+                "manual:12#dataset:distributed-multi-agent-attack:4",
+                REL,
+                "Attack scenario exercised",
+            ),
+            ("manual:12#method:acp:0", REL, "The protocol being exercised"),
+        ],
+        "method_dataset",
+    ),
+    # ---- method -> result relationship -------------------------------------
+    (
+        "GQ24",
+        "What results did ProtocolBench report for latency?",
+        (),
+        [
+            (
+                "manual:07#result:per_request_latency-on-cross-model-streaming-que:2",
+                HIGH,
+                "The measured latency",
+            ),
+            ("manual:07#metric:p99-latency:0", HIGH, "The latency metric used"),
+            ("manual:07#metric:latency-ranking:1", REL, "Comparative ranking"),
+            ("manual:07#method:protocolbench:0", REL, "The system producing the result"),
+        ],
+        "method_result",
+    ),
+    (
+        "GQ25",
+        "What did the NANDA index measure about DNS?",
+        (),
+        [
+            ("manual:13#result:daily-lookups-on-dns-infrastructure:0", HIGH, "DNS lookup volume"),
+            ("manual:13#result:write-frequency-on-dns:1", HIGH, "DNS write frequency"),
+            ("manual:13#metric:write-frequency:1", REL, "The metric definition"),
+            ("manual:13#method:nanda-index:6", REL, "The system making the comparison"),
+        ],
+        "method_result",
+    ),
+    (
+        "GQ26",
+        "What costs does self-healing introduce in agent systems?",
+        (),
+        [
+            (
+                "manual:06#result:cost-multiplier-effect-of-self-healing-mechanism:2",
+                HIGH,
+                "The measured cost multiplier",
+            ),
+            ("manual:06#result:inference-dominance:1", HIGH, "Inference dominates cost"),
+            ("manual:06#metric:cost-performance-trade-off:2", REL, "The trade-off metric"),
+            ("manual:11#limitation:latency-overhead:3", REL, "Guard overhead in a related system"),
+        ],
+        "method_result",
+    ),
+]
 
-    by_name: dict[str, list[tuple[str, str, list[str]]]] = {}
-    papers: list[str] = []
-    for path in sorted(knowledge_dir.glob("*.json")):  # noqa: ASYNC240 - CLI entry point
-        stored = json.loads(path.read_text())["value"]
-        papers.append(stored["paper_id"])
-        for obj in stored["objects"]:
-            by_name.setdefault(obj["name"], []).append(
-                (obj["id"], obj["kind"], [e["id"] for e in obj["evidence"]])
-            )
 
-    queries = []
-    for query_id, (text, kinds, wanted) in JUDGEMENTS.items():
-        judgements, evidence_ids, missing = [], [], []
-        for name, (grade, rationale) in wanted.items():
-            matches = by_name.get(name)
-            if not matches:
-                missing.append(name)
+async def main(out: pathlib.Path) -> int:
+    container = build_container()
+    try:
+        known: dict[str, str] = {}
+        evidence_for: dict[str, tuple[str, ...]] = {}
+        for paper_id in await container.knowledge_repository.list_ids():
+            stored = await container.knowledge_repository.get(paper_id)
+            if stored is None:
                 continue
-            for object_id, _, evidence in matches:
-                judgements.append(
-                    GoldJudgement(
-                        knowledge_object_id=object_id, relevance=grade, rationale=rationale
-                    )
+            for obj in stored.value.objects:
+                known[obj.id] = obj.name
+                evidence_for[obj.id] = tuple(item.id for item in obj.evidence)
+
+        missing: list[str] = []
+        queries: list[GoldQuery] = []
+        for query_id, text, kinds, judgements, intent in QUERIES:
+            unknown = [oid for oid, _, _ in judgements if oid not in known]
+            missing.extend(f"{query_id}: {oid}" for oid in unknown)
+            usable = [j for j in judgements if j[0] in known]
+            evidence_ids = tuple(
+                dict.fromkeys(eid for oid, _, _ in usable for eid in evidence_for[oid])
+            )
+            queries.append(
+                GoldQuery(
+                    id=query_id,
+                    text=text,
+                    kinds=kinds,
+                    judgements=tuple(
+                        GoldJudgement(
+                            knowledge_object_id=oid, relevance=relevance, rationale=rationale
+                        )
+                        for oid, relevance, rationale in usable
+                    ),
+                    relevant_evidence_ids=evidence_ids,
+                    notes=f"intent={intent}; derived by reading the corpus; awaiting human review",
                 )
-                evidence_ids.extend(evidence)
+            )
 
         if missing:
-            print(f"  {query_id}: {len(missing)} name(s) not in corpus: {missing}")
+            # Loud, not silent: a stale id would otherwise depress every arm equally and
+            # look like a retrieval result.
+            print("object ids not present in the corpus:", file=sys.stderr)
+            for item in missing:
+                print(f"  {item}", file=sys.stderr)
+            return 1
 
-        queries.append(
-            GoldQuery(
-                id=query_id,
-                text=text,
-                kinds=kinds,
-                judgements=tuple(judgements),
-                relevant_evidence_ids=tuple(dict.fromkeys(evidence_ids)),
-                status=ReviewStatus.DRAFT,
-                notes="Judgements written by inspecting the corpus; awaiting human review.",
-            )
+        gold = GoldSet(
+            version="v2",
+            corpus_description=(
+                f"{len(await container.knowledge_repository.list_ids())} validated papers "
+                f"from storage/papers/raw/manual, {len(known)} knowledge objects"
+            ),
+            queries=tuple(queries),
         )
+        out.parent.mkdir(parents=True, exist_ok=True)
+        gold.save(out)
 
-    gold = GoldSet(
-        version="v1",
-        corpus_description=f"{len(papers)} manually collected papers: {', '.join(papers)}",
-        queries=tuple(queries),
-    )
-    gold.save(GOLD_PATH)
-
-    print(f"\nwrote {GOLD_PATH} — {len(gold.queries)} queries, all DRAFT")
-    for query in gold.queries:
-        print(
-            f"  {query.id}: {len(query.judgements):>2} judged objects, "
-            f"{len(query.relevant_evidence_ids):>2} evidence  | {query.text[:52]}"
-        )
-    print("\nReview the judgements, then set status to 'reviewed' before trusting the numbers.")
-    return 0
+        by_intent: dict[str, int] = {}
+        for _, _, _, _, intent in QUERIES:
+            by_intent[intent] = by_intent.get(intent, 0) + 1
+        print(f"wrote {out}: {len(gold.queries)} queries, {len(gold.drafts)} draft")
+        print(f"judgements: {sum(len(q.judgements) for q in gold.queries)}")
+        for intent, count in sorted(by_intent.items()):
+            print(f"  {intent:<16}{count}")
+        return 0
+    finally:
+        await container.aclose()
 
 
 if __name__ == "__main__":
-    raise SystemExit(asyncio.run(main()))
+    argv = sys.argv[1:]
+    destination = pathlib.Path(argv[argv.index("--out") + 1]) if "--out" in argv else GOLD_PATH
+    raise SystemExit(asyncio.run(main(destination)))

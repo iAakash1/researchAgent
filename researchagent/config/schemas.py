@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -48,6 +49,31 @@ class ModelCatalog(BaseModel):
 
     def spec_for(self, alias: str) -> ModelSpec:
         return self.models[alias]
+
+    def with_provider_override(self, provider: str | None, model: str | None) -> ModelCatalog:
+        """Apply ``LLM_PROVIDER`` / ``LLM_MODEL`` on top of the catalogue.
+
+        Per-alias ``provider:`` entries remain the primary mechanism — they are what lets
+        one agent reason remotely while extraction stays local. This override exists for
+        the coarser case of running the whole pipeline on one provider, and is a no-op
+        when neither variable is set (the local-first default).
+        """
+        if provider is None and model is None:
+            return self
+        return self.model_copy(
+            update={
+                "models": {
+                    alias: spec.model_copy(
+                        update={
+                            key: value
+                            for key, value in (("provider", provider), ("model_name", model))
+                            if value is not None
+                        }
+                    )
+                    for alias, spec in self.models.items()
+                }
+            }
+        )
 
     def resolve_alias(self, alias: str | None) -> str:
         return alias if alias is not None else self.default
@@ -383,3 +409,35 @@ class RetrievalConfig(BaseModel):
     index: IndexSettings = Field(default_factory=IndexSettings)
     bm25: BM25Settings = Field(default_factory=BM25Settings)
     fusion: FusionSettings = Field(default_factory=FusionSettings)
+
+
+class GraphNeo4jSettings(BaseModel):
+    database: str = "neo4j"
+
+
+class GraphBuildSettings(BaseModel):
+    require_trusted_knowledge: bool = True
+    require_provenance: bool = True
+
+
+class GraphSchemaSettings(BaseModel):
+    """Identity of a graph generation, independent of the corpus it was built from."""
+
+    version: str = "1"
+    extraction_version: str = "1"
+    relation_version: str = "1"
+
+
+class GraphConfig(BaseModel):
+    """``config/graph.yaml`` root."""
+
+    # `memory` is the default so the graph works offline and the test suite never needs a
+    # running Neo4j. Persisting is a one-line config change.
+    backend: Literal["memory", "neo4j"] = "memory"
+    neo4j: GraphNeo4jSettings = Field(default_factory=GraphNeo4jSettings)
+    build: GraphBuildSettings = Field(default_factory=GraphBuildSettings)
+    schema_identity: GraphSchemaSettings = Field(
+        default_factory=GraphSchemaSettings, alias="schema"
+    )
+
+    model_config = {"populate_by_name": True}

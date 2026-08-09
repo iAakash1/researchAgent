@@ -12,7 +12,7 @@ models:
       temperature: 0.3
       top_p: 0.9
       context_window: 32768
-      max_output_tokens: 4096
+      max_output_tokens: 2048
 
   extraction:
     provider: ollama
@@ -33,3 +33,19 @@ models:
       temperature: 0.1
       context_window: 8192
       max_output_tokens: 1024
+
+  # Optional external inference. Requires GROQ_API_KEY; unused unless an agent asks for
+  # this alias in config/agents.yaml, or LLM_PROVIDER=groq overrides the catalogue.
+  # Model ids change — verify against https://console.groq.com/docs/models before editing.
+  reasoning_remote:
+    provider: groq
+    model: openai/gpt-oss-120b
+    description: Large remote reasoning model for synthesis and review.
+    params:
+      temperature: 0.3
+      top_p: 0.9
+      context_window: 131072
+      # Groq charges reserved output tokens against the per-minute budget, so this must
+      # leave room within the tier's per-minute budget (8000 TPM on the free tier)
+      # for the prompt and a follow-up call, or consecutive requests 413/429.
+      max_output_tokens: 2048

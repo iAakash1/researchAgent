@@ -37,6 +37,10 @@ class ReadinessResponse(BaseModel):
     ready: bool
     providers: list[ProviderHealth] = Field(default_factory=list)
     models: list[ModelAvailability] = Field(default_factory=list)
+    # Optional providers named in the catalogue but lacking credentials here.
+    # Listed rather than omitted so "not configured" is visibly different
+    # from "working".
+    unconfigured_providers: list[str] = Field(default_factory=list)
 
 
 @router.get("/live", response_model=LivenessResponse)
@@ -56,11 +60,17 @@ async def readiness(llm_service: LLMServiceDep, response: Response) -> Readiness
             provider=spec.provider,
             pulled=availability.get(alias, False),
         )
-        for alias, spec in sorted(llm_service.catalog.models.items())
+        for alias, spec in sorted(llm_service.active_aliases().items())
     ]
+    _, unconfigured = llm_service.configured_providers()
 
     ready = all(p.healthy for p in providers) and all(m.pulled for m in models)
     if not ready:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
-    return ReadinessResponse(ready=ready, providers=providers, models=models)
+    return ReadinessResponse(
+        ready=ready,
+        providers=providers,
+        models=models,
+        unconfigured_providers=sorted(unconfigured),
+    )

@@ -41,6 +41,32 @@ class ArmResult(BaseModel):
         return not self.degraded_queries
 
 
+class RunIdentity(BaseModel):
+    """Everything needed to reproduce a benchmark number, or to refuse to compare two.
+
+    A metric without this is uninterpretable: "hybrid scored 0.41" says nothing unless the
+    corpus, the judgements, the embedding model and the index it ran against are all
+    pinned. Two reports whose identities differ are not comparable, and recording the
+    identity is what makes that checkable rather than assumed.
+    """
+
+    model_config = {"frozen": True}
+
+    corpus_version: str = Field(description="Fingerprint of the papers and objects indexed")
+    papers: int = 0
+    knowledge_objects: int = 0
+    evidence_objects: int = 0
+    gold_version: str = ""
+    gold_reviewed: int = 0
+    gold_drafts: int = 0
+    embedding_model: str = ""
+    embedding_preprocessing: str = ""
+    index_version: str = ""
+    retrieval_config: dict[str, object] = Field(default_factory=dict)
+    ks: tuple[int, ...] = ()
+    limit: int = 0
+
+
 class BenchmarkReport(BaseModel):
     """A reproducible comparison. Cite the gold version alongside any number from it."""
 
@@ -50,7 +76,18 @@ class BenchmarkReport(BaseModel):
     queries_evaluated: int
     reviewed_only: bool
     arms: tuple[ArmResult, ...] = ()
+    identity: RunIdentity | None = None
     run_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+    @property
+    def is_citable(self) -> bool:
+        """Whether a claim may be made from these numbers.
+
+        Draft judgements produce indicative numbers only: they were proposed from the
+        corpus, not confirmed by a person, so a claim resting on them would be the system
+        grading its own homework.
+        """
+        return self.reviewed_only and self.queries_evaluated > 0
 
     def table(self, k: int = 5) -> str:
         header = (
@@ -83,12 +120,14 @@ class RetrievalBenchmark:
         evidence: EvidenceRepository | None = None,
         limit: int = 10,
         ks: tuple[int, ...] = (1, 3, 5, 10),
+        identity: RunIdentity | None = None,
     ) -> None:
         self._gold = gold
         self._arms = arms
         self._evidence = evidence
         self._limit = limit
         self._ks = ks
+        self._identity = identity
 
     async def run(self, *, reviewed_only: bool = True) -> BenchmarkReport:
         queries = self._gold.reviewed if reviewed_only else self._gold.queries
@@ -103,11 +142,24 @@ class RetrievalBenchmark:
             await self._run_arm(name, retriever, queries) for name, retriever in self._arms.items()
         ]
 
+        identity = self._identity
+        if identity is not None:
+            identity = identity.model_copy(
+                update={
+                    "gold_version": self._gold.version,
+                    "gold_reviewed": len(self._gold.reviewed),
+                    "gold_drafts": len(self._gold.drafts),
+                    "ks": self._ks,
+                    "limit": self._limit,
+                }
+            )
+
         return BenchmarkReport(
             gold_version=self._gold.version,
             queries_evaluated=len(queries),
             reviewed_only=reviewed_only,
             arms=tuple(arms),
+            identity=identity,
         )
 
     async def _run_arm(

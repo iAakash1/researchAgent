@@ -132,7 +132,7 @@ async def test_missing_model_tag_becomes_provider_unavailable(provider: OllamaPr
     with pytest.raises(ProviderUnavailableError) as excinfo:
         await provider.complete([Message.user("hi")], model="qwen3:8b", params=PARAMS)
 
-    assert excinfo.value.context["remedy"] == "ollama pull qwen3:8b"
+    assert excinfo.value.remedy == "ollama pull qwen3:8b"
     assert excinfo.value.retryable is True
 
 

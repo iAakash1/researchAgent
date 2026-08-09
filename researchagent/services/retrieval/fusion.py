@@ -141,9 +141,12 @@ class HybridKnowledgeRetriever(KnowledgeRetriever):
     ) -> list[tuple[KnowledgeObject, float, list[ConfidenceSignal]]]:
         k = self._settings.rrf_k
         accumulated: dict[str, tuple[KnowledgeObject, float, list[ConfidenceSignal]]] = {}
-        total_weight = sum(component.weight for component, _ in results) or 1.0
+        total_weight = sum(max(component.weight, 0.0) for component, _ in results) or 1.0
 
         for component, result in results:
+            if component.weight <= 0.0:
+                # See _weighted_score: a zero-weighted component is absent, not observed.
+                continue
             for rank, hit in enumerate(result.hits, start=1):
                 contribution = component.weight / (k + rank)
                 obj, score, signals = accumulated.get(hit.item.id, (hit.item, 0.0, []))
@@ -170,9 +173,14 @@ class HybridKnowledgeRetriever(KnowledgeRetriever):
         self, results: list[tuple[RetrieverComponent, RetrievalResult[KnowledgeObject]]]
     ) -> list[tuple[KnowledgeObject, float, list[ConfidenceSignal]]]:
         accumulated: dict[str, tuple[KnowledgeObject, float, list[ConfidenceSignal]]] = {}
-        total_weight = sum(component.weight for component, _ in results) or 1.0
+        total_weight = sum(max(component.weight, 0.0) for component, _ in results) or 1.0
 
         for component, result in results:
+            if component.weight <= 0.0:
+                # A zero-weighted component contributes nothing, so it produces no signal.
+                # Recording it as a signal with weight 0 would be a claim that something
+                # was observed and then ignored, which ConfidenceSignal rightly refuses.
+                continue
             # Min-max within the component so an absolute scale mismatch between BM25 and
             # cosine cannot decide the ranking.
             scores = [hit.score for hit in result.hits]

@@ -1,111 +1,309 @@
 {
-  "version": "v1",
-  "corpus_description": "3 manually collected papers: manual:01, manual:02, manual:03",
-  "created_at": "2026-08-09T15:23:13.995814Z",
+  "version": "v2",
+  "corpus_description": "12 validated papers from storage/papers/raw/manual, 222 knowledge objects",
+  "created_at": "2026-08-09T16:15:20.203956Z",
   "queries": [
     {
       "id": "GQ1",
-      "text": "What triggers metastable failures in distributed systems?",
-      "kinds": [],
-      "paper_ids": [],
-      "judgements": [
-        {
-          "knowledge_object_id": "manual:01#method:trigger-vs.-root-cause:7",
-          "relevance": "highly_relevant",
-          "rationale": "Directly distinguishes trigger from root cause"
-        },
-        {
-          "knowledge_object_id": "manual:02#result:trigger_type_percentage-on-table-1:0",
-          "relevance": "highly_relevant",
-          "rationale": "Measured distribution of trigger types"
-        },
-        {
-          "knowledge_object_id": "manual:02#result:load_spike_trigger_percentage-on-table-1:1",
-          "relevance": "highly_relevant",
-          "rationale": "Load spikes as a trigger, measured"
-        },
-        {
-          "knowledge_object_id": "manual:01#method:change-of-policy-during-overload:0",
-          "relevance": "relevant",
-          "rationale": "Policy change is a named trigger path"
-        },
-        {
-          "knowledge_object_id": "manual:01#dataset:retry-case-study:8",
-          "relevance": "relevant",
-          "rationale": "Retries are a documented trigger"
-        },
-        {
-          "knowledge_object_id": "manual:01#dataset:load-shedding:4",
-          "relevance": "marginal",
-          "rationale": "Mitigation of the overload that triggers failure"
-        }
-      ],
-      "relevant_evidence_ids": [
-        "d63759c3-181b-4378-b8a6-3fea3d074b00",
-        "0db8e0ef-43a7-409d-a988-130563a0a09e",
-        "2c98bffd-6ff4-4cec-af03-717f0e78884f",
-        "fd93e6ec-4b9a-4f31-a1a5-498705089ebc",
-        "800afd47-6eca-44e2-a6c1-2273857480aa",
-        "eade235b-ddeb-4ab9-a83a-cb3a53bdc81c"
-      ],
-      "status": "draft",
-      "reviewed_by": null,
-      "notes": "Judgements written by inspecting the corpus; awaiting human review."
-    },
-    {
-      "id": "GQ2",
-      "text": "Which techniques mitigate overload in distributed systems?",
+      "text": "What techniques mitigate overload in distributed systems?",
       "kinds": [
         "method"
       ],
       "paper_ids": [],
       "judgements": [
         {
-          "knowledge_object_id": "manual:01#method:circuit-breaker-pattern:8",
-          "relevance": "highly_relevant",
-          "rationale": "Canonical overload mitigation"
-        },
-        {
           "knowledge_object_id": "manual:01#method:prioritization:1",
           "relevance": "highly_relevant",
-          "rationale": "Prioritising work under overload"
+          "rationale": "Priorities retain efficiency under exhaustion"
         },
         {
-          "knowledge_object_id": "manual:01#method:adaptive-policies:9",
+          "knowledge_object_id": "manual:01#method:circuit-breaker-pattern:8",
           "relevance": "highly_relevant",
-          "rationale": "Policies that adapt to load"
+          "rationale": "Blocks requests to break the loop"
         },
         {
           "knowledge_object_id": "manual:01#method:autoscaling:6",
-          "relevance": "relevant",
-          "rationale": "Capacity response to load"
+          "relevance": "highly_relevant",
+          "rationale": "Adds capacity to escape the metastable state"
+        },
+        {
+          "knowledge_object_id": "manual:01#method:change-of-policy-during-overload:0",
+          "relevance": "highly_relevant",
+          "rationale": "Directly named overload policy"
         },
         {
           "knowledge_object_id": "manual:01#method:lower-priority-for-retried-queries:12",
           "relevance": "relevant",
-          "rationale": "Retry-specific mitigation"
+          "rationale": "Stops retries perpetuating overload"
         },
         {
-          "knowledge_object_id": "manual:01#method:fast-error-paths:4",
+          "knowledge_object_id": "manual:01#method:server-policy:11",
+          "relevance": "relevant",
+          "rationale": "Switches to a goodput-maximising policy"
+        },
+        {
+          "knowledge_object_id": "manual:01#method:adaptive-policies:9",
+          "relevance": "relevant",
+          "rationale": "Adaptive retry/failover decisions"
+        },
+        {
+          "knowledge_object_id": "manual:01#method:read-through-cache:13",
           "relevance": "marginal",
-          "rationale": "Reduces cost of failures under load"
+          "rationale": "Raises hit rate, indirectly reduces load"
         }
       ],
       "relevant_evidence_ids": [
-        "21ad9299-c02a-4594-aeba-e4046ef2b2b9",
-        "53611ae8-374c-4407-927c-bf5dc74b2994",
-        "3271b43b-206e-49b1-a42e-150c36b9c585",
-        "1a7a16a9-d4f3-45fe-b4f0-d902dccedd76",
-        "97d13ecd-3894-4476-84b7-0503e3ad1d2f",
-        "6bd54589-7a14-410a-bf98-1f29765db3a3"
+        "3decf172-22ec-4caf-8692-593f70e77806",
+        "eabbe906-e2ae-4e36-80ee-9697af3ed011",
+        "fa9bf2b3-98ee-487d-861b-a53395160a6a",
+        "b4337944-0838-4a1f-bd42-1b7a273b75d7",
+        "0fcfa55a-5abd-4fab-a6c5-4acca1131770",
+        "49c370ec-e3ec-4458-96e7-1403bc76afe7",
+        "f96aa924-08fb-4bed-9a85-42872010a321",
+        "2f561cc7-e07f-4b03-9a74-1bd8058eb91a"
       ],
       "status": "draft",
       "reviewed_by": null,
-      "notes": "Judgements written by inspecting the corpus; awaiting human review."
+      "notes": "intent=method; derived by reading the corpus; awaiting human review"
+    },
+    {
+      "id": "GQ2",
+      "text": "How does TCP avoid congestion collapse?",
+      "kinds": [
+        "method"
+      ],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:03#method:slow-start:5",
+          "relevance": "highly_relevant",
+          "rationale": "The core congestion-avoidance algorithm"
+        },
+        {
+          "knowledge_object_id": "manual:03#method:packet-conservation-principle:1",
+          "relevance": "highly_relevant",
+          "rationale": "The stability principle behind it"
+        },
+        {
+          "knowledge_object_id": "manual:03#method:acks-as-clock:4",
+          "relevance": "highly_relevant",
+          "rationale": "Self-clocking is the mechanism"
+        },
+        {
+          "knowledge_object_id": "manual:03#method:conservation-of-packets:2",
+          "relevance": "relevant",
+          "rationale": "Restatement of the principle"
+        },
+        {
+          "knowledge_object_id": "manual:03#method:slow-start-window-increase:7",
+          "relevance": "relevant",
+          "rationale": "The window increase rule"
+        },
+        {
+          "knowledge_object_id": "manual:03#method:window-based-transport-protocol:0",
+          "relevance": "marginal",
+          "rationale": "The protocol family, not the fix"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "25b51e7e-5abd-43c4-82a7-131b18b9ac34",
+        "c203bb03-d098-4106-9f55-fabd1f2026fd",
+        "4816792e-3fe9-40af-b850-7a447837dd04",
+        "83a8495d-3269-42f6-9ec1-e44e9473f489",
+        "438ec033-b8ec-4e93-aa6a-d1a8889bc773",
+        "f878d20b-17f8-40bd-814e-7b667815a75f",
+        "f1c96035-65fc-4369-9d12-a2502cde2fa6",
+        "33a212f1-d15e-4af1-a28a-957b9d13637b"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "intent=method; derived by reading the corpus; awaiting human review"
     },
     {
       "id": "GQ3",
-      "text": "What metrics measure system performance under load?",
+      "text": "What guard mechanisms prevent error cascades between agents?",
+      "kinds": [
+        "method"
+      ],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:11#method:control-flow-guard:6",
+          "relevance": "highly_relevant",
+          "rationale": "Named guard against cascades"
+        },
+        {
+          "knowledge_object_id": "manual:11#method:governance-layer:1",
+          "relevance": "highly_relevant",
+          "rationale": "Governance constrains agent actions"
+        },
+        {
+          "knowledge_object_id": "manual:11#method:middleware-module:0",
+          "relevance": "relevant",
+          "rationale": "Interception point for the guard"
+        },
+        {
+          "knowledge_object_id": "manual:12#method:acp:0",
+          "relevance": "relevant",
+          "rationale": "Agent Control Protocol governs agent behaviour"
+        },
+        {
+          "knowledge_object_id": "manual:10#method:self-verification-step:4",
+          "relevance": "marginal",
+          "rationale": "Verification catches errors before spread"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "cb22fc2b-4e87-4ff1-aea8-16a3b5aa8282",
+        "4581a4e4-5488-4de2-b43b-b1b55a12d5bf",
+        "06428856-5efa-45cc-9ae8-25b136cb8386",
+        "0b0a4968-800a-4c1e-83c4-be979744d98d",
+        "8c8a1fc8-db67-43e9-b55d-c4fea27e9d0d"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "intent=method; derived by reading the corpus; awaiting human review"
+    },
+    {
+      "id": "GQ4",
+      "text": "Which benchmark datasets are used to evaluate multi-agent LLM systems?",
+      "kinds": [
+        "dataset"
+      ],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:10#dataset:mast-data:0",
+          "relevance": "highly_relevant",
+          "rationale": "The paper's own failure-taxonomy dataset"
+        },
+        {
+          "knowledge_object_id": "manual:10#dataset:mast-data-human:1",
+          "relevance": "highly_relevant",
+          "rationale": "Human-annotated variant"
+        },
+        {
+          "knowledge_object_id": "manual:10#dataset:programdev-v2:4",
+          "relevance": "relevant",
+          "rationale": "Task suite the systems are run on"
+        },
+        {
+          "knowledge_object_id": "manual:10#dataset:olympiadbench:7",
+          "relevance": "relevant",
+          "rationale": "Reasoning benchmark used"
+        },
+        {
+          "knowledge_object_id": "manual:07#dataset:ms-marco:0",
+          "relevance": "relevant",
+          "rationale": "Retrieval benchmark in ProtocolBench"
+        },
+        {
+          "knowledge_object_id": "manual:07#dataset:2wikimulti:1",
+          "relevance": "relevant",
+          "rationale": "Multi-hop QA benchmark"
+        },
+        {
+          "knowledge_object_id": "manual:06#dataset:ai-nativebench:0",
+          "relevance": "marginal",
+          "rationale": "Agent benchmark, not multi-agent specifically"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "47d77faf-cbd2-41cc-95e1-971bdb4db6d9",
+        "2bfde22d-3901-4e18-a27d-f6a98bf06220",
+        "0d646ef6-dd7a-46fe-9a48-732dfafb6105",
+        "aa3380b7-2ac1-4ec6-9844-880ce4aeb911",
+        "cd1fb4b4-7980-4f3d-afb9-0beb41624cdd",
+        "7211a166-17f0-47be-8ab8-b3aa4794c71c",
+        "8afa6ac3-59a2-4ebf-86f9-d1252109398d"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "intent=dataset; derived by reading the corpus; awaiting human review"
+    },
+    {
+      "id": "GQ5",
+      "text": "Which multi-agent frameworks were studied?",
+      "kinds": [
+        "dataset"
+      ],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:10#dataset:metagpt:2",
+          "relevance": "highly_relevant",
+          "rationale": "Named framework under study"
+        },
+        {
+          "knowledge_object_id": "manual:10#dataset:chatdev:3",
+          "relevance": "highly_relevant",
+          "rationale": "Named framework under study"
+        },
+        {
+          "knowledge_object_id": "manual:10#dataset:ag2-(mathchat):8",
+          "relevance": "highly_relevant",
+          "rationale": "Named framework under study"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "d81e99c0-9f09-4e7d-98b5-80d95286c9a7",
+        "74c24489-4bda-4c18-abfe-2cf526ddf082",
+        "fb543bde-0d76-4546-bdbc-5cd5857ff6b6"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "intent=dataset; derived by reading the corpus; awaiting human review"
+    },
+    {
+      "id": "GQ6",
+      "text": "What example applications reproduce metastable failures?",
+      "kinds": [
+        "dataset",
+        "method"
+      ],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:02#method:example-applications:2",
+          "relevance": "highly_relevant",
+          "rationale": "Explicitly a set of reproducing applications"
+        },
+        {
+          "knowledge_object_id": "manual:02#dataset:java-program:0",
+          "relevance": "highly_relevant",
+          "rationale": "The multi-threaded reproducer"
+        },
+        {
+          "knowledge_object_id": "manual:02#dataset:rps-(requests-per-second):1",
+          "relevance": "relevant",
+          "rationale": "The load knob used to induce failure"
+        },
+        {
+          "knowledge_object_id": "manual:01#dataset:retry-case-study:8",
+          "relevance": "relevant",
+          "rationale": "Case study of a retry-driven failure"
+        },
+        {
+          "knowledge_object_id": "manual:01#dataset:kraken:13",
+          "relevance": "marginal",
+          "rationale": "Named system in the discussion"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "0e3c8f24-019b-442a-ab1d-0b32e1bf9662",
+        "e250a47e-1c28-438c-a3d8-a49074e73cf1",
+        "87f911d7-94a0-44fc-9353-6ddb263da470",
+        "cb3dbf7f-408e-44ee-88ad-de1795720112",
+        "c4c7a2a2-0ff5-4f9e-8575-b19f66faf072",
+        "537c1b3a-ab4e-434f-82ea-760ec01676ee"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "intent=dataset; derived by reading the corpus; awaiting human review"
+    },
+    {
+      "id": "GQ7",
+      "text": "Which metrics indicate a system is in a metastable state?",
       "kinds": [
         "metric"
       ],
@@ -114,43 +312,267 @@
         {
           "knowledge_object_id": "manual:01#metric:goodput:0",
           "relevance": "highly_relevant",
-          "rationale": "The primary throughput metric in this literature"
+          "rationale": "Throughput of useful work — the defining signal"
         },
         {
           "knowledge_object_id": "manual:01#metric:latency:1",
           "relevance": "highly_relevant",
-          "rationale": "Primary latency metric"
+          "rationale": "Latency is the other characteristic metric"
         },
         {
           "knowledge_object_id": "manual:02#metric:queue-length:0",
-          "relevance": "relevant",
-          "rationale": "Queue depth as a load indicator"
+          "relevance": "highly_relevant",
+          "rationale": "Queue growth marks the sustaining loop"
         },
         {
           "knowledge_object_id": "manual:02#metric:gc-duration:1",
           "relevance": "relevant",
-          "rationale": "Pause time under load"
+          "rationale": "GC pauses amplify the loop"
         },
         {
-          "knowledge_object_id": "manual:02#metric:printgcapplication-stoppedtime:3",
+          "knowledge_object_id": "manual:02#metric:queue-length-vs.-gc-duration-correlation:2",
+          "relevance": "relevant",
+          "rationale": "The correlation is the evidence"
+        },
+        {
+          "knowledge_object_id": "manual:01#method:minimum-queueing-latency:10",
           "relevance": "marginal",
-          "rationale": "A specific GC measurement"
+          "rationale": "Uses queueing latency as the signal"
         }
       ],
       "relevant_evidence_ids": [
-        "bf6404f3-082a-4f5a-b232-a9963bd3bee9",
-        "72f2d76f-5b75-4632-a82c-e94c76d00c18",
-        "d166e341-0ec7-496e-981a-fef0c300dee4",
-        "96f993d6-a095-4dcd-a814-0e964edc9f63",
-        "01599e4f-3293-453c-b47b-ac7bf0a07614"
+        "693bab91-66eb-4161-9ac5-a8e8cb969d1f",
+        "3f0d764f-41c9-4b09-9a67-6f4ae3dd694d",
+        "eda997c5-153a-475e-aab6-bdf4daaf44aa",
+        "28b16b92-025f-4695-b668-f1c97209506b",
+        "6d0fd175-f529-4ce2-a478-98b72e427763",
+        "09ad9e44-b583-4265-913c-e5e6d543b33d"
       ],
       "status": "draft",
       "reviewed_by": null,
-      "notes": "Judgements written by inspecting the corpus; awaiting human review."
+      "notes": "intent=metric; derived by reading the corpus; awaiting human review"
     },
     {
-      "id": "GQ4",
-      "text": "What limitations do the authors acknowledge in modelling metastable failures?",
+      "id": "GQ8",
+      "text": "What client-side metrics does gRPC expose for retries?",
+      "kinds": [
+        "metric"
+      ],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:15#metric:grpc-client-attempt-started:0",
+          "relevance": "highly_relevant",
+          "rationale": "Counts retry attempts"
+        },
+        {
+          "knowledge_object_id": "manual:15#metric:grpc-client-attempt-duration:1",
+          "relevance": "highly_relevant",
+          "rationale": "Per-attempt duration"
+        },
+        {
+          "knowledge_object_id": "manual:15#metric:grpc-client-call-duration:4",
+          "relevance": "highly_relevant",
+          "rationale": "Whole-call duration across retries"
+        },
+        {
+          "knowledge_object_id": "manual:15#metric:grpc-client-sent-total-compressed-message-size:2",
+          "relevance": "relevant",
+          "rationale": "Client-side volume"
+        },
+        {
+          "knowledge_object_id": "manual:15#metric:grpc-client-received-total-compressed-message-si:3",
+          "relevance": "relevant",
+          "rationale": "Client-side volume"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "f10d6ef5-f8eb-48aa-8166-636a25e135b8",
+        "12e9c4b7-a3ca-427f-981f-a48bec53307b",
+        "700645b9-96fa-4509-8b01-a94888da0fe7",
+        "d96d80cd-4351-46a9-a09e-6f605a6a3097",
+        "40e1c24b-3de8-44bc-978a-4262dcc40f32"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "intent=metric; derived by reading the corpus; awaiting human review"
+    },
+    {
+      "id": "GQ9",
+      "text": "How is agent naming and directory performance measured?",
+      "kinds": [
+        "metric"
+      ],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:13#metric:latency:4",
+          "relevance": "highly_relevant",
+          "rationale": "Lookup latency"
+        },
+        {
+          "knowledge_object_id": "manual:13#metric:write-overhead:0",
+          "relevance": "highly_relevant",
+          "rationale": "Cost of updates to the index"
+        },
+        {
+          "knowledge_object_id": "manual:13#metric:write-frequency:1",
+          "relevance": "highly_relevant",
+          "rationale": "How often the index changes"
+        },
+        {
+          "knowledge_object_id": "manual:13#metric:fault-tolerance:5",
+          "relevance": "relevant",
+          "rationale": "Resilience of the directory"
+        },
+        {
+          "knowledge_object_id": "manual:13#metric:governance-complexity:2",
+          "relevance": "marginal",
+          "rationale": "Governance rather than performance"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "c783b54a-d42b-4152-bfce-e274e8207b63",
+        "432742d9-a977-494c-b9c0-86843f07491d",
+        "14055399-c075-4234-98d3-cae4972dc26e",
+        "184b2f0a-68c8-4d20-a2a2-a265582f970e",
+        "5ac8d8cc-922d-40e6-8a64-454453f321ee"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "intent=metric; derived by reading the corpus; awaiting human review"
+    },
+    {
+      "id": "GQ10",
+      "text": "What proportion of metastable failures are caused by load spikes?",
+      "kinds": [
+        "result"
+      ],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:02#result:load_spike_trigger_percentage-on-table-1:1",
+          "relevance": "highly_relevant",
+          "rationale": "The measured share, directly"
+        },
+        {
+          "knowledge_object_id": "manual:02#result:trigger_type_percentage-on-table-1:0",
+          "relevance": "highly_relevant",
+          "rationale": "The trigger distribution it sits in"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "35678469-4ef2-4354-84dc-970b5943282c",
+        "1c828eb6-d633-4b5b-a458-6d4071e0a5f5"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "intent=result; derived by reading the corpus; awaiting human review"
+    },
+    {
+      "id": "GQ11",
+      "text": "What failure rates were measured for multi-agent frameworks?",
+      "kinds": [
+        "result"
+      ],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:10#result:failure-rate-on-metagpt-and-chatdev-frameworks:0",
+          "relevance": "highly_relevant",
+          "rationale": "The measured rate"
+        },
+        {
+          "knowledge_object_id": "manual:10#metric:failure-rate:0",
+          "relevance": "relevant",
+          "rationale": "The metric being reported"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "39c6b938-b9e9-4d80-abf3-7896e274a829",
+        "dc2dc5c2-f234-4def-b25c-ef03eb322ed3",
+        "7251b5c3-87d1-432c-bc63-7cff4b7f2665",
+        "44b1eed4-ad62-42b7-8220-55e639676a5e"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "intent=result; derived by reading the corpus; awaiting human review"
+    },
+    {
+      "id": "GQ12",
+      "text": "What throughput did the protocol sustain under attack?",
+      "kinds": [
+        "result"
+      ],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:12#result:throughput-on-experiment-1:-cooldown-evasion-att:2",
+          "relevance": "highly_relevant",
+          "rationale": "Throughput under the attack"
+        },
+        {
+          "knowledge_object_id": "manual:12#result:requests_processed_before_first_block-on-experim:4",
+          "relevance": "highly_relevant",
+          "rationale": "Requests before first block"
+        },
+        {
+          "knowledge_object_id": "manual:12#dataset:cooldown-evasion-attack:3",
+          "relevance": "relevant",
+          "rationale": "The attack scenario measured"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "7f1db478-3506-4729-af7e-58407b6b71b9",
+        "5bab5d67-1f6d-453b-967e-102f73d7b7bf",
+        "a525fc4a-dadb-4e78-9b3f-714a9121fe6e"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "intent=result; derived by reading the corpus; awaiting human review"
+    },
+    {
+      "id": "GQ13",
+      "text": "How much bandwidth was recovered by the congestion fix?",
+      "kinds": [
+        "result"
+      ],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:03#result:bandwidth-utilization:5",
+          "relevance": "highly_relevant",
+          "rationale": "The measured utilisation"
+        },
+        {
+          "knowledge_object_id": "manual:03#result:retransmission-rate:6",
+          "relevance": "highly_relevant",
+          "rationale": "Retransmissions before/after"
+        },
+        {
+          "knowledge_object_id": "manual:03#metric:bandwidth-utilization:0",
+          "relevance": "relevant",
+          "rationale": "The metric definition"
+        },
+        {
+          "knowledge_object_id": "manual:03#result:window-open-time:3",
+          "relevance": "marginal",
+          "rationale": "Related timing measurement"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "41e77e51-72fc-440f-9400-a396bf119561",
+        "ceb31e78-0f32-44a4-b95b-70137fed13b8",
+        "a76fcc2f-e328-42f0-973c-60d9b28ddc06",
+        "efa97484-6525-459d-8510-bee3eeef70e8"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "intent=result; derived by reading the corpus; awaiting human review"
+    },
+    {
+      "id": "GQ14",
+      "text": "What are the limitations of modelling and simulating metastable failures?",
       "kinds": [
         "limitation"
       ],
@@ -159,37 +581,151 @@
         {
           "knowledge_object_id": "manual:01#limitation:simplified-models-may-not-capture-metastability:0",
           "relevance": "highly_relevant",
-          "rationale": "Explicit modelling limit"
+          "rationale": "Abstraction hides the effect"
         },
         {
           "knowledge_object_id": "manual:01#limitation:perfect-fidelity-in-models-is-not-achievable:1",
           "relevance": "highly_relevant",
-          "rationale": "Explicit modelling limit"
+          "rationale": "Fidelity ceiling"
         },
         {
           "knowledge_object_id": "manual:01#limitation:precise-simulation-of-complex-systems-is-computa:2",
+          "relevance": "highly_relevant",
+          "rationale": "Simulation cost"
+        },
+        {
+          "knowledge_object_id": "manual:01#limitation:reconfiguration-as-a-recovery-strategy-has-limit:3",
           "relevance": "relevant",
-          "rationale": "Cost limit on simulation"
+          "rationale": "Recovery strategy limits"
         },
         {
           "knowledge_object_id": "manual:02#limitation:limited-information-in-reports:1",
-          "relevance": "marginal",
-          "rationale": "Data limitation, not a modelling one"
+          "relevance": "relevant",
+          "rationale": "Incident reports are incomplete"
         }
       ],
       "relevant_evidence_ids": [
-        "a987ec6b-422e-4b34-9122-bd42b5bf3834",
-        "f5911fe1-fe7c-4dbc-801d-4d17c3c098ea",
-        "00ee4502-580f-4562-a4e1-d69bcc5f85a9",
-        "25487952-5f77-4d6e-9f66-106b55e99bb8"
+        "b371dd1f-13e4-48bf-9c3b-5a8cb12eeeae",
+        "4b5394cd-9589-4a9e-9a5f-c62cf8d38606",
+        "5970d93f-5529-42f5-b888-c65dbf328106",
+        "1bb8421d-a663-4809-98dd-59cbb11127ef",
+        "d9c71a41-e998-4176-bf7b-407abddbb055"
       ],
       "status": "draft",
       "reviewed_by": null,
-      "notes": "Judgements written by inspecting the corpus; awaiting human review."
+      "notes": "intent=limitation; derived by reading the corpus; awaiting human review"
     },
     {
-      "id": "GQ5",
-      "text": "What future research directions are proposed for metastable failures?",
+      "id": "GQ15",
+      "text": "What limitations do LLM benchmarks acknowledge?",
+      "kinds": [
+        "limitation"
+      ],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:06#limitation:non-determinism-of-llms:0",
+          "relevance": "highly_relevant",
+          "rationale": "Non-determinism undermines repeatability"
+        },
+        {
+          "knowledge_object_id": "manual:06#limitation:opacity-of-model-updates:1",
+          "relevance": "highly_relevant",
+          "rationale": "Models change under the benchmark"
+        },
+        {
+          "knowledge_object_id": "manual:06#limitation:prompt-sensitivity:4",
+          "relevance": "highly_relevant",
+          "rationale": "Results move with the prompt"
+        },
+        {
+          "knowledge_object_id": "manual:06#limitation:metric-bias-in-correctness-measurement:3",
+          "relevance": "highly_relevant",
+          "rationale": "The metric itself is biased"
+        },
+        {
+          "knowledge_object_id": "manual:06#limitation:generalizability-to-future-models-and-domains:2",
+          "relevance": "relevant",
+          "rationale": "External validity"
+        },
+        {
+          "knowledge_object_id": "manual:07#limitation:model-fixed-in-experiments:2",
+          "relevance": "relevant",
+          "rationale": "Single model tested"
+        },
+        {
+          "knowledge_object_id": "manual:07#limitation:limited-scenarios:0",
+          "relevance": "relevant",
+          "rationale": "Scenario coverage"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "e2c0c98d-25b2-4a51-9341-808548306ac0",
+        "985e6ab5-f0ff-4994-90cd-cb199adbdfd3",
+        "8c0c58a9-cab9-4f08-9008-f39033ab98f3",
+        "059d547e-f940-41cf-8aec-261e9c50ed80",
+        "1e655954-1764-4088-a2bb-b03876e9dd96",
+        "766fa5fa-2b11-49df-ad45-2a7899c83231",
+        "7d53d5bc-d96a-4887-a1dc-f55f093d6455"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "intent=limitation; derived by reading the corpus; awaiting human review"
+    },
+    {
+      "id": "GQ16",
+      "text": "What security risks are identified in agent protocol specifications?",
+      "kinds": [
+        "limitation"
+      ],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:05b#limitation:arbitrary-code-execution-risk:4",
+          "relevance": "highly_relevant",
+          "rationale": "Code execution risk"
+        },
+        {
+          "knowledge_object_id": "manual:05b#limitation:untrusted-tool-behavior:5",
+          "relevance": "highly_relevant",
+          "rationale": "Tools cannot be trusted"
+        },
+        {
+          "knowledge_object_id": "manual:05b#limitation:no-unauthorized-data-transmission:2",
+          "relevance": "highly_relevant",
+          "rationale": "Data exfiltration constraint"
+        },
+        {
+          "knowledge_object_id": "manual:05b#limitation:security-enforcement:0",
+          "relevance": "relevant",
+          "rationale": "Enforcement is left to implementors"
+        },
+        {
+          "knowledge_object_id": "manual:05b#limitation:user-consent-for-tool-invocation:6",
+          "relevance": "relevant",
+          "rationale": "Consent requirement"
+        },
+        {
+          "knowledge_object_id": "manual:05b#limitation:data-protection-requirements:3",
+          "relevance": "relevant",
+          "rationale": "Data protection"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "0dd37b53-e3f3-4dbb-88dc-e2874edb588f",
+        "2a02f13a-1007-4ac1-a451-8c6403671647",
+        "56140b8f-68a4-4bf5-a8e4-7275cb80e4f2",
+        "079ed043-8d16-45ea-bbdd-28d001205f03",
+        "907c933d-0753-4377-8419-ac00604ae735",
+        "0b737601-a2fb-4f93-b472-237f9715766b"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "intent=limitation; derived by reading the corpus; awaiting human review"
+    },
+    {
+      "id": "GQ17",
+      "text": "What future work is proposed on metastable failures?",
       "kinds": [
         "future_work"
       ],
@@ -198,76 +734,450 @@
         {
           "knowledge_object_id": "manual:01#future_work:designing-systems-to-avoid-metastable-failures:0",
           "relevance": "highly_relevant",
-          "rationale": "Named future direction"
-        },
-        {
-          "knowledge_object_id": "manual:01#future_work:accurately-modeling-and-reproducing-metastable-f:4",
-          "relevance": "highly_relevant",
-          "rationale": "Named direction"
+          "rationale": "Frameworks to avoid them"
         },
         {
           "knowledge_object_id": "manual:01#future_work:estimating-the-probability-of-novel-metastable-f:1",
           "relevance": "highly_relevant",
-          "rationale": "Named direction"
+          "rationale": "Finding unknown failures"
+        },
+        {
+          "knowledge_object_id": "manual:01#future_work:accurately-modeling-and-reproducing-metastable-f:4",
+          "relevance": "highly_relevant",
+          "rationale": "Modelling and reproduction"
         },
         {
           "knowledge_object_id": "manual:01#future_work:identifying-vulnerabilities-in-existing-systems:2",
           "relevance": "relevant",
-          "rationale": "Named direction"
+          "rationale": "Vulnerability discovery"
+        },
+        {
+          "knowledge_object_id": "manual:01#future_work:resolving-metastable-failures-with-elastic-cloud:3",
+          "relevance": "relevant",
+          "rationale": "Elastic capacity"
         },
         {
           "knowledge_object_id": "manual:02#future_work:develop-solutions-to-metastable-failures.:1",
           "relevance": "relevant",
-          "rationale": "Named direction, second paper"
+          "rationale": "Calls for solutions"
         },
         {
-          "knowledge_object_id": "manual:01#future_work:understanding-the-impact-of-system-changes-on-su:5",
-          "relevance": "relevant",
-          "rationale": "Named direction"
+          "knowledge_object_id": "manual:02#future_work:encourage-further-research-on-metastable-failure:0",
+          "relevance": "marginal",
+          "rationale": "A call for research"
         }
       ],
       "relevant_evidence_ids": [
-        "1d114bbd-7263-44bd-9615-f6040d265f77",
-        "f9edd305-f880-4f24-97fc-ce8a056f0f06",
-        "260c8a27-1c36-4fdb-b71a-017efcb4f81b",
-        "3da1878c-67b1-4b80-80cc-14d49d4fe156",
-        "d0fe32b8-e0c4-4a01-925c-6aaac3725534",
-        "60bef4f9-4adc-4efe-b5ab-e2228cf5772e"
+        "5e22e9c1-ccf8-4089-b779-955800ad82f1",
+        "d8653c97-60b9-47e0-b43e-7928dd63ef2a",
+        "f3ce456c-3da0-4985-a6f8-f44ebe6e745c",
+        "8762778e-4012-4693-8fe8-87c65c0044ee",
+        "e61aea3b-89dc-4ee0-b0f4-7bb8e44abbd8",
+        "5ae06b90-7f71-47de-bdb0-9e1167a9e756",
+        "eb75572d-a428-4f1b-b10b-91c43db216fa"
       ],
       "status": "draft",
       "reviewed_by": null,
-      "notes": "Judgements written by inspecting the corpus; awaiting human review."
+      "notes": "intent=future_work; derived by reading the corpus; awaiting human review"
     },
     {
-      "id": "GQ6",
-      "text": "How do caches contribute to metastable failure?",
+      "id": "GQ18",
+      "text": "What future directions are proposed for agent governance?",
+      "kinds": [
+        "future_work"
+      ],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:12#future_work:make-governance-detectable,-measurable,-and-form:2",
+          "relevance": "highly_relevant",
+          "rationale": "Formalising governance"
+        },
+        {
+          "knowledge_object_id": "manual:12#future_work:mitigate-cross-agent-coordination-attacks:0",
+          "relevance": "highly_relevant",
+          "rationale": "Coordination attacks"
+        },
+        {
+          "knowledge_object_id": "manual:11#future_work:develop-more-governance-mechanisms:2",
+          "relevance": "highly_relevant",
+          "rationale": "More governance mechanisms"
+        },
+        {
+          "knowledge_object_id": "manual:13#future_work:global-governance:1",
+          "relevance": "relevant",
+          "rationale": "Governance at index scale"
+        },
+        {
+          "knowledge_object_id": "manual:12#future_work:improve-acp's-efficiency-and-scalability:1",
+          "relevance": "marginal",
+          "rationale": "Efficiency, not governance"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "5f27daf0-1d64-4451-bd18-a6e77bbdf7e0",
+        "b95e9b0b-7495-4e90-adb2-73602a615ba7",
+        "5487b45c-fe72-48f7-ae55-7fbe26ef6b18",
+        "e16d4ea2-3076-44f6-b4db-7ec96a704cd5",
+        "f4224908-8a35-406b-884e-c5191ad05fc8"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "intent=future_work; derived by reading the corpus; awaiting human review"
+    },
+    {
+      "id": "GQ19",
+      "text": "How do different papers characterise the triggers of cascading failure?",
       "kinds": [],
       "paper_ids": [],
       "judgements": [
         {
-          "knowledge_object_id": "manual:01#method:read-through-cache:13",
+          "knowledge_object_id": "manual:01#method:trigger-vs.-root-cause:7",
           "relevance": "highly_relevant",
-          "rationale": "Cache design implicated in the failure mode"
+          "rationale": "Distinguishes trigger from root cause"
         },
         {
-          "knowledge_object_id": "manual:01#dataset:read-through-cache:11",
+          "knowledge_object_id": "manual:02#result:trigger_type_percentage-on-table-1:0",
           "relevance": "highly_relevant",
-          "rationale": "Same concept, extracted separately"
+          "rationale": "Measured trigger distribution"
         },
         {
-          "knowledge_object_id": "manual:01#dataset:look-aside-cache:10",
+          "knowledge_object_id": "manual:02#method:identification-and-classification:1",
           "relevance": "highly_relevant",
-          "rationale": "The look-aside cache case study"
+          "rationale": "Taxonomy of triggers"
+        },
+        {
+          "knowledge_object_id": "manual:03#method:packet-conservation-failure:3",
+          "relevance": "relevant",
+          "rationale": "Failure mode in a different domain"
+        },
+        {
+          "knowledge_object_id": "manual:11#method:control-flow-guard:6",
+          "relevance": "relevant",
+          "rationale": "Cascade prevention in agent systems"
+        },
+        {
+          "knowledge_object_id": "manual:02#result:load_spike_trigger_percentage-on-table-1:1",
+          "relevance": "relevant",
+          "rationale": "One trigger, quantified"
         }
       ],
       "relevant_evidence_ids": [
-        "3b8e3009-8590-4ac1-890c-3bdf003f8ade",
-        "2d7be3f1-54a8-4077-a453-48d153e64b94",
-        "76bd7622-2667-4a29-a438-07d4a57f594e"
+        "1773c8b7-e821-44e1-8170-9e0be9a4f6da",
+        "1c828eb6-d633-4b5b-a458-6d4071e0a5f5",
+        "f80a0839-a097-4688-b846-6a4e2a127bd4",
+        "42a6564e-50ac-48c1-9f9b-e0b2330ab6d3",
+        "cb22fc2b-4e87-4ff1-aea8-16a3b5aa8282",
+        "35678469-4ef2-4354-84dc-970b5943282c"
       ],
       "status": "draft",
       "reviewed_by": null,
-      "notes": "Judgements written by inspecting the corpus; awaiting human review."
+      "notes": "intent=cross_paper; derived by reading the corpus; awaiting human review"
+    },
+    {
+      "id": "GQ20",
+      "text": "Which papers evaluate retry behaviour and what do they conclude?",
+      "kinds": [],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:01#method:lower-priority-for-retried-queries:12",
+          "relevance": "highly_relevant",
+          "rationale": "Retry policy recommendation"
+        },
+        {
+          "knowledge_object_id": "manual:01#dataset:retry-case-study:8",
+          "relevance": "highly_relevant",
+          "rationale": "The retry case study"
+        },
+        {
+          "knowledge_object_id": "manual:15#limitation:no-default-retry-policy:0",
+          "relevance": "highly_relevant",
+          "rationale": "gRPC has no default retry policy"
+        },
+        {
+          "knowledge_object_id": "manual:15#limitation:disable-retries:1",
+          "relevance": "relevant",
+          "rationale": "Retries can be disabled"
+        },
+        {
+          "knowledge_object_id": "manual:01#method:adaptive-policies:9",
+          "relevance": "relevant",
+          "rationale": "Adaptive retry decisions"
+        },
+        {
+          "knowledge_object_id": "manual:15#metric:grpc-client-attempt-started:0",
+          "relevance": "relevant",
+          "rationale": "Retry attempts are measured"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "0fcfa55a-5abd-4fab-a6c5-4acca1131770",
+        "c4c7a2a2-0ff5-4f9e-8575-b19f66faf072",
+        "9b535a61-e5e7-4eab-9de3-e5145c6bb7aa",
+        "3b8879b2-3158-4d53-8564-adc2c9b9b35b",
+        "f96aa924-08fb-4bed-9a85-42872010a321",
+        "f10d6ef5-f8eb-48aa-8166-636a25e135b8"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "intent=cross_paper; derived by reading the corpus; awaiting human review"
+    },
+    {
+      "id": "GQ21",
+      "text": "What evaluation harnesses do agent benchmark papers build?",
+      "kinds": [],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:07#method:protocolbench:0",
+          "relevance": "highly_relevant",
+          "rationale": "The harness itself"
+        },
+        {
+          "knowledge_object_id": "manual:07#method:scenario-harness:3",
+          "relevance": "highly_relevant",
+          "rationale": "Named scenario harness"
+        },
+        {
+          "knowledge_object_id": "manual:06#method:ai-nativebench:1",
+          "relevance": "highly_relevant",
+          "rationale": "The benchmark system"
+        },
+        {
+          "knowledge_object_id": "manual:06#method:trace-first-evaluation-methodology:0",
+          "relevance": "highly_relevant",
+          "rationale": "Its evaluation methodology"
+        },
+        {
+          "knowledge_object_id": "manual:07#method:protocolrouterbench:5",
+          "relevance": "relevant",
+          "rationale": "Router-specific harness"
+        },
+        {
+          "knowledge_object_id": "manual:10#method:mast-development-process:2",
+          "relevance": "relevant",
+          "rationale": "Taxonomy construction process"
+        },
+        {
+          "knowledge_object_id": "manual:07#method:logging-&-metrics-stack:4",
+          "relevance": "marginal",
+          "rationale": "Supporting infrastructure"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "c42750be-9fbc-4c2f-881a-93d5739857b4",
+        "64a7aa25-b1e6-41d5-92bd-65260606150d",
+        "b8bd0f91-dcec-4de6-9191-2080b55f9ad7",
+        "0762f1ee-4c06-4820-9389-32305fc290a0",
+        "80bfc6ab-8e1d-4b60-8f00-12f1abd67381",
+        "5b3e3676-ac54-47dd-ad5d-ab2400b6eaaa",
+        "1866342a-b1b5-4709-b6d0-c73722ed545b"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "intent=cross_paper; derived by reading the corpus; awaiting human review"
+    },
+    {
+      "id": "GQ22",
+      "text": "Which datasets was AI-NativeBench evaluated on?",
+      "kinds": [],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:06#dataset:markdown-validator:1",
+          "relevance": "highly_relevant",
+          "rationale": "One of the two task datasets"
+        },
+        {
+          "knowledge_object_id": "manual:06#dataset:landing-page-generator:2",
+          "relevance": "highly_relevant",
+          "rationale": "The other task dataset"
+        },
+        {
+          "knowledge_object_id": "manual:06#dataset:ai-nativebench:0",
+          "relevance": "relevant",
+          "rationale": "The suite these sit in"
+        },
+        {
+          "knowledge_object_id": "manual:06#method:ai-nativebench:1",
+          "relevance": "relevant",
+          "rationale": "The method being evaluated"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "56f091a8-7353-4c35-8141-a63ef665114a",
+        "d3ecadca-978a-4c1e-845b-c33e1bb72c30",
+        "8afa6ac3-59a2-4ebf-86f9-d1252109398d",
+        "b8bd0f91-dcec-4de6-9191-2080b55f9ad7"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "intent=method_dataset; derived by reading the corpus; awaiting human review"
+    },
+    {
+      "id": "GQ23",
+      "text": "Which datasets does the ACP reference implementation exercise?",
+      "kinds": [],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:12#dataset:go-reference-implementation:0",
+          "relevance": "highly_relevant",
+          "rationale": "The implementation under test"
+        },
+        {
+          "knowledge_object_id": "manual:12#dataset:multi-org-demo:1",
+          "relevance": "highly_relevant",
+          "rationale": "Deployment scenario"
+        },
+        {
+          "knowledge_object_id": "manual:12#dataset:payment-agent:2",
+          "relevance": "highly_relevant",
+          "rationale": "Agent scenario"
+        },
+        {
+          "knowledge_object_id": "manual:12#dataset:cooldown-evasion-attack:3",
+          "relevance": "relevant",
+          "rationale": "Attack scenario exercised"
+        },
+        {
+          "knowledge_object_id": "manual:12#dataset:distributed-multi-agent-attack:4",
+          "relevance": "relevant",
+          "rationale": "Attack scenario exercised"
+        },
+        {
+          "knowledge_object_id": "manual:12#method:acp:0",
+          "relevance": "relevant",
+          "rationale": "The protocol being exercised"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "a476990a-d124-4e37-adba-018c88ec952c",
+        "2878c888-b1e0-4b13-9d27-72a4cbef806e",
+        "f5c1bbec-04e8-4544-8c3c-4ae08a7e8f2f",
+        "a525fc4a-dadb-4e78-9b3f-714a9121fe6e",
+        "b589df0b-24ad-4c1d-9aff-980c3bd4b302",
+        "0b0a4968-800a-4c1e-83c4-be979744d98d"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "intent=method_dataset; derived by reading the corpus; awaiting human review"
+    },
+    {
+      "id": "GQ24",
+      "text": "What results did ProtocolBench report for latency?",
+      "kinds": [],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:07#result:per_request_latency-on-cross-model-streaming-que:2",
+          "relevance": "highly_relevant",
+          "rationale": "The measured latency"
+        },
+        {
+          "knowledge_object_id": "manual:07#metric:p99-latency:0",
+          "relevance": "highly_relevant",
+          "rationale": "The latency metric used"
+        },
+        {
+          "knowledge_object_id": "manual:07#metric:latency-ranking:1",
+          "relevance": "relevant",
+          "rationale": "Comparative ranking"
+        },
+        {
+          "knowledge_object_id": "manual:07#method:protocolbench:0",
+          "relevance": "relevant",
+          "rationale": "The system producing the result"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "3d5a59f9-f9e4-4e1e-9a4c-bd195c43273d",
+        "80af00ac-d0ed-4a62-8147-d4b7a578c6d6",
+        "91aac88b-0325-407c-b871-761579bcf341",
+        "d09d03e2-060d-436f-a1f7-4d9117a21204",
+        "bc01a69d-491b-4a42-9d87-918aa3c44380",
+        "5e14faa8-3d11-437f-b8b2-30abed48b665",
+        "11c76ab0-4dcf-4db1-8ca7-cbccad51bf90",
+        "c42750be-9fbc-4c2f-881a-93d5739857b4"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "intent=method_result; derived by reading the corpus; awaiting human review"
+    },
+    {
+      "id": "GQ25",
+      "text": "What did the NANDA index measure about DNS?",
+      "kinds": [],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:13#result:daily-lookups-on-dns-infrastructure:0",
+          "relevance": "highly_relevant",
+          "rationale": "DNS lookup volume"
+        },
+        {
+          "knowledge_object_id": "manual:13#result:write-frequency-on-dns:1",
+          "relevance": "highly_relevant",
+          "rationale": "DNS write frequency"
+        },
+        {
+          "knowledge_object_id": "manual:13#metric:write-frequency:1",
+          "relevance": "relevant",
+          "rationale": "The metric definition"
+        },
+        {
+          "knowledge_object_id": "manual:13#method:nanda-index:6",
+          "relevance": "relevant",
+          "rationale": "The system making the comparison"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "077b4bad-e27d-4789-a0c1-0e553bb85016",
+        "8b7cfb2a-1e58-40bf-b563-ea6f4e4ec18e",
+        "14055399-c075-4234-98d3-cae4972dc26e",
+        "820a9934-dc1e-49d3-9d80-4883eec7e9eb"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "intent=method_result; derived by reading the corpus; awaiting human review"
+    },
+    {
+      "id": "GQ26",
+      "text": "What costs does self-healing introduce in agent systems?",
+      "kinds": [],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:06#result:cost-multiplier-effect-of-self-healing-mechanism:2",
+          "relevance": "highly_relevant",
+          "rationale": "The measured cost multiplier"
+        },
+        {
+          "knowledge_object_id": "manual:06#result:inference-dominance:1",
+          "relevance": "highly_relevant",
+          "rationale": "Inference dominates cost"
+        },
+        {
+          "knowledge_object_id": "manual:06#metric:cost-performance-trade-off:2",
+          "relevance": "relevant",
+          "rationale": "The trade-off metric"
+        },
+        {
+          "knowledge_object_id": "manual:11#limitation:latency-overhead:3",
+          "relevance": "relevant",
+          "rationale": "Guard overhead in a related system"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "3eccab92-78b7-4bcf-8c04-5a476190ad7b",
+        "b23ba346-faa9-44d2-a0c9-93ba3b8a1d63",
+        "f37a006f-5939-45a6-9ef3-7e9b5cb9d1f1",
+        "34942503-c9a6-47e4-bf6f-6b35630e83b7"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "intent=method_result; derived by reading the corpus; awaiting human review"
     }
   ]
 }

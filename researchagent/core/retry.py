@@ -32,6 +32,19 @@ class RetryPolicy(BaseModel):
         return random.uniform(0, capped) if self.jitter else capped  # noqa: S311
 
 
+def _delay_for(policy: RetryPolicy, attempt: int, error: BaseException) -> float:
+    """The policy's delay, raised to any wait the provider explicitly asked for.
+
+    Backing off 0.2s when the upstream said "retry after 4s" guarantees the retry fails
+    and burns an attempt doing it.
+    """
+    delay = policy.delay_for(attempt)
+    requested = getattr(error, "retry_after_seconds", None)
+    if requested is None:
+        return delay
+    return min(max(delay, float(requested)), policy.max_delay_seconds)
+
+
 def _is_retryable(error: BaseException) -> bool:
     if isinstance(error, ResearchAgentError):
         return error.retryable
@@ -59,7 +72,7 @@ async def retry_async[T](
             if not _is_retryable(exc) or attempt == policy.max_attempts:
                 raise
 
-            delay = policy.delay_for(attempt + 1)
+            delay = _delay_for(policy, attempt + 1, exc)
             logger.warning(
                 "operation_retry",
                 operation=operation_name,

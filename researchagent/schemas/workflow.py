@@ -120,7 +120,11 @@ class KnowledgeReport(BaseModel):
     # Proposals the papers' own text refused to support. The honesty metric.
     rejected_ungrounded: int = 0
     rejected_invalid: int = 0
-    grounding_rate: float = 0.0
+    # None when no paper in the batch recorded its extraction counters — unknown, which
+    # is not the same claim as 0.0.
+    grounding_rate: float | None = Field(default=None, ge=0.0, le=1.0)
+    acceptance_rate: float | None = Field(default=None, ge=0.0, le=1.0)
+    documents_measured: int = 0
     kinds_present: tuple[str, ...] = ()
 
 

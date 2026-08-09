@@ -4,8 +4,14 @@ Local-first multi-agent research intelligence platform. Give it a research goal;
 searches literature, retrieves and parses papers, verifies every claim against the source
 text, finds gaps, critiques its own report, and exports a literature review with evidence.
 
-Everything runs on your machine through [Ollama](https://ollama.com). No API keys, no data
-leaving the host.
+Everything runs on your machine through [Ollama](https://ollama.com) by default. No API
+keys, no data leaving the host.
+
+An optional external provider is available for the reasoning-heavy stages: set
+`GROQ_API_KEY` and point a model alias in `config/models.yaml` at `provider: groq`
+(the `reasoning_remote` alias uses GPT-OSS 120B). Both providers sit behind the same
+`LLMProvider` port, so nothing above `integrations/` changes. Leave `GROQ_API_KEY` unset
+and the system stays fully local and offline — including the test suite.
 
 > **Status: v0.6** — a research goal becomes a plan, then real papers, then validated
 > documents, then evidence-backed knowledge: methods, datasets, metrics, results,

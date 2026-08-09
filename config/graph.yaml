@@ -1,0 +1,28 @@
+# Knowledge graph (v0.8).
+#
+# The graph is a DERIVED INDEX. Every node and edge is reconstructible from the knowledge
+# and evidence repositories, which remain the source of truth. Deleting the graph store
+# costs a rebuild, never a fact.
+
+# `memory` keeps the graph in-process: no server, no Docker, works offline. `neo4j`
+# persists it. Both satisfy the same GraphRepository port, so this is the only line that
+# changes.
+backend: memory
+
+neo4j:
+  # Credentials come from RESEARCHAGENT_NEO4J__* settings, never from this file.
+  database: neo4j
+
+build:
+  # Papers whose knowledge failed validation are skipped rather than partially imported:
+  # a graph built from untrusted knowledge is a graph nobody can cite.
+  require_trusted_knowledge: true
+  # An edge with no locatable evidence is recorded as rejected, never written.
+  require_provenance: true
+
+schema:
+  # Bump when node/edge semantics change. Mixing generations is prevented by the version
+  # identifier, which folds this in.
+  version: "1"
+  extraction_version: "1"
+  relation_version: "1"
