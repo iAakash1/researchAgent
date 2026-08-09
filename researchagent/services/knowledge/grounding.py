@@ -15,8 +15,6 @@ high; below it the safe answer is "not found".
 
 from __future__ import annotations
 
-import re
-import unicodedata
 from difflib import SequenceMatcher
 
 from pydantic import BaseModel, Field
@@ -24,15 +22,10 @@ from pydantic import BaseModel, Field
 from researchagent.core.evidence import Evidence, SourceLocation
 from researchagent.core.logging import get_logger
 from researchagent.models.document import PaperDocument, Paragraph, Section
+from researchagent.utils.text import normalise
 
 logger = get_logger(__name__)
 
-# PDF text extraction routinely leaves these behind; none of them change the words.
-_LIGATURES = {"ﬀ": "ff", "ﬁ": "fi", "ﬂ": "fl", "ﬃ": "ffi", "ﬄ": "ffl"}
-_SOFT_HYPHEN = re.compile(r"[­‐‑]")  # noqa: RUF001 - the characters being normalised
-_HYPHEN_LINEBREAK = re.compile(r"(\w)-\s+(\w)")
-_WHITESPACE = re.compile(r"\s+")
-_QUOTES = {"“": '"', "”": '"', "‘": "'", "’": "'"}  # noqa: RUF001 - ditto
 
 MIN_QUOTE_CHARS = 20
 
@@ -194,21 +187,6 @@ class EvidenceGrounder:
             char_start=start,
             char_end=start + length,
         )
-
-
-def normalise(text: str) -> str:
-    """Collapse the differences PDF extraction introduces, keep the words.
-
-    Applied to both sides of every comparison so that grounding survives real-world text
-    without becoming loose enough to match invented text.
-    """
-    folded = unicodedata.normalize("NFKC", text)
-    for source, target in {**_LIGATURES, **_QUOTES}.items():
-        folded = folded.replace(source, target)
-    folded = _SOFT_HYPHEN.sub("-", folded)
-    # "distri- buted" across a line break is one word.
-    folded = _HYPHEN_LINEBREAK.sub(r"\1\2", folded)
-    return _WHITESPACE.sub(" ", folded).strip().lower()
 
 
 def _best_window_ratio(candidate: str, haystack: str) -> tuple[float, int]:

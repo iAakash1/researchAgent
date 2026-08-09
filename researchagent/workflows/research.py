@@ -32,17 +32,20 @@ from researchagent.schemas.workflow import (
     DiscoveryReport,
     DocumentFailure,
     DocumentReport,
+    EvidenceReport,
     KnowledgeReport,
     ResearchState,
     WorkflowStage,
 )
 from researchagent.services.discovery_service import DiscoveryService
 from researchagent.services.document.pipeline import DocumentIntelligenceService
+from researchagent.services.evidence.pipeline import EvidenceIntelligenceService
 from researchagent.services.knowledge.pipeline import KnowledgeIntelligenceService
 from researchagent.workflows.edges import CONTINUE, HALT, halt_on_failure
 from researchagent.workflows.guards import (
     requires_candidates,
     requires_documents,
+    requires_knowledge,
     requires_local_pdfs,
     requires_plan,
     run_not_failed,
@@ -162,12 +165,47 @@ def knowledge_extraction_node(service: KnowledgeIntelligenceService) -> ServiceN
     )
 
 
+def evidence_intelligence_node(service: EvidenceIntelligenceService) -> ServiceNode:
+    async def handler(state: ResearchState) -> StateUpdate:
+        # `requires_knowledge` and `requires_plan` have already run.
+        assert state.plan is not None  # noqa: S101
+        paper_ids = tuple(state.documents.ready_for_extraction if state.documents else ())
+
+        result = await service.process(state.plan, paper_ids, run_id=state.run_id)
+        bundles = result.bundles
+
+        return {
+            "evidence": EvidenceReport(
+                papers_indexed=result.index.papers_indexed,
+                evidence_records=result.index.evidence_records,
+                bundles_built=len(result.outcomes),
+                bundles_trusted=result.trusted,
+                contradictions=result.total_contradictions,
+                unanswered_questions=result.unanswered_questions,
+                bundle_ids=tuple(bundle.id for bundle in bundles),
+                mean_bundle_confidence=(
+                    round(sum(b.confidence.score for b in bundles) / len(bundles), 6)
+                    if bundles
+                    else 0.0
+                ),
+            ),
+        }
+
+    return ServiceNode(
+        WorkflowStage.EVIDENCE_INTELLIGENCE,
+        "evidence_intelligence",
+        handler,
+        guards=[run_not_failed(), requires_plan(), requires_knowledge()],
+    )
+
+
 def build_research_graph(
     *,
     planner: BaseAgent[Any, Any],
     discovery: DiscoveryService,
     documents: DocumentIntelligenceService,
     knowledge: KnowledgeIntelligenceService,
+    evidence: EvidenceIntelligenceService,
     checkpointer: BaseCheckpointSaver[str] | None = None,
 ) -> CompiledStateGraph[ResearchState, Any, ResearchState, ResearchState]:
     """Compile the workflow. Collaborators are injected, so tests compile it with fakes."""
@@ -177,6 +215,7 @@ def build_research_graph(
     graph.add_node(WorkflowStage.DISCOVERY.value, discovery_node(discovery))
     graph.add_node(WorkflowStage.DOCUMENT_INTELLIGENCE.value, document_intelligence_node(documents))
     graph.add_node(WorkflowStage.KNOWLEDGE_EXTRACTION.value, knowledge_extraction_node(knowledge))
+    graph.add_node(WorkflowStage.EVIDENCE_INTELLIGENCE.value, evidence_intelligence_node(evidence))
 
     graph.add_edge(START, WorkflowStage.PLANNING.value)
     graph.add_conditional_edges(
@@ -194,7 +233,12 @@ def build_research_graph(
         halt_on_failure,
         {CONTINUE: WorkflowStage.KNOWLEDGE_EXTRACTION.value, HALT: END},
     )
-    graph.add_edge(WorkflowStage.KNOWLEDGE_EXTRACTION.value, END)
+    graph.add_conditional_edges(
+        WorkflowStage.KNOWLEDGE_EXTRACTION.value,
+        halt_on_failure,
+        {CONTINUE: WorkflowStage.EVIDENCE_INTELLIGENCE.value, HALT: END},
+    )
+    graph.add_edge(WorkflowStage.EVIDENCE_INTELLIGENCE.value, END)
 
     compiled = graph.compile(checkpointer=checkpointer)
     logger.info(

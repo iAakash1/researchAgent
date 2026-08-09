@@ -16,6 +16,7 @@ from researchagent.models.research import ResearchPlan
 from researchagent.schemas.workflow import (
     DiscoveryReport,
     DocumentReport,
+    EvidenceReport,
     KnowledgeReport,
     ResearchConstraints,
     ResearchState,
@@ -45,6 +46,7 @@ class PlanResponse(BaseModel):
     discovery: DiscoveryReport | None = None
     documents: DocumentReport | None = None
     knowledge: KnowledgeReport | None = None
+    evidence: EvidenceReport | None = None
     history: list[StageRecord]
     failure: StageFailure | None = None
 
@@ -58,6 +60,7 @@ class PlanResponse(BaseModel):
             discovery=state.discovery,
             documents=state.documents,
             knowledge=state.knowledge,
+            evidence=state.evidence,
             history=state.history,
             failure=state.failure,
         )

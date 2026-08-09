@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from researchagent.core.interfaces.llm import GenerationParams
 from researchagent.core.retry import RetryPolicy
+from researchagent.models.knowledge import KnowledgeKind
 from researchagent.models.paper import SourceName
 
 
@@ -266,3 +267,52 @@ class KnowledgeConfig(BaseModel):
     )
     validation: KnowledgeValidationConfig = Field(default_factory=KnowledgeValidationConfig)
     pipeline: KnowledgePipelineSettings = Field(default_factory=KnowledgePipelineSettings)
+
+
+class RetrievalWeights(BaseModel):
+    """Relative influence of each retrieval signal.
+
+    Deterministic and tunable today; v0.7 adds embedding similarity as another weighted
+    signal rather than as a replacement, so lexical and semantic scores can be compared
+    and benchmarked against each other.
+    """
+
+    name_match: float = Field(default=1.0, ge=0.0)
+    text_match: float = Field(default=0.8, ge=0.0)
+    validation_confidence: float = Field(default=0.6, ge=0.0)
+    evidence_density: float = Field(default=0.4, ge=0.0)
+    provenance_precision: float = Field(default=0.5, ge=0.0)
+    cross_paper_agreement: float = Field(default=0.9, ge=0.0)
+
+
+class ContradictionConfig(BaseModel):
+    """How far two reported numbers must diverge before it counts as a disagreement."""
+
+    numeric_tolerance: float = Field(default=0.05, ge=0.0, le=1.0)
+
+
+class BundleSettings(BaseModel):
+    max_objects: int = Field(default=25, ge=1, le=200)
+    max_evidence_per_object: int = Field(default=3, ge=1, le=20)
+    min_object_score: float = Field(default=0.05, ge=0.0, le=1.0)
+    # Papers needed before a bundle stops being flagged as single-source.
+    min_papers_for_confidence: int = Field(default=2, ge=1, le=20)
+    corroboration_target: int = Field(default=3, ge=1, le=50)
+
+
+class EvidencePipelineSettings(BaseModel):
+    max_bundles_per_run: int = Field(default=8, ge=1, le=50)
+    max_objects_per_bundle: int = Field(default=25, ge=1, le=200)
+    # Empty means every kind; narrowing is a per-deployment tuning decision.
+    bundle_kinds: tuple[KnowledgeKind, ...] = ()
+
+
+class EvidenceConfig(BaseModel):
+    """``config/evidence.yaml`` root."""
+
+    evidence_dir: Path = Path("storage/papers/evidence")
+    bundles_dir: Path = Path("storage/bundles")
+    weights: RetrievalWeights = Field(default_factory=RetrievalWeights)
+    contradictions: ContradictionConfig = Field(default_factory=ContradictionConfig)
+    bundles: BundleSettings = Field(default_factory=BundleSettings)
+    pipeline: EvidencePipelineSettings = Field(default_factory=EvidencePipelineSettings)

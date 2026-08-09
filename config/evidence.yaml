@@ -1,0 +1,32 @@
+# Evidence Intelligence Engine.
+
+evidence_dir: storage/papers/evidence
+bundles_dir: storage/bundles
+
+# Deterministic retrieval weights. v0.7 adds embedding similarity as a further weighted
+# signal alongside these, so lexical and semantic ranking can be compared rather than
+# swapped blindly.
+weights:
+  name_match: 1.0
+  text_match: 0.8
+  validation_confidence: 0.6
+  evidence_density: 0.4
+  provenance_precision: 0.5
+  cross_paper_agreement: 0.9
+
+contradictions:
+  # How far two reported numbers must diverge before it is a disagreement rather than
+  # rounding. Lowering this reports more conflicts, including spurious ones.
+  numeric_tolerance: 0.05
+
+bundles:
+  max_objects: 25
+  max_evidence_per_object: 3
+  min_object_score: 0.05
+  min_papers_for_confidence: 2   # below this a bundle is flagged single-source
+  corroboration_target: 3
+
+pipeline:
+  max_bundles_per_run: 8         # one per research question
+  max_objects_per_bundle: 25
+  bundle_kinds: []               # empty means every knowledge kind

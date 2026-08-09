@@ -137,3 +137,21 @@ def requires_documents() -> Guard:
         description="At least one document is validated and ready for extraction",
         predicate=predicate,
     )
+
+
+def requires_knowledge() -> Guard:
+    """Evidence intelligence needs extracted knowledge to index and bundle."""
+
+    def predicate(state: ResearchState) -> GuardResult:
+        report = state.knowledge
+        if report is None:
+            return GuardResult.block("knowledge extraction has not run", "knowledge")
+        if report.objects_extracted == 0:
+            return GuardResult.block("no knowledge objects survived extraction", "knowledge")
+        return GuardResult.allow()
+
+    return Guard(
+        name="requires_knowledge",
+        description="At least one validated knowledge object exists",
+        predicate=predicate,
+    )

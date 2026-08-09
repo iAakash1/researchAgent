@@ -25,6 +25,8 @@ logs/
 storage/papers/metadata/
 storage/papers/documents/
 storage/papers/knowledge/
+storage/papers/evidence/
+storage/bundles/
 storage/papers/raw/downloaded/
 
 .DS_Store

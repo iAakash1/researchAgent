@@ -28,7 +28,7 @@ from researchagent.models.knowledge import (
     PaperKnowledge,
     ResultDetails,
 )
-from researchagent.services.knowledge.grounding import normalise
+from researchagent.utils.text import normalise
 
 logger = get_logger(__name__)
 

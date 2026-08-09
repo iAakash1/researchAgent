@@ -18,7 +18,7 @@ from researchagent.core.logging import get_logger
 from researchagent.models.document import SectionKind
 from researchagent.models.knowledge import KnowledgeKind, KnowledgeObject, ResultDetails
 from researchagent.services.knowledge.base import ExtractionDraft, KnowledgeExtractor, build_object
-from researchagent.services.knowledge.grounding import normalise
+from researchagent.utils.text import normalise
 
 logger = get_logger(__name__)
 

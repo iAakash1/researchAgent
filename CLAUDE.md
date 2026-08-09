@@ -32,6 +32,7 @@ api  →  workflows  →  agents  →  services  →  integrations
 | `models/` | domain objects (Paper, PaperDocument, Section, Evidence) | know about storage or LLMs |
 | `services/validation/` | one validator per question, returning `ValidationResult` | raise for an expected negative |
 | `services/knowledge/` | extractors (one kind each) + grounding + relations | trust a model's quote without locating it |
+| `services/evidence/` | evidence indexing, the four retrieval layers, bundle assembly | retrieve raw text instead of evidence |
 | `repositories/` | all DB access (Postgres, Qdrant, Neo4j) | be called from agents directly |
 | `integrations/` | outbound adapters, one per external system | be imported by agents |
 | `services/` | reusable capabilities agents compose | make control-flow decisions |
@@ -102,7 +103,7 @@ config/agents.yaml   # add the entry
 ## Workflow (target)
 
 Planner → Discovery → Document Intelligence → Knowledge Intelligence →
-Evidence Retrieval → Knowledge Graph → Reasoning → Verification → Reviewer →
+Evidence Intelligence → Knowledge Graph → Reasoning → Verification → Reviewer →
 (reject ⇒ back to Planner with feedback) → Report → Session Memory.
 
 Each stage validates the previous one. Contracts between stages:
@@ -112,12 +113,11 @@ Each stage validates the previous one. Contracts between stages:
 
 v0.1 skeleton ✅ · v0.2 Planner + LangGraph ✅ · v0.3 Discovery + Retrieval ✅ ·
 v0.4 Document Intelligence + Zero-Trust Foundation ✅ · v0.5 Knowledge Intelligence ✅ ·
-v0.6 Evidence Retrieval · v0.7 Knowledge Graph · v0.8 Reasoning · v0.9 Verification ·
+v0.6 Evidence Intelligence ✅ · v0.7 Knowledge Graph · v0.8 Reasoning · v0.9 Verification ·
 v1.0 Research Operating System.
 
 Each release introduces exactly one canonical abstraction:
-`PaperDocument` (v0.4) · `KnowledgeObject` (v0.5) · `EvidenceBundle` (v0.6) ·
-`KnowledgeGraph` (v0.7) · `ReasoningSession` (v0.8) · `VerifiedKnowledge` (v0.9).
+`PaperDocument` (v0.4) · `KnowledgeObject` (v0.5) · `EvidenceBundle` (v0.6) · `KnowledgeGraph` (v0.7) · `ReasoningSession` (v0.8) · `VerifiedKnowledge` (v0.9).
 
 Packages for later phases exist with a docstring stating their responsibility and are
 empty until their version lands. That is intentional — do not fill them early.

@@ -12,6 +12,7 @@ from researchagent.config.schemas import (
     AgentConfig,
     AgentSpec,
     DocumentsConfig,
+    EvidenceConfig,
     KnowledgeConfig,
     ModelCatalog,
     SourcesConfig,
@@ -33,7 +34,9 @@ from researchagent.core.settings import Environment, Settings
 from researchagent.integrations.manual import ManualPaperSource
 from researchagent.integrations.pymupdf import PyMuPDFLoader
 from researchagent.memory.checkpoints import build_checkpointer
+from researchagent.repositories.bundle_repository import JsonBundleRepository
 from researchagent.repositories.document_repository import JsonDocumentRepository
+from researchagent.repositories.evidence_repository import JsonEvidenceRepository
 from researchagent.repositories.knowledge_repository import JsonKnowledgeRepository
 from researchagent.repositories.paper_repository import JsonPaperRepository
 from researchagent.services.deduplication import PaperDeduplicator
@@ -46,6 +49,17 @@ from researchagent.services.document import (
     MetadataExtractor,
     ReferenceExtractor,
     SectionDetector,
+)
+from researchagent.services.evidence import (
+    AgreementCrossPaperRetriever,
+    ContradictionDetector,
+    EvidenceBundleBuilder,
+    EvidenceIndexer,
+    EvidenceIntelligenceService,
+    LexicalKnowledgeRetriever,
+    LinkedEvidenceRetriever,
+    RepositoryDocumentRetriever,
+    StoredBundleRetriever,
 )
 from researchagent.services.knowledge import KnowledgeIntelligenceService, RelationBuilder
 from researchagent.services.knowledge.registry import build_extractors
@@ -209,6 +223,8 @@ def container(
     document_repository: JsonDocumentRepository,
     document_assembler: DocumentAssembler,
     knowledge_repository: JsonKnowledgeRepository,
+    evidence_repository: JsonEvidenceRepository,
+    bundle_repository: JsonBundleRepository,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Container:
@@ -242,6 +258,29 @@ def container(
         event_bus=event_bus,
     )
 
+    evidence_config = config_loader.load("evidence", EvidenceConfig)
+    knowledge_retriever = LexicalKnowledgeRetriever(knowledge_repository, evidence_config.weights)
+    evidence_retriever = LinkedEvidenceRetriever(evidence_repository, evidence_config.weights)
+    document_retriever = RepositoryDocumentRetriever(document_repository)
+    cross_paper_retriever = AgreementCrossPaperRetriever(
+        knowledge_retriever, evidence_config.weights
+    )
+    bundle_retriever = StoredBundleRetriever(bundle_repository)
+    evidence_service = EvidenceIntelligenceService(
+        EvidenceIndexer(evidence_repository, event_bus=event_bus),
+        EvidenceBundleBuilder(
+            knowledge_retriever,
+            evidence_retriever,
+            cross_paper_retriever,
+            ContradictionDetector(evidence_config.contradictions),
+            evidence_config.bundles,
+        ),
+        knowledge_repository,
+        bundle_repository,
+        evidence_config.pipeline,
+        event_bus=event_bus,
+    )
+
     discovery_service = DiscoveryService(
         [manual_source],
         PaperDeduplicator(),
@@ -264,6 +303,7 @@ def container(
         discovery=discovery_service,
         documents=document_service,
         knowledge=knowledge_service,
+        evidence=evidence_service,
         checkpointer=build_checkpointer(workflow_config.checkpointer),
     )
 
@@ -276,6 +316,7 @@ def container(
         sources_config=sources_config,
         documents_config=documents_config,
         knowledge_config=knowledge_config,
+        evidence_config=evidence_config,
         prompt_library=prompt_library,
         event_bus=event_bus,
         llm_service=service,
@@ -289,6 +330,14 @@ def container(
         document_service=document_service,
         knowledge_repository=knowledge_repository,
         knowledge_service=knowledge_service,
+        evidence_repository=evidence_repository,
+        bundle_repository=bundle_repository,
+        evidence_service=evidence_service,
+        knowledge_retriever=knowledge_retriever,
+        evidence_retriever=evidence_retriever,
+        document_retriever=document_retriever,
+        cross_paper_retriever=cross_paper_retriever,
+        bundle_retriever=bundle_retriever,
         workflow_runner=WorkflowRunner(graph, workflow_config),
     )
 
@@ -371,5 +420,44 @@ def knowledge_service(
         knowledge_repository,
         document_repository,
         paper_repository,
+        event_bus=event_bus,
+    )
+
+
+@pytest.fixture
+def evidence_repository(tmp_path: Path) -> JsonEvidenceRepository:
+    return JsonEvidenceRepository(tmp_path / "evidence")
+
+
+@pytest.fixture
+def bundle_repository(tmp_path: Path) -> JsonBundleRepository:
+    return JsonBundleRepository(tmp_path / "bundles")
+
+
+@pytest.fixture
+def knowledge_retriever(knowledge_repository: JsonKnowledgeRepository) -> LexicalKnowledgeRetriever:
+    return LexicalKnowledgeRetriever(knowledge_repository)
+
+
+@pytest.fixture
+def evidence_service(
+    knowledge_repository: JsonKnowledgeRepository,
+    evidence_repository: JsonEvidenceRepository,
+    bundle_repository: JsonBundleRepository,
+    document_repository: JsonDocumentRepository,
+    knowledge_retriever: LexicalKnowledgeRetriever,
+    event_bus: EventBus,
+) -> EvidenceIntelligenceService:
+    cross_paper = AgreementCrossPaperRetriever(knowledge_retriever)
+    return EvidenceIntelligenceService(
+        EvidenceIndexer(evidence_repository, event_bus=event_bus),
+        EvidenceBundleBuilder(
+            knowledge_retriever,
+            LinkedEvidenceRetriever(evidence_repository),
+            cross_paper,
+            ContradictionDetector(),
+        ),
+        knowledge_repository,
+        bundle_repository,
         event_bus=event_bus,
     )

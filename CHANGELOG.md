@@ -4,6 +4,38 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] — 2026-08-09
+
+Evidence Intelligence Engine. The system stops retrieving text and starts retrieving
+evidence. `EvidenceBundle` becomes the canonical retrieval abstraction every future
+reasoning engine consumes.
+
+### Added
+- `models/bundle.py`: `EvidenceBundle` — knowledge objects, their evidence, relations,
+  contradictions, coverage, statistics, confidence and its own validation verdict. A
+  bundle whose evidence references an absent object cannot be constructed.
+- `models/evidence.py`: `EvidenceRecord`, `EvidenceLink`, `PaperEvidence` — evidence
+  indexed independently of knowledge, with the association as an explicit link record.
+- `models/query.py`: `ResearchQuery` — one structured request shape for every retrieval
+  layer; `ResearchQuery.for_question` turns a Planner research question into a query.
+- `core/interfaces/retrieval.py`: `Retriever` port plus `KnowledgeRetriever`,
+  `EvidenceRetriever`, `DocumentRetriever`, `CrossPaperRetriever`, `BundleRetriever`.
+  Nothing in the contract names a technology.
+- `services/evidence/`: deterministic implementations of all four layers, the evidence
+  indexer, the `ContradictionDetector`, the `EvidenceBundleBuilder`, and the pipeline
+  service.
+- `services/validation/bundle.py`: `ProvenanceValidator` and `BundleCoverageValidator`.
+- `repositories/evidence_repository.py`, `repositories/bundle_repository.py`,
+  `config/evidence.yaml`, the `evidence_intelligence` workflow stage, and read-only
+  retrieval endpoints under `/evidence`.
+- `utils/text.py`: shared normalisation, extracted from the knowledge package.
+
+### Changed
+- `services/validation/__init__.py` no longer re-exports its validators; the aggregate
+  import closed a cycle between the validation and knowledge packages.
+
+[0.6.0]: https://github.com/iAakash1/researchAgent/releases/tag/v0.6.0
+
 ## [0.5.0] — 2026-08-09
 
 Knowledge Intelligence Engine. The system stops reasoning over text and starts reasoning

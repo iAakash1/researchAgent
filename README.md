@@ -7,7 +7,7 @@ text, finds gaps, critiques its own report, and exports a literature review with
 Everything runs on your machine through [Ollama](https://ollama.com). No API keys, no data
 leaving the host.
 
-> **Status: v0.5** — a research goal becomes a plan, then real papers, then validated
+> **Status: v0.6** — a research goal becomes a plan, then real papers, then validated
 > documents, then evidence-backed knowledge: methods, datasets, metrics, results,
 > limitations and future work, each traceable to the page and paragraph that states it.
 > Evidence retrieval lands in v0.6. See [ROADMAP](#roadmap).

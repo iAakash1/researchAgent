@@ -52,6 +52,11 @@ class EventType(StrEnum):
     REFERENCES_EXTRACTED = "document.references.extracted"
 
     KNOWLEDGE_EXTRACTED = "knowledge.extracted"
+    EVIDENCE_INDEXED = "evidence.indexed"
+    BUNDLE_CREATED = "bundle.created"
+    BUNDLE_MERGED = "bundle.merged"
+    RETRIEVAL_PERFORMED = "retrieval.performed"
+    CONTRADICTION_DETECTED = "contradiction.detected"
     KNOWLEDGE_REJECTED = "knowledge.rejected"
 
     VALIDATION_PASSED = "validation.passed"
@@ -127,6 +132,25 @@ class KnowledgePayload(EventPayload):
     evidence: int = 0
     kinds: tuple[str, ...] = ()
     rejected: int = 0
+
+
+class BundlePayload(EventPayload):
+    bundle_id: str
+    question_id: str | None = None
+    knowledge_objects: int = 0
+    evidence_items: int = 0
+    papers: int = 0
+    contradictions: int = 0
+    confidence: float = 0.0
+
+
+class RetrievalPayload(EventPayload):
+    layer: str
+    retrieved_by: str
+    query: str
+    hits: int = 0
+    considered: int = 0
+    latency_ms: float = 0.0
 
 
 class ValidationPayload(EventPayload):

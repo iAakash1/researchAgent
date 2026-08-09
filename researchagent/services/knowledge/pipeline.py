@@ -38,7 +38,7 @@ from researchagent.schemas.knowledge import (
     ValidatedKnowledge,
 )
 from researchagent.services.knowledge.base import ExtractionOutcome, KnowledgeExtractor
-from researchagent.services.knowledge.grounding import EvidenceGrounder, normalise
+from researchagent.services.knowledge.grounding import EvidenceGrounder
 from researchagent.services.knowledge.relations import RelationBuilder
 from researchagent.services.validation.knowledge import (
     CompletenessValidator,
@@ -47,6 +47,7 @@ from researchagent.services.validation.knowledge import (
     RelationshipValidator,
     ResultValidator,
 )
+from researchagent.utils.text import normalise
 
 logger = get_logger(__name__)
 

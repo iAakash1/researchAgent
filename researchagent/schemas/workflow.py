@@ -26,6 +26,7 @@ class WorkflowStage(StrEnum):
     DISCOVERY = "discovery"
     DOCUMENT_INTELLIGENCE = "document_intelligence"
     KNOWLEDGE_EXTRACTION = "knowledge_extraction"
+    EVIDENCE_INTELLIGENCE = "evidence_intelligence"
 
 
 class RunStatus(StrEnum):
@@ -123,6 +124,20 @@ class KnowledgeReport(BaseModel):
     kinds_present: tuple[str, ...] = ()
 
 
+class EvidenceReport(BaseModel):
+    """Summary of the evidence intelligence stage."""
+
+    papers_indexed: int = 0
+    evidence_records: int = 0
+    bundles_built: int = 0
+    bundles_trusted: int = 0
+    contradictions: int = 0
+    # Questions whose bundle came back empty — the literature gaps this run found.
+    unanswered_questions: tuple[str, ...] = ()
+    bundle_ids: tuple[str, ...] = ()
+    mean_bundle_confidence: float = 0.0
+
+
 class ResearchState(BaseModel):
     """State threaded through the whole research workflow."""
 
@@ -150,6 +165,8 @@ class ResearchState(BaseModel):
     # Knowledge objects live in the knowledge repository; state carries the summary and
     # the rejection counts, which are what the reviewer needs to judge the run.
     knowledge: KnowledgeReport | None = None
+    # Bundles live in the bundle repository; state carries the summary a reviewer needs.
+    evidence: EvidenceReport | None = None
 
     history: Annotated[list[StageRecord], operator.add] = Field(default_factory=list)
     failure: StageFailure | None = None

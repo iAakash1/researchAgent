@@ -1,17 +1,6 @@
-"""Validation services: one validator, one question, one ValidationResult."""
+"""Validation services: one validator, one question, one ValidationResult.
 
-from researchagent.services.validation.document import (
-    CitationValidator,
-    MetadataValidator,
-    PDFValidator,
-    ReferenceValidator,
-    SectionValidator,
-)
-
-__all__ = [
-    "CitationValidator",
-    "MetadataValidator",
-    "PDFValidator",
-    "ReferenceValidator",
-    "SectionValidator",
-]
+Deliberately no aggregate re-exports. Importing this package must not drag in every
+validator (and through them, every subsystem they validate) — callers import the module
+that owns the validator they need.
+"""

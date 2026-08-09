@@ -15,6 +15,7 @@ from researchagent.config.loader import ConfigLoader
 from researchagent.config.schemas import (
     AgentConfig,
     DocumentsConfig,
+    EvidenceConfig,
     KnowledgeConfig,
     ModelCatalog,
     SourcesConfig,
@@ -28,7 +29,9 @@ from researchagent.core.settings import Settings, get_settings
 from researchagent.integrations.pymupdf import PyMuPDFLoader
 from researchagent.integrations.sources import build_enabled_sources
 from researchagent.memory.checkpoints import build_checkpointer
+from researchagent.repositories.bundle_repository import JsonBundleRepository
 from researchagent.repositories.document_repository import JsonDocumentRepository
+from researchagent.repositories.evidence_repository import JsonEvidenceRepository
 from researchagent.repositories.knowledge_repository import JsonKnowledgeRepository
 from researchagent.repositories.paper_repository import JsonPaperRepository
 from researchagent.services.deduplication import PaperDeduplicator
@@ -41,6 +44,17 @@ from researchagent.services.document import (
     MetadataExtractor,
     ReferenceExtractor,
     SectionDetector,
+)
+from researchagent.services.evidence import (
+    AgreementCrossPaperRetriever,
+    ContradictionDetector,
+    EvidenceBundleBuilder,
+    EvidenceIndexer,
+    EvidenceIntelligenceService,
+    LexicalKnowledgeRetriever,
+    LinkedEvidenceRetriever,
+    RepositoryDocumentRetriever,
+    StoredBundleRetriever,
 )
 from researchagent.services.knowledge import KnowledgeIntelligenceService, RelationBuilder
 from researchagent.services.knowledge.registry import build_extractors
@@ -65,6 +79,7 @@ class Container:
     sources_config: SourcesConfig
     documents_config: DocumentsConfig
     knowledge_config: KnowledgeConfig
+    evidence_config: EvidenceConfig
     prompt_library: PromptLibrary
     event_bus: EventBus
     llm_service: LLMService
@@ -76,6 +91,16 @@ class Container:
     document_service: DocumentIntelligenceService
     knowledge_repository: JsonKnowledgeRepository
     knowledge_service: KnowledgeIntelligenceService
+    evidence_repository: JsonEvidenceRepository
+    bundle_repository: JsonBundleRepository
+    evidence_service: EvidenceIntelligenceService
+    # Retrieval layers exposed directly: the API and, from v0.9, the reasoning engine
+    # query them without going through the pipeline that populated them.
+    knowledge_retriever: LexicalKnowledgeRetriever
+    evidence_retriever: LinkedEvidenceRetriever
+    document_retriever: RepositoryDocumentRetriever
+    cross_paper_retriever: AgreementCrossPaperRetriever
+    bundle_retriever: StoredBundleRetriever
     workflow_runner: WorkflowRunner
 
     async def aclose(self) -> None:
@@ -96,6 +121,7 @@ def build_container(settings: Settings | None = None) -> Container:
     sources_config = loader.load("sources", SourcesConfig)
     documents_config = loader.load("documents", DocumentsConfig)
     knowledge_config = loader.load("knowledge", KnowledgeConfig)
+    evidence_config = loader.load("evidence", EvidenceConfig)
 
     prompt_library = PromptLibrary(settings.prompts_dir)
     event_bus = EventBus()
@@ -158,6 +184,34 @@ def build_container(settings: Settings | None = None) -> Container:
         event_bus=event_bus,
     )
 
+    evidence_repository = JsonEvidenceRepository(
+        _resolve(evidence_config.evidence_dir, settings.project_root)
+    )
+    bundle_repository = JsonBundleRepository(
+        _resolve(evidence_config.bundles_dir, settings.project_root)
+    )
+    knowledge_retriever = LexicalKnowledgeRetriever(knowledge_repository, evidence_config.weights)
+    evidence_retriever = LinkedEvidenceRetriever(evidence_repository, evidence_config.weights)
+    document_retriever = RepositoryDocumentRetriever(document_repository)
+    cross_paper_retriever = AgreementCrossPaperRetriever(
+        knowledge_retriever, evidence_config.weights
+    )
+    bundle_retriever = StoredBundleRetriever(bundle_repository)
+    evidence_service = EvidenceIntelligenceService(
+        EvidenceIndexer(evidence_repository, event_bus=event_bus),
+        EvidenceBundleBuilder(
+            knowledge_retriever,
+            evidence_retriever,
+            cross_paper_retriever,
+            ContradictionDetector(evidence_config.contradictions),
+            evidence_config.bundles,
+        ),
+        knowledge_repository,
+        bundle_repository,
+        evidence_config.pipeline,
+        event_bus=event_bus,
+    )
+
     planner = build_agent(
         "planner",
         agent_config=agent_config,
@@ -170,6 +224,7 @@ def build_container(settings: Settings | None = None) -> Container:
         discovery=discovery_service,
         documents=document_service,
         knowledge=knowledge_service,
+        evidence=evidence_service,
         checkpointer=build_checkpointer(workflow_config.checkpointer),
     )
 
@@ -191,6 +246,7 @@ def build_container(settings: Settings | None = None) -> Container:
         sources_config=sources_config,
         documents_config=documents_config,
         knowledge_config=knowledge_config,
+        evidence_config=evidence_config,
         prompt_library=prompt_library,
         event_bus=event_bus,
         llm_service=llm_service,
@@ -202,6 +258,14 @@ def build_container(settings: Settings | None = None) -> Container:
         document_service=document_service,
         knowledge_repository=knowledge_repository,
         knowledge_service=knowledge_service,
+        evidence_repository=evidence_repository,
+        bundle_repository=bundle_repository,
+        evidence_service=evidence_service,
+        knowledge_retriever=knowledge_retriever,
+        evidence_retriever=evidence_retriever,
+        document_retriever=document_retriever,
+        cross_paper_retriever=cross_paper_retriever,
+        bundle_retriever=bundle_retriever,
         workflow_runner=WorkflowRunner(graph, workflow_config),
     )
 
