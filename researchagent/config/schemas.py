@@ -316,3 +316,70 @@ class EvidenceConfig(BaseModel):
     contradictions: ContradictionConfig = Field(default_factory=ContradictionConfig)
     bundles: BundleSettings = Field(default_factory=BundleSettings)
     pipeline: EvidencePipelineSettings = Field(default_factory=EvidencePipelineSettings)
+
+
+class FusionStrategy(StrEnum):
+    RECIPROCAL_RANK = "reciprocal_rank"
+    WEIGHTED_SCORE = "weighted_score"
+
+
+class BM25Settings(BaseModel):
+    """Standard BM25 parameters. k1 controls term-frequency saturation, b length
+    normalisation; the defaults are the usual starting point, not a tuned result."""
+
+    k1: float = Field(default=1.5, gt=0.0, le=3.0)
+    b: float = Field(default=0.75, ge=0.0, le=1.0)
+
+
+class FusionSettings(BaseModel):
+    strategy: FusionStrategy = FusionStrategy.RECIPROCAL_RANK
+    # Each component retrieves this many times the requested limit, so fusion has depth
+    # to reorder rather than reordering an already-truncated list.
+    candidate_multiplier: int = Field(default=3, ge=1, le=20)
+    # RRF's damping constant. 60 is the value from the original paper.
+    rrf_k: int = Field(default=60, ge=1, le=1000)
+    lexical_weight: float = Field(default=1.0, ge=0.0)
+    sparse_weight: float = Field(default=1.0, ge=0.0)
+    dense_weight: float = Field(default=1.0, ge=0.0)
+
+
+class EmbeddingSettings(BaseModel):
+    """Never hardcode a model name: switching models is a config change that forces a
+    new index version, because the model is part of the index identity."""
+
+    enabled: bool = True
+    provider: str = "ollama"
+    model: str = "nomic-embed-text"
+    batch_size: int = Field(default=32, ge=1, le=512)
+    timeout_seconds: float = Field(default=120.0, gt=0)
+    preprocessing_version: str = "1"
+
+
+class VectorStoreSettings(BaseModel):
+    # `memory` keeps the full semantic stack working offline and in tests; `qdrant` is
+    # the production adapter. Both implement the same port.
+    backend: str = "memory"
+    url: str = "http://localhost:6333"
+    collection_prefix: str = "researchagent_knowledge"
+    api_key: str | None = None
+    timeout_seconds: float = Field(default=30.0, gt=0)
+
+
+class IndexSettings(BaseModel):
+    # Bumped by hand when the index schema changes for a reason the model identity does
+    # not already capture.
+    schema_version: str = "1"
+    rebuild_on_start: bool = False
+
+
+class RetrievalConfig(BaseModel):
+    """``config/retrieval.yaml`` root."""
+
+    # The retriever the pipeline actually uses. `deterministic` is the v0.6 baseline and
+    # remains the default: semantic retrieval is opt-in until the benchmark justifies it.
+    active_retriever: str = "deterministic"
+    embeddings: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
+    vector_store: VectorStoreSettings = Field(default_factory=VectorStoreSettings)
+    index: IndexSettings = Field(default_factory=IndexSettings)
+    bm25: BM25Settings = Field(default_factory=BM25Settings)
+    fusion: FusionSettings = Field(default_factory=FusionSettings)

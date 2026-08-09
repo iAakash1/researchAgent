@@ -1,0 +1,41 @@
+# Retrieval engine.
+#
+# `deterministic` is the v0.6 baseline and stays the default. Semantic and hybrid
+# retrieval are opt-in until the benchmark shows they are better on this corpus.
+# Options: deterministic | bm25 | semantic | hybrid
+active_retriever: deterministic
+
+embeddings:
+  enabled: true
+  provider: ollama
+  # Never hardcoded in code. Changing this changes the index identity, which forces a
+  # new index version rather than silently reusing incompatible vectors.
+  model: nomic-embed-text
+  batch_size: 32
+  timeout_seconds: 120
+  preprocessing_version: "1"
+
+vector_store:
+  # memory  — exact brute-force cosine; works offline and in tests
+  # qdrant  — production adapter, same port
+  backend: memory
+  url: http://localhost:6333
+  collection_prefix: researchagent_knowledge
+
+index:
+  schema_version: "1"
+  rebuild_on_start: false
+
+bm25:
+  k1: 1.5
+  b: 0.75
+
+fusion:
+  # reciprocal_rank fuses ranks (immune to scale mismatch between BM25 and cosine);
+  # weighted_score fuses min-max normalised scores.
+  strategy: reciprocal_rank
+  candidate_multiplier: 3
+  rrf_k: 60
+  lexical_weight: 1.0
+  sparse_weight: 1.0
+  dense_weight: 1.0

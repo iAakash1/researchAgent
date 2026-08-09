@@ -1,0 +1,273 @@
+{
+  "version": "v1",
+  "corpus_description": "3 manually collected papers: manual:01, manual:02, manual:03",
+  "created_at": "2026-08-09T15:23:13.995814Z",
+  "queries": [
+    {
+      "id": "GQ1",
+      "text": "What triggers metastable failures in distributed systems?",
+      "kinds": [],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:01#method:trigger-vs.-root-cause:7",
+          "relevance": "highly_relevant",
+          "rationale": "Directly distinguishes trigger from root cause"
+        },
+        {
+          "knowledge_object_id": "manual:02#result:trigger_type_percentage-on-table-1:0",
+          "relevance": "highly_relevant",
+          "rationale": "Measured distribution of trigger types"
+        },
+        {
+          "knowledge_object_id": "manual:02#result:load_spike_trigger_percentage-on-table-1:1",
+          "relevance": "highly_relevant",
+          "rationale": "Load spikes as a trigger, measured"
+        },
+        {
+          "knowledge_object_id": "manual:01#method:change-of-policy-during-overload:0",
+          "relevance": "relevant",
+          "rationale": "Policy change is a named trigger path"
+        },
+        {
+          "knowledge_object_id": "manual:01#dataset:retry-case-study:8",
+          "relevance": "relevant",
+          "rationale": "Retries are a documented trigger"
+        },
+        {
+          "knowledge_object_id": "manual:01#dataset:load-shedding:4",
+          "relevance": "marginal",
+          "rationale": "Mitigation of the overload that triggers failure"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "d63759c3-181b-4378-b8a6-3fea3d074b00",
+        "0db8e0ef-43a7-409d-a988-130563a0a09e",
+        "2c98bffd-6ff4-4cec-af03-717f0e78884f",
+        "fd93e6ec-4b9a-4f31-a1a5-498705089ebc",
+        "800afd47-6eca-44e2-a6c1-2273857480aa",
+        "eade235b-ddeb-4ab9-a83a-cb3a53bdc81c"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "Judgements written by inspecting the corpus; awaiting human review."
+    },
+    {
+      "id": "GQ2",
+      "text": "Which techniques mitigate overload in distributed systems?",
+      "kinds": [
+        "method"
+      ],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:01#method:circuit-breaker-pattern:8",
+          "relevance": "highly_relevant",
+          "rationale": "Canonical overload mitigation"
+        },
+        {
+          "knowledge_object_id": "manual:01#method:prioritization:1",
+          "relevance": "highly_relevant",
+          "rationale": "Prioritising work under overload"
+        },
+        {
+          "knowledge_object_id": "manual:01#method:adaptive-policies:9",
+          "relevance": "highly_relevant",
+          "rationale": "Policies that adapt to load"
+        },
+        {
+          "knowledge_object_id": "manual:01#method:autoscaling:6",
+          "relevance": "relevant",
+          "rationale": "Capacity response to load"
+        },
+        {
+          "knowledge_object_id": "manual:01#method:lower-priority-for-retried-queries:12",
+          "relevance": "relevant",
+          "rationale": "Retry-specific mitigation"
+        },
+        {
+          "knowledge_object_id": "manual:01#method:fast-error-paths:4",
+          "relevance": "marginal",
+          "rationale": "Reduces cost of failures under load"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "21ad9299-c02a-4594-aeba-e4046ef2b2b9",
+        "53611ae8-374c-4407-927c-bf5dc74b2994",
+        "3271b43b-206e-49b1-a42e-150c36b9c585",
+        "1a7a16a9-d4f3-45fe-b4f0-d902dccedd76",
+        "97d13ecd-3894-4476-84b7-0503e3ad1d2f",
+        "6bd54589-7a14-410a-bf98-1f29765db3a3"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "Judgements written by inspecting the corpus; awaiting human review."
+    },
+    {
+      "id": "GQ3",
+      "text": "What metrics measure system performance under load?",
+      "kinds": [
+        "metric"
+      ],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:01#metric:goodput:0",
+          "relevance": "highly_relevant",
+          "rationale": "The primary throughput metric in this literature"
+        },
+        {
+          "knowledge_object_id": "manual:01#metric:latency:1",
+          "relevance": "highly_relevant",
+          "rationale": "Primary latency metric"
+        },
+        {
+          "knowledge_object_id": "manual:02#metric:queue-length:0",
+          "relevance": "relevant",
+          "rationale": "Queue depth as a load indicator"
+        },
+        {
+          "knowledge_object_id": "manual:02#metric:gc-duration:1",
+          "relevance": "relevant",
+          "rationale": "Pause time under load"
+        },
+        {
+          "knowledge_object_id": "manual:02#metric:printgcapplication-stoppedtime:3",
+          "relevance": "marginal",
+          "rationale": "A specific GC measurement"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "bf6404f3-082a-4f5a-b232-a9963bd3bee9",
+        "72f2d76f-5b75-4632-a82c-e94c76d00c18",
+        "d166e341-0ec7-496e-981a-fef0c300dee4",
+        "96f993d6-a095-4dcd-a814-0e964edc9f63",
+        "01599e4f-3293-453c-b47b-ac7bf0a07614"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "Judgements written by inspecting the corpus; awaiting human review."
+    },
+    {
+      "id": "GQ4",
+      "text": "What limitations do the authors acknowledge in modelling metastable failures?",
+      "kinds": [
+        "limitation"
+      ],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:01#limitation:simplified-models-may-not-capture-metastability:0",
+          "relevance": "highly_relevant",
+          "rationale": "Explicit modelling limit"
+        },
+        {
+          "knowledge_object_id": "manual:01#limitation:perfect-fidelity-in-models-is-not-achievable:1",
+          "relevance": "highly_relevant",
+          "rationale": "Explicit modelling limit"
+        },
+        {
+          "knowledge_object_id": "manual:01#limitation:precise-simulation-of-complex-systems-is-computa:2",
+          "relevance": "relevant",
+          "rationale": "Cost limit on simulation"
+        },
+        {
+          "knowledge_object_id": "manual:02#limitation:limited-information-in-reports:1",
+          "relevance": "marginal",
+          "rationale": "Data limitation, not a modelling one"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "a987ec6b-422e-4b34-9122-bd42b5bf3834",
+        "f5911fe1-fe7c-4dbc-801d-4d17c3c098ea",
+        "00ee4502-580f-4562-a4e1-d69bcc5f85a9",
+        "25487952-5f77-4d6e-9f66-106b55e99bb8"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "Judgements written by inspecting the corpus; awaiting human review."
+    },
+    {
+      "id": "GQ5",
+      "text": "What future research directions are proposed for metastable failures?",
+      "kinds": [
+        "future_work"
+      ],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:01#future_work:designing-systems-to-avoid-metastable-failures:0",
+          "relevance": "highly_relevant",
+          "rationale": "Named future direction"
+        },
+        {
+          "knowledge_object_id": "manual:01#future_work:accurately-modeling-and-reproducing-metastable-f:4",
+          "relevance": "highly_relevant",
+          "rationale": "Named direction"
+        },
+        {
+          "knowledge_object_id": "manual:01#future_work:estimating-the-probability-of-novel-metastable-f:1",
+          "relevance": "highly_relevant",
+          "rationale": "Named direction"
+        },
+        {
+          "knowledge_object_id": "manual:01#future_work:identifying-vulnerabilities-in-existing-systems:2",
+          "relevance": "relevant",
+          "rationale": "Named direction"
+        },
+        {
+          "knowledge_object_id": "manual:02#future_work:develop-solutions-to-metastable-failures.:1",
+          "relevance": "relevant",
+          "rationale": "Named direction, second paper"
+        },
+        {
+          "knowledge_object_id": "manual:01#future_work:understanding-the-impact-of-system-changes-on-su:5",
+          "relevance": "relevant",
+          "rationale": "Named direction"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "1d114bbd-7263-44bd-9615-f6040d265f77",
+        "f9edd305-f880-4f24-97fc-ce8a056f0f06",
+        "260c8a27-1c36-4fdb-b71a-017efcb4f81b",
+        "3da1878c-67b1-4b80-80cc-14d49d4fe156",
+        "d0fe32b8-e0c4-4a01-925c-6aaac3725534",
+        "60bef4f9-4adc-4efe-b5ab-e2228cf5772e"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "Judgements written by inspecting the corpus; awaiting human review."
+    },
+    {
+      "id": "GQ6",
+      "text": "How do caches contribute to metastable failure?",
+      "kinds": [],
+      "paper_ids": [],
+      "judgements": [
+        {
+          "knowledge_object_id": "manual:01#method:read-through-cache:13",
+          "relevance": "highly_relevant",
+          "rationale": "Cache design implicated in the failure mode"
+        },
+        {
+          "knowledge_object_id": "manual:01#dataset:read-through-cache:11",
+          "relevance": "highly_relevant",
+          "rationale": "Same concept, extracted separately"
+        },
+        {
+          "knowledge_object_id": "manual:01#dataset:look-aside-cache:10",
+          "relevance": "highly_relevant",
+          "rationale": "The look-aside cache case study"
+        }
+      ],
+      "relevant_evidence_ids": [
+        "3b8e3009-8590-4ac1-890c-3bdf003f8ade",
+        "2d7be3f1-54a8-4077-a453-48d153e64b94",
+        "76bd7622-2667-4a29-a438-07d4a57f594e"
+      ],
+      "status": "draft",
+      "reviewed_by": null,
+      "notes": "Judgements written by inspecting the corpus; awaiting human review."
+    }
+  ]
+}

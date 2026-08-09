@@ -56,6 +56,7 @@ class EventType(StrEnum):
     BUNDLE_CREATED = "bundle.created"
     BUNDLE_MERGED = "bundle.merged"
     RETRIEVAL_PERFORMED = "retrieval.performed"
+    INDEX_BUILT = "index.built"
     CONTRADICTION_DETECTED = "contradiction.detected"
     KNOWLEDGE_REJECTED = "knowledge.rejected"
 
@@ -151,6 +152,13 @@ class RetrievalPayload(EventPayload):
     hits: int = 0
     considered: int = 0
     latency_ms: float = 0.0
+
+
+class IndexPayload(EventPayload):
+    index_version: str
+    model_fingerprint: str
+    objects: int = 0
+    embedding_ms: float = 0.0
 
 
 class ValidationPayload(EventPayload):

@@ -27,6 +27,7 @@ storage/papers/documents/
 storage/papers/knowledge/
 storage/papers/evidence/
 storage/bundles/
+storage/vectors/
 storage/papers/raw/downloaded/
 
 .DS_Store

@@ -4,6 +4,31 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] — 2026-08-09
+
+Hybrid Evidence Retrieval Engine. Semantic and hybrid retrieval arrive behind the
+existing ports; the v0.6 deterministic retriever is unchanged and remains the baseline
+and the default.
+
+### Added
+- `core/interfaces/embeddings.py` (`EmbeddingModel`, `ModelIdentity`) and
+  `core/interfaces/vector_store.py` (`VectorStore`, `VectorMetadata`).
+- `integrations/ollama/embeddings.py`, `integrations/qdrant/store.py`, and
+  `integrations/memory_store.py` — an exact in-memory cosine store so the full semantic
+  stack runs offline and in tests.
+- `services/retrieval/`: shared retrieval representation, BM25, semantic retrieval,
+  configurable hybrid fusion (RRF and weighted score), and the indexing pipeline.
+- `evaluation/`: metrics (P@K, R@K, MRR, nDCG@K, evidence coverage), a versioned gold set
+  with review status, and a benchmark runner comparing all four arms.
+- `config/retrieval.yaml`, `scripts/build_gold_set.py`, `scripts/benchmark_retrieval.py`.
+
+### Changed
+- `RetrievalResult` gained `degraded` / `unavailable_reason` (defaulted, additive) so a
+  retriever that could not run is distinguishable from one that found nothing — hybrid
+  fusion excludes a degraded component instead of scoring it zero.
+
+[0.7.0]: https://github.com/iAakash1/researchAgent/releases/tag/v0.7.0
+
 ## [0.6.0] — 2026-08-09
 
 Evidence Intelligence Engine. The system stops retrieving text and starts retrieving

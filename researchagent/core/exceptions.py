@@ -260,3 +260,34 @@ class PrerequisiteNotMetError(ResearchAgentError):
     code = "prerequisite_not_met"
     http_status = 409
     recoverability = Recoverability.FATAL
+
+
+class EmbeddingError(ResearchAgentError):
+    """The embedding backend could not produce vectors."""
+
+    code = "embedding_error"
+    http_status = 503
+    recoverability = Recoverability.RETRYABLE
+    remedy = "Check Ollama is running and the embedding model is pulled"
+
+
+class VectorStoreError(ResearchAgentError):
+    """The vector store could not serve a request."""
+
+    code = "vector_store_error"
+    http_status = 503
+    recoverability = Recoverability.RETRYABLE
+    remedy = "Check Qdrant is reachable; retrieval falls back to lexical meanwhile"
+
+
+class IndexIncompatibleError(ResearchAgentError):
+    """Stored vectors were produced by a different model or preprocessing.
+
+    Fatal rather than retryable: retrying cannot reconcile two vector spaces, and serving
+    the query anyway would return confident nonsense. The index must be rebuilt.
+    """
+
+    code = "index_incompatible"
+    http_status = 409
+    recoverability = Recoverability.FATAL
+    remedy = "Rebuild the index with the configured embedding model"

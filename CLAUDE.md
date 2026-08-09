@@ -113,7 +113,7 @@ Each stage validates the previous one. Contracts between stages:
 
 v0.1 skeleton ✅ · v0.2 Planner + LangGraph ✅ · v0.3 Discovery + Retrieval ✅ ·
 v0.4 Document Intelligence + Zero-Trust Foundation ✅ · v0.5 Knowledge Intelligence ✅ ·
-v0.6 Evidence Intelligence ✅ · v0.7 Knowledge Graph · v0.8 Reasoning · v0.9 Verification ·
+v0.6 Evidence Intelligence ✅ · v0.7 Hybrid Retrieval ✅ · v0.8 Knowledge Graph · v0.8 Reasoning · v0.9 Verification ·
 v1.0 Research Operating System.
 
 Each release introduces exactly one canonical abstraction:

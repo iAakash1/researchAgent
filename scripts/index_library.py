@@ -26,12 +26,12 @@ async def main() -> int:
     try:
         manual = next((s for s in container.paper_sources if s.name is SourceName.MANUAL), None)
         if manual is None:
-            print("manual source is disabled in config/sources.yaml", file=sys.stderr)  # noqa: T201
+            print("manual source is disabled in config/sources.yaml", file=sys.stderr)
             return 1
 
         health = await manual.health()
         if not health.healthy:
-            print(f"manual library unavailable: {health.detail}", file=sys.stderr)  # noqa: T201
+            print(f"manual library unavailable: {health.detail}", file=sys.stderr)
             return 1
 
         papers = manual.load_all()  # type: ignore[attr-defined]
@@ -46,10 +46,10 @@ async def main() -> int:
             ]
         )
 
-        print(f"indexed {len(saved)} papers -> {container.paper_repository.metadata_dir}")  # noqa: T201
+        print(f"indexed {len(saved)} papers -> {container.paper_repository.metadata_dir}")
         for record in saved:
             year = record.paper.year or "----"
-            print(f"  {record.id:<14} {year}  {record.paper.title}")  # noqa: T201
+            print(f"  {record.id:<14} {year}  {record.paper.title}")
         return 0
     finally:
         await container.aclose()

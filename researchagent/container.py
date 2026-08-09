@@ -18,11 +18,15 @@ from researchagent.config.schemas import (
     EvidenceConfig,
     KnowledgeConfig,
     ModelCatalog,
+    RetrievalConfig,
     SourcesConfig,
     WorkflowConfig,
 )
 from researchagent.core.events import EventBus
+from researchagent.core.interfaces.embeddings import EmbeddingModel
 from researchagent.core.interfaces.paper_source import PaperSource
+from researchagent.core.interfaces.retrieval import KnowledgeRetriever
+from researchagent.core.interfaces.vector_store import VectorStore
 from researchagent.core.logging import configure_logging, get_logger
 from researchagent.core.prompts import PromptLibrary
 from researchagent.core.settings import Settings, get_settings
@@ -60,6 +64,13 @@ from researchagent.services.knowledge import KnowledgeIntelligenceService, Relat
 from researchagent.services.knowledge.registry import build_extractors
 from researchagent.services.llm_service import LLMService
 from researchagent.services.ranking import HeuristicScorer
+from researchagent.services.retrieval import KnowledgeIndexer
+from researchagent.services.retrieval.registry import (
+    build_embedding_model,
+    build_retrieval_arms,
+    build_vector_store,
+    select_active,
+)
 from researchagent.services.retrieval_service import RetrievalService
 from researchagent.workflows.research import build_research_graph
 from researchagent.workflows.runner import WorkflowRunner
@@ -80,6 +91,7 @@ class Container:
     documents_config: DocumentsConfig
     knowledge_config: KnowledgeConfig
     evidence_config: EvidenceConfig
+    retrieval_config: RetrievalConfig
     prompt_library: PromptLibrary
     event_bus: EventBus
     llm_service: LLMService
@@ -101,10 +113,19 @@ class Container:
     document_retriever: RepositoryDocumentRetriever
     cross_paper_retriever: AgreementCrossPaperRetriever
     bundle_retriever: StoredBundleRetriever
+    # Every retrieval strategy stays constructed, whichever one is active. The benchmark
+    # compares them, and switching is a config edit rather than a code change.
+    embedding_model: EmbeddingModel
+    vector_store: VectorStore
+    knowledge_indexer: KnowledgeIndexer
+    retrieval_arms: dict[str, KnowledgeRetriever]
+    active_knowledge_retriever: KnowledgeRetriever
     workflow_runner: WorkflowRunner
 
     async def aclose(self) -> None:
         await self.llm_service.aclose()
+        await self.embedding_model.aclose()
+        await self.vector_store.aclose()
         for source in self.paper_sources:
             await source.aclose()
 
@@ -122,6 +143,7 @@ def build_container(settings: Settings | None = None) -> Container:
     documents_config = loader.load("documents", DocumentsConfig)
     knowledge_config = loader.load("knowledge", KnowledgeConfig)
     evidence_config = loader.load("evidence", EvidenceConfig)
+    retrieval_config = loader.load("retrieval", RetrievalConfig)
 
     prompt_library = PromptLibrary(settings.prompts_dir)
     event_bus = EventBus()
@@ -197,10 +219,26 @@ def build_container(settings: Settings | None = None) -> Container:
         knowledge_retriever, evidence_config.weights
     )
     bundle_retriever = StoredBundleRetriever(bundle_repository)
+    embedding_model = build_embedding_model(
+        retrieval_config.embeddings, base_url=settings.ollama.base_url
+    )
+    vector_store = build_vector_store(retrieval_config.vector_store)
+    knowledge_indexer = KnowledgeIndexer(
+        embedding_model,
+        vector_store,
+        knowledge_repository,
+        retrieval_config.index,
+        event_bus=event_bus,
+    )
+    retrieval_arms = build_retrieval_arms(
+        retrieval_config, knowledge_repository, knowledge_retriever, embedding_model, vector_store
+    )
+    active_knowledge_retriever = select_active(retrieval_arms, retrieval_config)
+
     evidence_service = EvidenceIntelligenceService(
         EvidenceIndexer(evidence_repository, event_bus=event_bus),
         EvidenceBundleBuilder(
-            knowledge_retriever,
+            active_knowledge_retriever,
             evidence_retriever,
             cross_paper_retriever,
             ContradictionDetector(evidence_config.contradictions),
@@ -247,6 +285,7 @@ def build_container(settings: Settings | None = None) -> Container:
         documents_config=documents_config,
         knowledge_config=knowledge_config,
         evidence_config=evidence_config,
+        retrieval_config=retrieval_config,
         prompt_library=prompt_library,
         event_bus=event_bus,
         llm_service=llm_service,
@@ -266,6 +305,11 @@ def build_container(settings: Settings | None = None) -> Container:
         document_retriever=document_retriever,
         cross_paper_retriever=cross_paper_retriever,
         bundle_retriever=bundle_retriever,
+        embedding_model=embedding_model,
+        vector_store=vector_store,
+        knowledge_indexer=knowledge_indexer,
+        retrieval_arms=retrieval_arms,
+        active_knowledge_retriever=active_knowledge_retriever,
         workflow_runner=WorkflowRunner(graph, workflow_config),
     )
 

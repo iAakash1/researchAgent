@@ -70,6 +70,12 @@ class RetrievalResult[TItem: BaseModel](BaseModel):
     retrieved_by: str = Field(min_length=1)
     latency_ms: float = Field(default=0.0, ge=0.0)
 
+    # A retriever that could not run must be distinguishable from one that ran and found
+    # nothing. Fusion depends on it: an outage in the semantic index should fall back to
+    # lexical, whereas a genuinely empty semantic result is information.
+    degraded: bool = False
+    unavailable_reason: str | None = None
+
     @property
     def items(self) -> tuple[TItem, ...]:
         return tuple(hit.item for hit in self.hits)
@@ -81,6 +87,29 @@ class RetrievalResult[TItem: BaseModel](BaseModel):
     @property
     def top_score(self) -> float:
         return self.hits[0].score if self.hits else 0.0
+
+    @property
+    def is_usable(self) -> bool:
+        """Whether this result reflects a retriever that actually ran."""
+        return not self.degraded
+
+    @classmethod
+    def unavailable(
+        cls,
+        *,
+        layer: RetrievalLayer,
+        query: ResearchQuery,
+        retrieved_by: str,
+        reason: str,
+    ) -> RetrievalResult[TItem]:
+        """The honest empty result: nothing found because nothing could be asked."""
+        return cls(
+            layer=layer,
+            query=query,
+            retrieved_by=retrieved_by,
+            degraded=True,
+            unavailable_reason=reason,
+        )
 
 
 class Retriever[TItem: BaseModel](ABC):

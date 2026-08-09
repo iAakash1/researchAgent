@@ -15,6 +15,7 @@ from researchagent.config.schemas import (
     EvidenceConfig,
     KnowledgeConfig,
     ModelCatalog,
+    RetrievalConfig,
     SourcesConfig,
     WorkflowConfig,
 )
@@ -32,6 +33,8 @@ from researchagent.core.interfaces.llm import (
 from researchagent.core.prompts import PromptLibrary
 from researchagent.core.settings import Environment, Settings
 from researchagent.integrations.manual import ManualPaperSource
+from researchagent.integrations.memory_store import InMemoryVectorStore
+from researchagent.integrations.ollama import NullEmbeddingModel
 from researchagent.integrations.pymupdf import PyMuPDFLoader
 from researchagent.memory.checkpoints import build_checkpointer
 from researchagent.repositories.bundle_repository import JsonBundleRepository
@@ -65,6 +68,8 @@ from researchagent.services.knowledge import KnowledgeIntelligenceService, Relat
 from researchagent.services.knowledge.registry import build_extractors
 from researchagent.services.llm_service import BoundLLM, LLMService
 from researchagent.services.ranking import HeuristicScorer
+from researchagent.services.retrieval import KnowledgeIndexer
+from researchagent.services.retrieval.registry import build_retrieval_arms, select_active
 from researchagent.services.retrieval_service import RetrievalService
 from researchagent.workflows.research import build_research_graph
 from researchagent.workflows.runner import WorkflowRunner
@@ -266,6 +271,19 @@ def container(
         knowledge_retriever, evidence_config.weights
     )
     bundle_retriever = StoredBundleRetriever(bundle_repository)
+    retrieval_config = config_loader.load("retrieval", RetrievalConfig)
+    # Tests never touch Ollama or Qdrant: a null embedder plus the in-memory store keep
+    # the semantic arm constructible and honestly degraded.
+    embedding_model = NullEmbeddingModel()
+    vector_store = InMemoryVectorStore()
+    knowledge_indexer = KnowledgeIndexer(
+        embedding_model, vector_store, knowledge_repository, retrieval_config.index
+    )
+    retrieval_arms = build_retrieval_arms(
+        retrieval_config, knowledge_repository, knowledge_retriever, embedding_model, vector_store
+    )
+    active_knowledge_retriever = select_active(retrieval_arms, retrieval_config)
+
     evidence_service = EvidenceIntelligenceService(
         EvidenceIndexer(evidence_repository, event_bus=event_bus),
         EvidenceBundleBuilder(
@@ -317,6 +335,7 @@ def container(
         documents_config=documents_config,
         knowledge_config=knowledge_config,
         evidence_config=evidence_config,
+        retrieval_config=retrieval_config,
         prompt_library=prompt_library,
         event_bus=event_bus,
         llm_service=service,
@@ -338,6 +357,11 @@ def container(
         document_retriever=document_retriever,
         cross_paper_retriever=cross_paper_retriever,
         bundle_retriever=bundle_retriever,
+        embedding_model=embedding_model,
+        vector_store=vector_store,
+        knowledge_indexer=knowledge_indexer,
+        retrieval_arms=retrieval_arms,
+        active_knowledge_retriever=active_knowledge_retriever,
         workflow_runner=WorkflowRunner(graph, workflow_config),
     )
 
