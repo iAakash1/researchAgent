@@ -25,6 +25,7 @@ class WorkflowStage(StrEnum):
     PLANNING = "planning"
     DISCOVERY = "discovery"
     DOCUMENT_INTELLIGENCE = "document_intelligence"
+    KNOWLEDGE_EXTRACTION = "knowledge_extraction"
 
 
 class RunStatus(StrEnum):
@@ -107,6 +108,21 @@ class DocumentFailure(BaseModel):
     remedy: str | None = None
 
 
+class KnowledgeReport(BaseModel):
+    """Summary of the knowledge extraction stage."""
+
+    documents_processed: int = 0
+    succeeded: int = 0
+    failed: int = 0
+    objects_extracted: int = 0
+    relations_built: int = 0
+    # Proposals the papers' own text refused to support. The honesty metric.
+    rejected_ungrounded: int = 0
+    rejected_invalid: int = 0
+    grounding_rate: float = 0.0
+    kinds_present: tuple[str, ...] = ()
+
+
 class ResearchState(BaseModel):
     """State threaded through the whole research workflow."""
 
@@ -131,6 +147,9 @@ class ResearchState(BaseModel):
     # Canonical documents are large; state carries the per-paper verdicts and the
     # documents themselves live in the document repository.
     documents: DocumentReport | None = None
+    # Knowledge objects live in the knowledge repository; state carries the summary and
+    # the rejection counts, which are what the reviewer needs to judge the run.
+    knowledge: KnowledgeReport | None = None
 
     history: Annotated[list[StageRecord], operator.add] = Field(default_factory=list)
     failure: StageFailure | None = None

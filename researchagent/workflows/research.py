@@ -2,9 +2,11 @@
 
 Current shape::
 
-    START -> planning --(ok)--> discovery --(ok)--> document_intelligence -> END
-                  \\                      \\
-                   (failed) --> END         (failed) --> END
+    START -> planning --(ok)--> discovery --(ok)--> document_intelligence
+                  \\                      \\                    |
+                   (failed) --> END         (failed) --> END    (ok)
+                                                                 v
+                                                        knowledge_extraction -> END
 
 Guards, not defensive code inside stages, are what keep a stage from running on inputs
 it cannot use.
@@ -30,14 +32,17 @@ from researchagent.schemas.workflow import (
     DiscoveryReport,
     DocumentFailure,
     DocumentReport,
+    KnowledgeReport,
     ResearchState,
     WorkflowStage,
 )
 from researchagent.services.discovery_service import DiscoveryService
 from researchagent.services.document.pipeline import DocumentIntelligenceService
+from researchagent.services.knowledge.pipeline import KnowledgeIntelligenceService
 from researchagent.workflows.edges import CONTINUE, HALT, halt_on_failure
 from researchagent.workflows.guards import (
     requires_candidates,
+    requires_documents,
     requires_local_pdfs,
     requires_plan,
     run_not_failed,
@@ -127,11 +132,42 @@ def document_intelligence_node(service: DocumentIntelligenceService) -> ServiceN
     )
 
 
+def knowledge_extraction_node(service: KnowledgeIntelligenceService) -> ServiceNode:
+    async def handler(state: ResearchState) -> StateUpdate:
+        # `requires_documents` guarantees a validated document exists; the documents
+        # themselves are loaded from the repository rather than carried in state.
+        documents = await service.documents_for(state)
+        result = await service.process(documents, run_id=state.run_id)
+
+        kinds = sorted({kind for knowledge in result.knowledge for kind in knowledge.kinds_present})
+        return {
+            "knowledge": KnowledgeReport(
+                documents_processed=len(result.outcomes),
+                succeeded=result.succeeded,
+                failed=result.failed,
+                objects_extracted=result.total_objects,
+                relations_built=sum(len(k.relations) for k in result.knowledge),
+                rejected_ungrounded=sum(o.rejections.ungrounded for o in result.outcomes),
+                rejected_invalid=sum(o.rejections.invalid for o in result.outcomes),
+                grounding_rate=result.grounding_rate,
+                kinds_present=tuple(kind.value for kind in kinds),
+            ),
+        }
+
+    return ServiceNode(
+        WorkflowStage.KNOWLEDGE_EXTRACTION,
+        "knowledge_intelligence",
+        handler,
+        guards=[run_not_failed(), requires_documents()],
+    )
+
+
 def build_research_graph(
     *,
     planner: BaseAgent[Any, Any],
     discovery: DiscoveryService,
     documents: DocumentIntelligenceService,
+    knowledge: KnowledgeIntelligenceService,
     checkpointer: BaseCheckpointSaver[str] | None = None,
 ) -> CompiledStateGraph[ResearchState, Any, ResearchState, ResearchState]:
     """Compile the workflow. Collaborators are injected, so tests compile it with fakes."""
@@ -140,6 +176,7 @@ def build_research_graph(
     graph.add_node(WorkflowStage.PLANNING.value, planning_node(planner))
     graph.add_node(WorkflowStage.DISCOVERY.value, discovery_node(discovery))
     graph.add_node(WorkflowStage.DOCUMENT_INTELLIGENCE.value, document_intelligence_node(documents))
+    graph.add_node(WorkflowStage.KNOWLEDGE_EXTRACTION.value, knowledge_extraction_node(knowledge))
 
     graph.add_edge(START, WorkflowStage.PLANNING.value)
     graph.add_conditional_edges(
@@ -152,7 +189,12 @@ def build_research_graph(
         halt_on_failure,
         {CONTINUE: WorkflowStage.DOCUMENT_INTELLIGENCE.value, HALT: END},
     )
-    graph.add_edge(WorkflowStage.DOCUMENT_INTELLIGENCE.value, END)
+    graph.add_conditional_edges(
+        WorkflowStage.DOCUMENT_INTELLIGENCE.value,
+        halt_on_failure,
+        {CONTINUE: WorkflowStage.KNOWLEDGE_EXTRACTION.value, HALT: END},
+    )
+    graph.add_edge(WorkflowStage.KNOWLEDGE_EXTRACTION.value, END)
 
     compiled = graph.compile(checkpointer=checkpointer)
     logger.info(

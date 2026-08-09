@@ -1,0 +1,30 @@
+# Knowledge Intelligence Engine.
+
+knowledge_dir: storage/papers/knowledge
+
+# Extraction is near-deterministic work: the `extraction` alias in models.yaml pins a
+# low-temperature, seeded model.
+model: extraction
+prompt_version: v1
+
+# One extractor per knowledge kind. Disable one by removing it here — no code change.
+enabled_extractors:
+  - method_extractor
+  - dataset_extractor
+  - metric_extractor
+  - result_extractor
+  - limitation_extractor
+  - future_work_extractor
+
+validation:
+  min_name_chars: 2
+  min_claim_chars: 25
+  require_name_in_quote: true
+
+pipeline:
+  max_concurrent_documents: 2
+  max_documents_per_run: 10
+  skip_unchanged: true
+  # How close a model-supplied quote must be to real document text before it counts as
+  # evidence. Raising this rejects more; lowering it admits paraphrase as fact.
+  grounding_similarity_threshold: 0.85

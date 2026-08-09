@@ -15,6 +15,7 @@ from researchagent.config.loader import ConfigLoader
 from researchagent.config.schemas import (
     AgentConfig,
     DocumentsConfig,
+    KnowledgeConfig,
     ModelCatalog,
     SourcesConfig,
     WorkflowConfig,
@@ -28,6 +29,7 @@ from researchagent.integrations.pymupdf import PyMuPDFLoader
 from researchagent.integrations.sources import build_enabled_sources
 from researchagent.memory.checkpoints import build_checkpointer
 from researchagent.repositories.document_repository import JsonDocumentRepository
+from researchagent.repositories.knowledge_repository import JsonKnowledgeRepository
 from researchagent.repositories.paper_repository import JsonPaperRepository
 from researchagent.services.deduplication import PaperDeduplicator
 from researchagent.services.discovery_service import DiscoveryService
@@ -40,6 +42,8 @@ from researchagent.services.document import (
     ReferenceExtractor,
     SectionDetector,
 )
+from researchagent.services.knowledge import KnowledgeIntelligenceService, RelationBuilder
+from researchagent.services.knowledge.registry import build_extractors
 from researchagent.services.llm_service import LLMService
 from researchagent.services.ranking import HeuristicScorer
 from researchagent.services.retrieval_service import RetrievalService
@@ -60,6 +64,7 @@ class Container:
     workflow_config: WorkflowConfig
     sources_config: SourcesConfig
     documents_config: DocumentsConfig
+    knowledge_config: KnowledgeConfig
     prompt_library: PromptLibrary
     event_bus: EventBus
     llm_service: LLMService
@@ -69,6 +74,8 @@ class Container:
     retrieval_service: RetrievalService
     document_repository: JsonDocumentRepository
     document_service: DocumentIntelligenceService
+    knowledge_repository: JsonKnowledgeRepository
+    knowledge_service: KnowledgeIntelligenceService
     workflow_runner: WorkflowRunner
 
     async def aclose(self) -> None:
@@ -88,6 +95,7 @@ def build_container(settings: Settings | None = None) -> Container:
     workflow_config = loader.load("workflow", WorkflowConfig)
     sources_config = loader.load("sources", SourcesConfig)
     documents_config = loader.load("documents", DocumentsConfig)
+    knowledge_config = loader.load("knowledge", KnowledgeConfig)
 
     prompt_library = PromptLibrary(settings.prompts_dir)
     event_bus = EventBus()
@@ -131,6 +139,25 @@ def build_container(settings: Settings | None = None) -> Container:
         event_bus=event_bus,
     )
 
+    knowledge_repository = JsonKnowledgeRepository(
+        _resolve(knowledge_config.knowledge_dir, settings.project_root)
+    )
+    knowledge_service = KnowledgeIntelligenceService(
+        build_extractors(
+            knowledge_config.enabled_extractors,
+            llm_service.get(knowledge_config.model),
+            prompt_library,
+            prompt_version=knowledge_config.prompt_version,
+        ),
+        RelationBuilder(),
+        knowledge_repository,
+        document_repository,
+        paper_repository,
+        knowledge_config.pipeline,
+        knowledge_config.validation,
+        event_bus=event_bus,
+    )
+
     planner = build_agent(
         "planner",
         agent_config=agent_config,
@@ -142,6 +169,7 @@ def build_container(settings: Settings | None = None) -> Container:
         planner=planner,
         discovery=discovery_service,
         documents=document_service,
+        knowledge=knowledge_service,
         checkpointer=build_checkpointer(workflow_config.checkpointer),
     )
 
@@ -162,6 +190,7 @@ def build_container(settings: Settings | None = None) -> Container:
         workflow_config=workflow_config,
         sources_config=sources_config,
         documents_config=documents_config,
+        knowledge_config=knowledge_config,
         prompt_library=prompt_library,
         event_bus=event_bus,
         llm_service=llm_service,
@@ -171,6 +200,8 @@ def build_container(settings: Settings | None = None) -> Container:
         retrieval_service=retrieval_service,
         document_repository=document_repository,
         document_service=document_service,
+        knowledge_repository=knowledge_repository,
+        knowledge_service=knowledge_service,
         workflow_runner=WorkflowRunner(graph, workflow_config),
     )
 

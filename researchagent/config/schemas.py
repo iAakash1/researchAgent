@@ -228,3 +228,41 @@ class DocumentsConfig(BaseModel):
     sections: SectionDetectionConfig = Field(default_factory=SectionDetectionConfig)
     validation: DocumentValidationConfig = Field(default_factory=DocumentValidationConfig)
     pipeline: DocumentPipelineSettings = Field(default_factory=DocumentPipelineSettings)
+
+
+class KnowledgeValidationConfig(BaseModel):
+    """What counts as an acceptable knowledge object."""
+
+    min_name_chars: int = Field(default=2, ge=1)
+    min_claim_chars: int = Field(default=25, ge=0)
+    # Named entities should appear in their own supporting quote; claim-like kinds are
+    # exempt because a limitation is a statement, not a name.
+    require_name_in_quote: bool = True
+
+
+class KnowledgePipelineSettings(BaseModel):
+    max_concurrent_documents: int = Field(default=2, ge=1, le=8)
+    max_documents_per_run: int = Field(default=10, ge=1, le=200)
+    skip_unchanged: bool = True
+    # How close a model-supplied quote must be to real document text. High on purpose:
+    # below this the honest answer is "not found", and the extraction is discarded.
+    grounding_similarity_threshold: float = Field(default=0.85, ge=0.5, le=1.0)
+
+
+class KnowledgeConfig(BaseModel):
+    """``config/knowledge.yaml`` root."""
+
+    knowledge_dir: Path = Path("storage/papers/knowledge")
+    # Extraction is near-deterministic work; the alias binds it to a low-temperature model.
+    model: str | None = "extraction"
+    prompt_version: str = "v1"
+    enabled_extractors: tuple[str, ...] = (
+        "method_extractor",
+        "dataset_extractor",
+        "metric_extractor",
+        "result_extractor",
+        "limitation_extractor",
+        "future_work_extractor",
+    )
+    validation: KnowledgeValidationConfig = Field(default_factory=KnowledgeValidationConfig)
+    pipeline: KnowledgePipelineSettings = Field(default_factory=KnowledgePipelineSettings)

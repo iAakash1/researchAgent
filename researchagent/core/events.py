@@ -51,6 +51,9 @@ class EventType(StrEnum):
     SECTIONS_DETECTED = "document.sections.detected"
     REFERENCES_EXTRACTED = "document.references.extracted"
 
+    KNOWLEDGE_EXTRACTED = "knowledge.extracted"
+    KNOWLEDGE_REJECTED = "knowledge.rejected"
+
     VALIDATION_PASSED = "validation.passed"
     VALIDATION_FAILED = "validation.failed"
     EVIDENCE_GENERATED = "evidence.generated"
@@ -115,6 +118,15 @@ class DocumentPayload(EventPayload):
     duration_ms: float | None = None
     error_code: str | None = None
     error_message: str | None = None
+
+
+class KnowledgePayload(EventPayload):
+    paper_id: str
+    objects: int = 0
+    relations: int = 0
+    evidence: int = 0
+    kinds: tuple[str, ...] = ()
+    rejected: int = 0
 
 
 class ValidationPayload(EventPayload):

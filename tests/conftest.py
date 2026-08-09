@@ -12,6 +12,7 @@ from researchagent.config.schemas import (
     AgentConfig,
     AgentSpec,
     DocumentsConfig,
+    KnowledgeConfig,
     ModelCatalog,
     SourcesConfig,
     WorkflowConfig,
@@ -33,6 +34,7 @@ from researchagent.integrations.manual import ManualPaperSource
 from researchagent.integrations.pymupdf import PyMuPDFLoader
 from researchagent.memory.checkpoints import build_checkpointer
 from researchagent.repositories.document_repository import JsonDocumentRepository
+from researchagent.repositories.knowledge_repository import JsonKnowledgeRepository
 from researchagent.repositories.paper_repository import JsonPaperRepository
 from researchagent.services.deduplication import PaperDeduplicator
 from researchagent.services.discovery_service import DiscoveryService
@@ -45,6 +47,8 @@ from researchagent.services.document import (
     ReferenceExtractor,
     SectionDetector,
 )
+from researchagent.services.knowledge import KnowledgeIntelligenceService, RelationBuilder
+from researchagent.services.knowledge.registry import build_extractors
 from researchagent.services.llm_service import BoundLLM, LLMService
 from researchagent.services.ranking import HeuristicScorer
 from researchagent.services.retrieval_service import RetrievalService
@@ -204,6 +208,7 @@ def container(
     paper_repository: JsonPaperRepository,
     document_repository: JsonDocumentRepository,
     document_assembler: DocumentAssembler,
+    knowledge_repository: JsonKnowledgeRepository,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Container:
@@ -220,6 +225,20 @@ def container(
         paper_repository,
         documents_config.pipeline,
         documents_config.validation,
+        event_bus=event_bus,
+    )
+
+    knowledge_config = config_loader.load("knowledge", KnowledgeConfig)
+    knowledge_service = KnowledgeIntelligenceService(
+        build_extractors(
+            knowledge_config.enabled_extractors, service.get("extraction"), prompt_library
+        ),
+        RelationBuilder(),
+        knowledge_repository,
+        document_repository,
+        paper_repository,
+        knowledge_config.pipeline,
+        knowledge_config.validation,
         event_bus=event_bus,
     )
 
@@ -244,6 +263,7 @@ def container(
         planner=planner,
         discovery=discovery_service,
         documents=document_service,
+        knowledge=knowledge_service,
         checkpointer=build_checkpointer(workflow_config.checkpointer),
     )
 
@@ -255,6 +275,7 @@ def container(
         workflow_config=workflow_config,
         sources_config=sources_config,
         documents_config=documents_config,
+        knowledge_config=knowledge_config,
         prompt_library=prompt_library,
         event_bus=event_bus,
         llm_service=service,
@@ -266,6 +287,8 @@ def container(
         ),
         document_repository=document_repository,
         document_service=document_service,
+        knowledge_repository=knowledge_repository,
+        knowledge_service=knowledge_service,
         workflow_runner=WorkflowRunner(graph, workflow_config),
     )
 
@@ -311,6 +334,41 @@ def document_service(
     return DocumentIntelligenceService(
         PyMuPDFLoader(),
         document_assembler,
+        document_repository,
+        paper_repository,
+        event_bus=event_bus,
+    )
+
+
+@pytest.fixture
+def knowledge_repository(tmp_path: Path) -> JsonKnowledgeRepository:
+    return JsonKnowledgeRepository(tmp_path / "knowledge")
+
+
+@pytest.fixture
+def knowledge_service(
+    bound_llm: BoundLLM,
+    prompt_library: PromptLibrary,
+    knowledge_repository: JsonKnowledgeRepository,
+    document_repository: JsonDocumentRepository,
+    paper_repository: JsonPaperRepository,
+    event_bus: EventBus,
+) -> KnowledgeIntelligenceService:
+    return KnowledgeIntelligenceService(
+        build_extractors(
+            (
+                "method_extractor",
+                "dataset_extractor",
+                "metric_extractor",
+                "result_extractor",
+                "limitation_extractor",
+                "future_work_extractor",
+            ),
+            bound_llm,
+            prompt_library,
+        ),
+        RelationBuilder(),
+        knowledge_repository,
         document_repository,
         paper_repository,
         event_bus=event_bus,

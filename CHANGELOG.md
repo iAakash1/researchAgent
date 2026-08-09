@@ -4,6 +4,39 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] — 2026-08-09
+
+Knowledge Intelligence Engine. The system stops reasoning over text and starts reasoning
+over `KnowledgeObject` — typed, evidence-backed facts.
+
+### Added
+- `models/knowledge.py`: the canonical abstraction. `KnowledgeObject` **cannot be
+  constructed without evidence** — enforced by the model, so an unsupported extraction
+  never exists even transiently. Typed details per kind via a discriminated union,
+  `KnowledgeRelation` with typed domain/range, `PaperKnowledge`.
+- `services/knowledge/grounding.py`: the anti-hallucination gate. Every model-supplied
+  quote is located in the source document (exact, then windowed fuzzy, then section-level)
+  before it becomes evidence. Tolerates ligatures, soft hyphens and column wrapping;
+  rejects invention.
+- Six specialized extractors — method, dataset, metric, result, limitation, future work —
+  each reading its own sections, with its own versioned prompt, behind a shared base that
+  owns grounding and error isolation.
+- `services/validation/knowledge.py`: evidence, result, completeness, relationship and
+  coverage validators. The result validator independently re-checks that a reported number
+  appears in its own quote.
+- `services/knowledge/relations.py`: relations derived from evidence, never generated —
+  field matches from grounded sentences, plus weaker co-location links scored as such.
+- `repositories/knowledge_repository.py`, `config/knowledge.yaml`, the
+  `knowledge_extraction` workflow stage and its `requires_documents` guard.
+
+### Fixed
+- `ExtractionDraft.quote` is required rather than defaulted. As an optional schema field
+  the model omitted it entirely, which silently made every extraction ungrounded.
+- Knowledge objects naming the same entity are deduplicated across extractors, merging
+  their evidence instead of double-counting the fact.
+
+[0.5.0]: https://github.com/iAakash1/researchAgent/releases/tag/v0.5.0
+
 ## [0.4.0] — 2026-08-09
 
 Document Intelligence Engine and Zero-Trust Foundation. The system stops thinking in PDFs

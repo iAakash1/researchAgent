@@ -26,6 +26,7 @@ from researchagent.schemas.workflow import RunStatus, StageStatus, WorkflowStage
 from researchagent.services.deduplication import PaperDeduplicator
 from researchagent.services.discovery_service import DiscoveryService
 from researchagent.services.document import DocumentIntelligenceService
+from researchagent.services.knowledge import KnowledgeIntelligenceService
 from researchagent.services.llm_service import BoundLLM
 from researchagent.services.ranking import HeuristicScorer
 from researchagent.workflows.research import build_research_graph
@@ -128,11 +129,13 @@ def runner(
     planner: StubPlanner,
     discovery: DiscoveryService,
     document_service: DocumentIntelligenceService,
+    knowledge_service: KnowledgeIntelligenceService,
 ) -> WorkflowRunner:
     graph = build_research_graph(
         planner=planner,
         discovery=discovery,
         documents=document_service,
+        knowledge=knowledge_service,
         checkpointer=InMemorySaver(),
     )
     return WorkflowRunner(graph, CONFIG)
@@ -155,12 +158,16 @@ async def test_history_records_every_stage(runner: WorkflowRunner) -> None:
         WorkflowStage.PLANNING,
         WorkflowStage.DISCOVERY,
         WorkflowStage.DOCUMENT_INTELLIGENCE,
+        WorkflowStage.KNOWLEDGE_EXTRACTION,
     ]
     assert [record.agent for record in state.history[:2]] == ["planner", "discovery_service"]
     assert all(record.status is StageStatus.OK for record in state.history[:2])
     # The stub source returns metadata-only papers, so the document stage is blocked by
     # its `requires_local_pdfs` guard rather than failing.
+    # Both later stages are blocked by their guards, not failed: the stub source returns
+    # metadata-only papers, so there is nothing to parse and nothing to extract from.
     assert state.history[2].status is StageStatus.BLOCKED
+    assert state.history[3].status is StageStatus.BLOCKED
 
 
 async def test_planner_failure_halts_before_discovery(
@@ -226,6 +233,7 @@ async def test_stream_emits_one_update_per_node(runner: WorkflowRunner) -> None:
         WorkflowStage.PLANNING.value,
         WorkflowStage.DISCOVERY.value,
         WorkflowStage.DOCUMENT_INTELLIGENCE.value,
+        WorkflowStage.KNOWLEDGE_EXTRACTION.value,
     ]
 
 
@@ -266,9 +274,14 @@ async def test_graph_without_checkpointer_reports_it(
     planner: StubPlanner,
     discovery: DiscoveryService,
     document_service: DocumentIntelligenceService,
+    knowledge_service: KnowledgeIntelligenceService,
 ) -> None:
     graph = build_research_graph(
-        planner=planner, discovery=discovery, documents=document_service, checkpointer=None
+        planner=planner,
+        discovery=discovery,
+        documents=document_service,
+        knowledge=knowledge_service,
+        checkpointer=None,
     )
     runner = WorkflowRunner(graph, WorkflowConfig(checkpointer=CheckpointerKind.NONE))
 

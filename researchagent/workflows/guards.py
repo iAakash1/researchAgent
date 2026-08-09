@@ -115,3 +115,25 @@ def requires_local_pdfs() -> Guard:
 def all_of(*guards: Guard) -> list[Guard]:
     """Compose guards; the first block wins so the reason stays specific."""
     return list(guards)
+
+
+def requires_documents() -> Guard:
+    """Knowledge extraction needs documents that survived validation.
+
+    The clearest expression of the pipeline rule: reasoning happens over validated
+    documents, never over PDFs and never over documents the previous stage rejected.
+    """
+
+    def predicate(state: ResearchState) -> GuardResult:
+        report = state.documents
+        if report is None:
+            return GuardResult.block("document intelligence has not run", "documents")
+        if not report.ready_for_extraction:
+            return GuardResult.block("no document passed validation", "validated_document")
+        return GuardResult.allow()
+
+    return Guard(
+        name="requires_documents",
+        description="At least one document is validated and ready for extraction",
+        predicate=predicate,
+    )

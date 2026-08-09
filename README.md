@@ -7,10 +7,14 @@ text, finds gaps, critiques its own report, and exports a literature review with
 Everything runs on your machine through [Ollama](https://ollama.com). No API keys, no data
 leaving the host.
 
-> **Status: v0.4** — a research goal becomes a plan, then real papers, then validated
-> canonical documents: sections, references, citations, figures and tables, each with
-> traceable evidence and grounded confidence. Knowledge extraction lands in v0.5.
-> See [ROADMAP](#roadmap).
+> **Status: v0.5** — a research goal becomes a plan, then real papers, then validated
+> documents, then evidence-backed knowledge: methods, datasets, metrics, results,
+> limitations and future work, each traceable to the page and paragraph that states it.
+> Evidence retrieval lands in v0.6. See [ROADMAP](#roadmap).
+
+**Nothing is believed without evidence.** Every quote a model produces is located in the
+source PDF before it becomes a fact; what cannot be located is discarded, and the
+rejection rate is reported. A `KnowledgeObject` cannot exist without provenance.
 
 **Zero trust.** Every stage assumes the previous one may be wrong. Discovery metadata is
 cross-checked against what the PDF says about itself; every extracted fact carries the
@@ -125,10 +129,10 @@ make format
 | v0.2 | Planner agent + LangGraph state orchestration, versioned prompts |
 | v0.3 | Literature discovery + retrieval: six providers, dedup, ranking, JSON library |
 | v0.4 | Document intelligence engine + zero-trust foundation (validation, evidence, guards) |
-| v0.5 | Knowledge extraction: structured method/dataset/metric/limitation records |
-| v0.6 | Section-aware chunking, embeddings and hybrid RAG over Qdrant |
+| v0.5 | Knowledge intelligence: evidence-grounded `KnowledgeObject` extraction |
+| v0.6 | Evidence retrieval: section-aware chunking, embeddings, hybrid retrieval |
 | v0.7 | Knowledge graph (Neo4j) from extracted facts only |
-| v0.8 | Analysis over graph + RAG + documents |
+| v0.8 | Reasoning engine over graph + evidence + documents |
 | v0.9 | Verification agent — every claim checked against source evidence |
 | v1.0 | Research intelligence platform: reviewer loop, UI, agent evaluation benchmarks |
 

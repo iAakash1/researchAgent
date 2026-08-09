@@ -31,6 +31,7 @@ api  →  workflows  →  agents  →  services  →  integrations
 | `schemas/` | agent I/O contracts, workflow state | contain logic |
 | `models/` | domain objects (Paper, PaperDocument, Section, Evidence) | know about storage or LLMs |
 | `services/validation/` | one validator per question, returning `ValidationResult` | raise for an expected negative |
+| `services/knowledge/` | extractors (one kind each) + grounding + relations | trust a model's quote without locating it |
 | `repositories/` | all DB access (Postgres, Qdrant, Neo4j) | be called from agents directly |
 | `integrations/` | outbound adapters, one per external system | be imported by agents |
 | `services/` | reusable capabilities agents compose | make control-flow decisions |
@@ -53,7 +54,11 @@ downstream components.
 The system becomes progressively more trustworthy at each pipeline stage.
 
 - **Evidence** over inference. Every asserted fact carries a `SourceLocation` — document,
-  page, section, paragraph — so it can be re-checked, not re-believed.
+  page, section, paragraph — so it can be re-checked, not re-believed. A `KnowledgeObject`
+  cannot be constructed without it: the model rejects an unsupported fact at construction.
+- **Grounding** over assertion. A model-supplied quote is located in the source document
+  before it becomes evidence. What cannot be located is discarded, and the rejection rate
+  is reported as the system's own hallucination measure.
 - **Validation** over assumption. Stages exchange `Validated[T]`, never bare objects.
   `ValidationResult` carries success, grounded confidence, issues and evidence.
 - **Measurement** over guesswork. A `ConfidenceSignal` cannot be constructed without the
@@ -96,19 +101,23 @@ config/agents.yaml   # add the entry
 
 ## Workflow (target)
 
-Planner → Discovery → Document Intelligence → Knowledge Extraction → RAG →
-Knowledge Graph → Analysis → Verification → Reviewer →
-(reject ⇒ back to Planner with feedback) → Report.
+Planner → Discovery → Document Intelligence → Knowledge Intelligence →
+Evidence Retrieval → Knowledge Graph → Reasoning → Verification → Reviewer →
+(reject ⇒ back to Planner with feedback) → Report → Session Memory.
 
 Each stage validates the previous one. Contracts between stages:
-`ResearchPlan → ScoredPaper → PaperDocument → KnowledgeRecord → VerifiedKnowledge → ResearchReport`.
+`ResearchPlan → ScoredPaper → PaperDocument → KnowledgeObject → EvidenceBundle → VerifiedKnowledge → ResearchReport`.
 
 ## Roadmap
 
 v0.1 skeleton ✅ · v0.2 Planner + LangGraph ✅ · v0.3 Discovery + Retrieval ✅ ·
-v0.4 Document Intelligence + Zero-Trust Foundation ✅ · v0.5 Knowledge Extraction ·
-v0.6 Chunking + Embeddings + RAG · v0.7 Knowledge Graph · v0.8 Analysis ·
-v0.9 Verification · v1.0 Research Intelligence Platform + agent evaluation.
+v0.4 Document Intelligence + Zero-Trust Foundation ✅ · v0.5 Knowledge Intelligence ✅ ·
+v0.6 Evidence Retrieval · v0.7 Knowledge Graph · v0.8 Reasoning · v0.9 Verification ·
+v1.0 Research Operating System.
+
+Each release introduces exactly one canonical abstraction:
+`PaperDocument` (v0.4) · `KnowledgeObject` (v0.5) · `EvidenceBundle` (v0.6) ·
+`KnowledgeGraph` (v0.7) · `ReasoningSession` (v0.8) · `VerifiedKnowledge` (v0.9).
 
 Packages for later phases exist with a docstring stating their responsibility and are
 empty until their version lands. That is intentional — do not fill them early.
