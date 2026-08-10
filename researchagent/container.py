@@ -9,8 +9,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
-from researchagent.agents.registry import build_agent
+from researchagent.agents.base import BaseAgent
+from researchagent.agents.registry import AGENTS, build_agent
 from researchagent.config.loader import ConfigLoader
 from researchagent.config.schemas import (
     AgentConfig,
@@ -19,6 +21,7 @@ from researchagent.config.schemas import (
     GraphConfig,
     KnowledgeConfig,
     ModelCatalog,
+    ReasoningConfig,
     RetrievalConfig,
     SourcesConfig,
     WorkflowConfig,
@@ -42,6 +45,7 @@ from researchagent.repositories.document_repository import JsonDocumentRepositor
 from researchagent.repositories.evidence_repository import JsonEvidenceRepository
 from researchagent.repositories.knowledge_repository import JsonKnowledgeRepository
 from researchagent.repositories.paper_repository import JsonPaperRepository
+from researchagent.services.audit import AuditTrailBuilder
 from researchagent.services.deduplication import PaperDeduplicator
 from researchagent.services.discovery_service import DiscoveryService
 from researchagent.services.document import (
@@ -80,10 +84,16 @@ from researchagent.services.retrieval.registry import (
     select_active,
 )
 from researchagent.services.retrieval_service import RetrievalService
+from researchagent.services.tools import ServiceToolbox
+from researchagent.workflows.reasoning_runner import ReasoningRunner
 from researchagent.workflows.research import build_research_graph
 from researchagent.workflows.runner import WorkflowRunner
 
 logger = get_logger(__name__)
+
+# Agents permitted an I/O surface. Reasoning and review reason over what they are handed;
+# only retrieval and verification need to go and look.
+_TOOLBOX_AGENTS = frozenset({"retrieval", "verification"})
 
 
 @dataclass(slots=True)
@@ -134,6 +144,12 @@ class Container:
     graph_repository: GraphRepository
     graph_builder: GraphBuilder
     graph_queries: GraphQueries
+    # v0.9. The toolbox is the agents' only I/O surface; agent factories bind it per
+    # agent and iteration so every tool call is attributable.
+    reasoning_config: ReasoningConfig
+    toolbox: ServiceToolbox
+    audit_trail: AuditTrailBuilder
+    reasoning_runner: ReasoningRunner
     workflow_runner: WorkflowRunner
 
     async def aclose(self) -> None:
@@ -284,6 +300,36 @@ def build_container(settings: Settings | None = None) -> Container:
     )
     graph_queries = GraphQueries(graph_repository)
 
+    reasoning_config = loader.load("reasoning", ReasoningConfig)
+    toolbox = ServiceToolbox(
+        active_knowledge_retriever,
+        evidence_service,
+        knowledge_repository,
+        evidence_repository,
+        paper_repository,
+        bundle_repository,
+        graph_repository,
+        graph_queries,
+    )
+    audit_trail = AuditTrailBuilder(bundle_repository, evidence_repository)
+
+    def agent_for(name: str, iteration: int) -> BaseAgent[Any, Any]:
+        """Build an agent bound to this iteration's toolbox view.
+
+        Agents that take a toolbox receive one attributed to them, so the tool-call
+        ledger records which agent asked for what without the agent knowing it is logged.
+        """
+        spec = agent_config.spec_for(name)
+        agent_cls = AGENTS.get(name)
+        kwargs: dict[str, Any] = {"event_bus": event_bus}
+        if name in _TOOLBOX_AGENTS:
+            kwargs["toolbox"] = toolbox.for_agent(name, iteration)
+        return agent_cls(llm_service.get(spec.model), spec, prompt_library, **kwargs)
+
+    reasoning_runner = ReasoningRunner(
+        agent_for, bundle_repository, reasoning_config, event_bus=event_bus
+    )
+
     planner = build_agent(
         "planner",
         agent_config=agent_config,
@@ -348,6 +394,10 @@ def build_container(settings: Settings | None = None) -> Container:
         graph_repository=graph_repository,
         graph_builder=graph_builder,
         graph_queries=graph_queries,
+        reasoning_config=reasoning_config,
+        toolbox=toolbox,
+        audit_trail=audit_trail,
+        reasoning_runner=reasoning_runner,
         workflow_runner=WorkflowRunner(graph, workflow_config),
     )
 

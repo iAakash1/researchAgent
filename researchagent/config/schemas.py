@@ -99,12 +99,18 @@ class AgentConfig(BaseModel):
     agents: dict[str, AgentSpec] = Field(default_factory=dict)
 
     def spec_for(self, agent_name: str) -> AgentSpec:
-        """Agent-specific settings layered over ``defaults``."""
+        """Agent-specific settings layered over ``defaults``.
+
+        Re-validated rather than ``model_copy``-ed: ``model_dump`` turns nested models
+        into dicts and ``model_copy(update=...)`` does not validate, so an agent
+        overriding a nested block — a per-agent ``retry`` policy, say — would receive a
+        plain dict where the code expects a ``RetryPolicy``.
+        """
         override = self.agents.get(agent_name)
         if override is None:
             return self.defaults
-        explicit = override.model_dump(exclude_unset=True)
-        return self.defaults.model_copy(update=explicit)
+        merged = self.defaults.model_dump() | override.model_dump(exclude_unset=True)
+        return AgentSpec.model_validate(merged)
 
 
 class CheckpointerKind(StrEnum):
@@ -441,3 +447,43 @@ class GraphConfig(BaseModel):
     )
 
     model_config = {"populate_by_name": True}
+
+
+class ResearchBudget(BaseModel):
+    """Hard limits on an autonomous agent loop.
+
+    An agent loop without a budget is a bill, not a system. Every limit here is a reason
+    the run can terminate, and each one is reported rather than silently hit.
+    """
+
+    max_iterations: int = Field(default=3, ge=1, le=20)
+    max_retrieval_attempts: int = Field(default=8, ge=1, le=100)
+    max_tool_calls: int = Field(default=40, ge=1, le=1000)
+    max_tokens_per_agent: int = Field(default=32_000, ge=256)
+    max_total_tokens: int = Field(default=200_000, ge=1024)
+
+    @model_validator(mode="after")
+    def _agent_budget_fits_the_total(self) -> ResearchBudget:
+        if self.max_tokens_per_agent > self.max_total_tokens:
+            raise ValueError(
+                f"max_tokens_per_agent ({self.max_tokens_per_agent}) exceeds "
+                f"max_total_tokens ({self.max_total_tokens})"
+            )
+        return self
+
+
+class ReasoningLoopSettings(BaseModel):
+    max_questions_per_round: int = Field(default=3, ge=1, le=10)
+    max_findings_to_verify: int = Field(default=6, ge=1, le=50)
+
+
+class ReasoningReviewSettings(BaseModel):
+    minimum_papers_per_finding: int = Field(default=2, ge=1, le=10)
+
+
+class ReasoningConfig(BaseModel):
+    """``config/reasoning.yaml`` root."""
+
+    budget: ResearchBudget = Field(default_factory=ResearchBudget)
+    loop: ReasoningLoopSettings = Field(default_factory=ReasoningLoopSettings)
+    review: ReasoningReviewSettings = Field(default_factory=ReasoningReviewSettings)

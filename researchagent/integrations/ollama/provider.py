@@ -28,6 +28,7 @@ from researchagent.core.interfaces.llm import (
     Message,
     ProviderHealth,
     Role,
+    StructuredResult,
     TokenUsage,
     TSchema,
 )
@@ -157,6 +158,48 @@ class OllamaProvider(LLMProvider):
                 received_type=type(result).__name__,
             ) from exc
 
+    async def complete_structured_with_usage(
+        self,
+        messages: list[Message],
+        *,
+        model: str,
+        params: GenerationParams,
+        schema: type[TSchema],
+    ) -> StructuredResult[TSchema]:
+        """Structured output plus token counts.
+
+        ``with_structured_output`` normally discards the underlying message, and with it
+        the usage metadata. ``include_raw=True`` keeps both, so a local run can be
+        budgeted on real counts rather than an estimate. Models that report no usage
+        metadata yield ``usage=None`` — unknown, not zero.
+        """
+        chat = self._chat_model(model, params)
+        structured = chat.with_structured_output(schema, include_raw=True)
+
+        async def call() -> Any:
+            return await structured.ainvoke(self._to_langchain(messages))
+
+        result = await self._guard(call, model=model, operation="complete_structured")
+        parsed = result.get("parsed") if isinstance(result, dict) else result
+        raw = result.get("raw") if isinstance(result, dict) else None
+
+        return StructuredResult[TSchema](
+            value=self._as_schema(parsed, schema, model=model), usage=_reported_usage(raw)
+        )
+
+    def _as_schema(self, value: Any, schema: type[TSchema], *, model: str) -> TSchema:
+        if isinstance(value, schema):
+            return value
+        try:
+            return schema.model_validate(value)
+        except (ValidationError, TypeError) as exc:
+            raise OutputParsingError(
+                "Model output did not satisfy the requested schema",
+                model=model,
+                schema=schema.__name__,
+                received_type=type(value).__name__,
+            ) from exc
+
     async def health(self) -> ProviderHealth:
         try:
             models = await self._admin.list_models()
@@ -275,3 +318,31 @@ def _usage_of(message: AIMessage) -> TokenUsage:
         prompt_tokens=int(meta.get("prompt_eval_count", 0) or 0),
         completion_tokens=int(meta.get("eval_count", 0) or 0),
     )
+
+
+def _reported_usage(message: Any) -> TokenUsage | None:
+    """Token counts a message actually carries, or None when it carries none.
+
+    Distinct from ``_usage_of``, which fills a required field on ``CompletionResponse``
+    and so must return a value. Budgeting needs the difference: a model that reports
+    nothing has *unknown* cost, and treating unknown as zero is how a token budget
+    silently stops being a budget.
+    """
+    usage = getattr(message, "usage_metadata", None)
+    if isinstance(usage, dict) and (
+        usage.get("input_tokens") is not None or usage.get("output_tokens") is not None
+    ):
+        return TokenUsage(
+            prompt_tokens=int(usage.get("input_tokens") or 0),
+            completion_tokens=int(usage.get("output_tokens") or 0),
+        )
+
+    meta = getattr(message, "response_metadata", None)
+    if isinstance(meta, dict) and (
+        meta.get("prompt_eval_count") is not None or meta.get("eval_count") is not None
+    ):
+        return TokenUsage(
+            prompt_tokens=int(meta.get("prompt_eval_count") or 0),
+            completion_tokens=int(meta.get("eval_count") or 0),
+        )
+    return None

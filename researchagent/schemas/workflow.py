@@ -16,6 +16,7 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 
 from researchagent.models.research import ResearchPlan
+from researchagent.schemas.reasoning import ReasoningSession
 from researchagent.services.ranking import ScoredPaper
 
 
@@ -27,6 +28,10 @@ class WorkflowStage(StrEnum):
     DOCUMENT_INTELLIGENCE = "document_intelligence"
     KNOWLEDGE_EXTRACTION = "knowledge_extraction"
     EVIDENCE_INTELLIGENCE = "evidence_intelligence"
+    RETRIEVAL = "retrieval"
+    REASONING = "reasoning"
+    VERIFICATION = "verification"
+    REVIEW = "review"
 
 
 class RunStatus(StrEnum):
@@ -171,6 +176,10 @@ class ResearchState(BaseModel):
     knowledge: KnowledgeReport | None = None
     # Bundles live in the bundle repository; state carries the summary a reviewer needs.
     evidence: EvidenceReport | None = None
+
+    # v0.9: the agentic loop's memory. One nested model so it can be persisted, replayed
+    # and audited as a unit rather than scattered across the state.
+    reasoning: ReasoningSession | None = None
 
     history: Annotated[list[StageRecord], operator.add] = Field(default_factory=list)
     failure: StageFailure | None = None

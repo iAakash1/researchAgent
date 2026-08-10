@@ -59,6 +59,17 @@ class EventType(StrEnum):
     INDEX_BUILT = "index.built"
     GRAPH_BUILT = "graph.built"
     GRAPH_EDGE_REJECTED = "graph.edge.rejected"
+
+    # v0.9 agentic loop. Tool calls and iteration boundaries are events rather than log
+    # lines because they are what an audit of a conclusion needs to replay.
+    TOOL_CALLED = "tool.called"
+    TOOL_COMPLETED = "tool.completed"
+    RESEARCH_ITERATION_STARTED = "research.iteration.started"
+    HYPOTHESIS_CREATED = "research.hypothesis.created"
+    FINDING_CREATED = "research.finding.created"
+    FINDING_VERIFIED = "research.finding.verified"
+    FINDING_REJECTED = "research.finding.rejected"
+    RESEARCH_TERMINATED = "research.terminated"
     CONTRADICTION_DETECTED = "contradiction.detected"
     KNOWLEDGE_REJECTED = "knowledge.rejected"
 
@@ -84,6 +95,36 @@ class AgentPayload(EventPayload):
     attempts: int | None = None
     error: str | None = None
     code: str | None = None
+
+
+class ReasoningPayload(EventPayload):
+    """One step of the agentic loop.
+
+    Carries ids and counts, never prompts or model output: an event stream that quoted
+    what an agent was told would leak whatever the corpus contains into the log.
+    """
+
+    agent: str
+    iteration: int = 0
+    question_id: str | None = None
+    finding_id: str | None = None
+    hypothesis_id: str | None = None
+    verdict: str | None = None
+    bundles: int | None = None
+    findings: int | None = None
+    detail: str | None = None
+
+
+class ToolCallPayload(EventPayload):
+    """A tool invocation. Arguments are summarised, never echoed verbatim."""
+
+    agent: str
+    tool: str
+    iteration: int = 0
+    result_count: int = 0
+    latency_ms: float = 0.0
+    succeeded: bool = True
+    error_code: str | None = None
 
 
 class LLMCallPayload(EventPayload):

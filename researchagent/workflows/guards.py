@@ -155,3 +155,81 @@ def requires_knowledge() -> Guard:
         description="At least one validated knowledge object exists",
         predicate=predicate,
     )
+
+
+def requires_evidence_bundles() -> Guard:
+    """Reasoning cannot run over nothing.
+
+    The v0.9 restatement of the pipeline rule: an agent reasons over validated bundles or
+    it does not reason. Enforced here so no agent has to defend itself against being
+    called with an empty context.
+    """
+
+    def predicate(state: ResearchState) -> GuardResult:
+        session = state.reasoning
+        if session is None:
+            return GuardResult.block("the reasoning session has not started", "reasoning")
+        if not session.bundle_ids:
+            return GuardResult.block("retrieval produced no evidence bundles", "evidence_bundles")
+        return GuardResult.allow()
+
+    return Guard(
+        name="requires_evidence_bundles",
+        description="Retrieval produced at least one validated bundle",
+        predicate=predicate,
+    )
+
+
+def requires_findings() -> Guard:
+    """Verification cannot run without something to verify."""
+
+    def predicate(state: ResearchState) -> GuardResult:
+        session = state.reasoning
+        if session is None or not session.findings:
+            return GuardResult.block("reasoning produced no findings", "findings")
+        return GuardResult.allow()
+
+    return Guard(
+        name="requires_findings",
+        description="Reasoning produced at least one finding",
+        predicate=predicate,
+    )
+
+
+def requires_verification() -> Guard:
+    """The reviewer never sees an unverified finding.
+
+    Without this the reviewer would be the only thing standing between a model's
+    self-assessed confidence and an accepted result.
+    """
+
+    def predicate(state: ResearchState) -> GuardResult:
+        session = state.reasoning
+        if session is None or not session.verifications:
+            return GuardResult.block("no finding has been verified", "verification")
+        return GuardResult.allow()
+
+    return Guard(
+        name="requires_verification",
+        description="At least one finding carries a verification verdict",
+        predicate=predicate,
+    )
+
+
+def within_budget() -> Guard:
+    """Refuse to start another round the budget cannot pay for."""
+
+    def predicate(state: ResearchState) -> GuardResult:
+        session = state.reasoning
+        if session is None:
+            return GuardResult.allow()
+        exceeded = session.ledger.exceeded(session.budget)
+        if exceeded is not None:
+            return GuardResult.block(f"budget exhausted: {exceeded.value}", "budget")
+        return GuardResult.allow()
+
+    return Guard(
+        name="within_budget",
+        description="The run has iterations, tokens and tool calls left",
+        predicate=predicate,
+    )

@@ -43,7 +43,9 @@ class StubChat:
             raise self.error
         return self.result
 
-    def with_structured_output(self, schema: type[BaseModel]) -> StubChat:
+    def with_structured_output(
+        self, schema: type[BaseModel], *, include_raw: bool = False
+    ) -> StubChat:
         return self
 
 

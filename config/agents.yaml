@@ -22,3 +22,36 @@ agents:
       max_research_questions: 5
       max_queries: 8
       max_keywords_per_question: 6
+
+  # v0.9 agents. `model` names an alias in models.yaml, never a provider: switching the
+  # reasoning agent to GPT-OSS 120B is changing `reasoning` -> `reasoning_remote` here.
+  retrieval:
+    model: fast
+    prompt_version: v1
+    options:
+      max_queries: 3
+      max_entities: 3
+      min_coverage: 0.34
+
+  reasoning:
+    model: reasoning
+    prompt_version: v1
+    timeout_seconds: 600
+
+  verification:
+    model: reasoning
+    prompt_version: v1
+    timeout_seconds: 600
+    retry:
+      # Verification is adversarial; a retry that reruns the same prompt is cheap and
+      # a flaky parse should not silently pass a finding through unchecked.
+      max_attempts: 2
+      initial_delay_seconds: 1.0
+      max_delay_seconds: 10.0
+      backoff_multiplier: 2.0
+      jitter: true
+
+  reviewer:
+    model: reasoning
+    prompt_version: v1
+    timeout_seconds: 600

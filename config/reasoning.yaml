@@ -1,0 +1,23 @@
+# Agentic research loop (v0.9).
+#
+# Every value here is a reason the run can terminate. An agent loop without a budget is a
+# bill, not a system, so these are checked before each round rather than after.
+
+budget:
+  # One planner pass, then this many retrieve -> reason -> verify rounds.
+  max_iterations: 3
+  max_retrieval_attempts: 8
+  max_tool_calls: 40
+  max_tokens_per_agent: 32000
+  max_total_tokens: 200000
+
+loop:
+  # Questions retrieved for in one round. A question needing more rounds than the budget
+  # allows is a question this corpus cannot answer.
+  max_questions_per_round: 3
+  max_findings_to_verify: 6
+
+review:
+  # A finding cited by fewer papers than this is recorded as single-source. Not fatal —
+  # some questions genuinely have one relevant paper — but the reviewer weighs it.
+  minimum_papers_per_finding: 2

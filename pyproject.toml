@@ -75,4 +75,8 @@ ignore_missing_imports = true
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
-addopts = "-q"
+# importlib import mode: two test files may share a basename (tests/core/test_registry.py
+# and tests/agents/test_registry.py) without colliding, and `from tests.conftest import ...`
+# keeps working.
+addopts = "-q --import-mode=importlib"
+consider_namespace_packages = true

@@ -88,6 +88,20 @@ class CompletionResponse(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+class StructuredResult[TResult: BaseModel](BaseModel):
+    """A structured completion together with what it cost, when the provider says.
+
+    ``usage`` is ``None`` — not ``TokenUsage()`` — when the provider does not report it.
+    Zero is a measurement; absence is not, and a budget that silently treats unknown
+    spend as free is a budget that never fires.
+    """
+
+    model_config = {"arbitrary_types_allowed": True}
+
+    value: TResult
+    usage: TokenUsage | None = None
+
+
 class ProviderHealth(BaseModel):
     provider: str
     healthy: bool
@@ -134,6 +148,23 @@ class LLMProvider(ABC):
         Implementations must raise ``OutputParsingError`` (retryable) rather than
         returning partially valid objects.
         """
+
+    async def complete_structured_with_usage(
+        self,
+        messages: list[Message],
+        *,
+        model: str,
+        params: GenerationParams,
+        schema: type[TSchema],
+    ) -> StructuredResult[TSchema]:
+        """``complete_structured``, plus token usage when the provider reports it.
+
+        Deliberately concrete rather than abstract: a provider that cannot report usage
+        for structured calls inherits this and returns ``usage=None``, which is the
+        honest answer. Overriding it is how a provider opts in to being budgeted.
+        """
+        value = await self.complete_structured(messages, model=model, params=params, schema=schema)
+        return StructuredResult[TSchema](value=value)
 
     @abstractmethod
     async def health(self) -> ProviderHealth:

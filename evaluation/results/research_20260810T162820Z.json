@@ -1,0 +1,1984 @@
+{
+  "goal": "How do systems in this corpus mitigate overload-driven cascading failure, on what evidence, and what limitations prevent a general conclusion?",
+  "questions": [
+    "Which techniques do these papers report for mitigating overload in distributed systems?",
+    "What limitations do the papers acknowledge that prevent generalising overload mitigations?"
+  ],
+  "session": {
+    "budget": {
+      "max_iterations": 3,
+      "max_retrieval_attempts": 8,
+      "max_tool_calls": 40,
+      "max_tokens_per_agent": 32000,
+      "max_total_tokens": 200000
+    },
+    "ledger": {
+      "iterations": 1,
+      "retrieval_attempts": 2,
+      "tool_calls": 0,
+      "total_tokens": 0,
+      "tokens_by_agent": {}
+    },
+    "iteration": 1,
+    "stage": "terminated",
+    "questions": [
+      {
+        "question_id": "RQ1",
+        "question": "Which techniques do these papers report for mitigating overload in distributed systems?",
+        "bundle_ids": [
+          "bundle:query:dbc13780b02d062d",
+          "bundle:query:631fbb2a7a93677c"
+        ],
+        "finding_ids": [],
+        "verified_finding_ids": [],
+        "retrieval_attempts": 1,
+        "exhausted_reason": null
+      },
+      {
+        "question_id": "RQ2",
+        "question": "What limitations do the papers acknowledge that prevent generalising overload mitigations?",
+        "bundle_ids": [
+          "bundle:query:0d7b9a1142c52814",
+          "bundle:query:02fb4c8969ac0b73"
+        ],
+        "finding_ids": [],
+        "verified_finding_ids": [],
+        "retrieval_attempts": 1,
+        "exhausted_reason": null
+      }
+    ],
+    "hypotheses": [],
+    "findings": [
+      {
+        "id": "F-0ea7de5b",
+        "question_id": "RQ1",
+        "statement": "The papers report several techniques to mitigate overload in distributed systems.",
+        "reasoning": "",
+        "citations": [
+          {
+            "bundle_id": "bundle:query:dbc13780b02d062d",
+            "evidence_ids": [
+              "d59991e6-3eae-4927-89e9-f2a669fab77d",
+              "87f911d7-94a0-44fc-9353-6ddb263da470"
+            ],
+            "knowledge_object_ids": [
+              "manual:02#method:comprehensive-analysis:0",
+              "manual:02#dataset:rps-(requests-per-second):1"
+            ],
+            "paper_ids": [
+              "manual:02"
+            ],
+            "quote": "We perform a comprehensive analysis of these incidents, focusing on impact, trigger, work ampli\ufb01cation mechanisms, and mitigation practices. To study the impact, we focus on the duration and number of impacted services. This information is usually readily available in the reports. For the triggers, we identify the triggers and classify them into several distinct categories. We use a similar identi\ufb01cation and classi\ufb01cation process to distill work-ampli\ufb01cation mechanisms and mitiga- tion patterns. We present our summarized \ufb01ndings in Table 1. 2.2 Summary of Metastable Failures in the Wild In Table 1, we provide a breakdown of metastable failure incidents we have found. The examples include instances from both major cloud providers (e.g., Microsoft, Amazon, Google, IBM) and smaller companies and projects (e.g., Spo- tify, Elasticsearch, Apache Cassandra). Our summary table describes high-level aspects of these failures: duration of the incident, impacted services, triggers leading to the outage, the sustaining effect mechanism, and corrective actions taken by the engineers."
+          }
+        ],
+        "contradicting": [],
+        "status": "rejected",
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "model_stated",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "reasoning agent reported 0.50 for this claim"
+            },
+            {
+              "name": "evidence_count",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "2 evidence item(s) resolved to real bundles"
+            },
+            {
+              "name": "paper_support",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "supported by 1 paper(s): ['manual:02']"
+            }
+          ]
+        },
+        "limitations": [],
+        "derived_from_hypothesis": null,
+        "produced_by": "reasoning",
+        "iteration": 0,
+        "created_at": "2026-08-10T16:26:30.748563Z"
+      },
+      {
+        "id": "F-a8bfa604",
+        "question_id": "RQ1",
+        "statement": "The papers report on the use of slow-start window increase to mitigate overload in distributed systems.",
+        "reasoning": "",
+        "citations": [
+          {
+            "bundle_id": "bundle:query:631fbb2a7a93677c",
+            "evidence_ids": [
+              "438ec033-b8ec-4e93-aa6a-d1a8889bc773",
+              "f878d20b-17f8-40bd-814e-7b667815a75f"
+            ],
+            "knowledge_object_ids": [
+              "manual:03#method:slow-start-window-increase:7"
+            ],
+            "paper_ids": [
+              "manual:03"
+            ],
+            "quote": "\u2022 On each ack for new data, increase cwnd by one packet."
+          }
+        ],
+        "contradicting": [],
+        "status": "rejected",
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "model_stated",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "reasoning agent reported 0.50 for this claim"
+            },
+            {
+              "name": "evidence_count",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "2 evidence item(s) resolved to real bundles"
+            },
+            {
+              "name": "paper_support",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "supported by 1 paper(s): ['manual:03']"
+            }
+          ]
+        },
+        "limitations": [],
+        "derived_from_hypothesis": null,
+        "produced_by": "reasoning",
+        "iteration": 0,
+        "created_at": "2026-08-10T16:26:30.748819Z"
+      },
+      {
+        "id": "F-00839e2b",
+        "question_id": "RQ1",
+        "statement": "The papers report on the use of index-level mapping to mitigate overload in distributed systems.",
+        "reasoning": "",
+        "citations": [
+          {
+            "bundle_id": "bundle:query:631fbb2a7a93677c",
+            "evidence_ids": [
+              "751a2914-7656-410b-9dcb-7ab64cd0ac96"
+            ],
+            "knowledge_object_ids": [
+              "manual:13#method:index-level:0"
+            ],
+            "paper_ids": [
+              "manual:13"
+            ],
+            "quote": "1.\u200b Index Level (Anchor Tier) : \u25cb\u200b Provides decentralized mapping from agent identifiers (IDs) to metadata URLs i.e. AgentAddr (\u2264 120 B) containing TTL and pointers (FactsURL, PrivateFactsURL, AdaptiveResolverURL). \u25cb\u200b Records are cacheable and Ed25519-signed, slashing index-write overheads while blocking tampering. Maintains only essential, static metadata such as Agent ID, credential hashes, TTL, and URLs for dynamic agent facts. \u25cb\u200b Supports resolution via short-lived, cacheable records that are resistant to tampering and unauthorized updates.\u200b 2.\u200b AgentFacts Level (Metadata Distribution Tier): \u25cb\u200b Hosts self-describing JSON-LD documents (AgentFacts), each signed as a W3C VC., that contain endpoint lists, capability descriptors, telemetry configurations, authentication protocols, and credentialed evaluations. \u25cb\u200b Enables frequent, independent updates without requiring index-level intervention."
+          }
+        ],
+        "contradicting": [],
+        "status": "rejected",
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "model_stated",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "reasoning agent reported 0.50 for this claim"
+            },
+            {
+              "name": "evidence_count",
+              "value": 0.25,
+              "weight": 1.0,
+              "observation": "1 evidence item(s) resolved to real bundles"
+            },
+            {
+              "name": "paper_support",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "supported by 1 paper(s): ['manual:13']"
+            }
+          ]
+        },
+        "limitations": [],
+        "derived_from_hypothesis": null,
+        "produced_by": "reasoning",
+        "iteration": 0,
+        "created_at": "2026-08-10T16:26:30.748944Z"
+      },
+      {
+        "id": "F-18592c61",
+        "question_id": "RQ2",
+        "statement": "Some systems mitigate overload-driven cascading failure through packet conservation principles.",
+        "reasoning": "",
+        "citations": [
+          {
+            "bundle_id": "bundle:query:02fb4c8969ac0b73",
+            "evidence_ids": [
+              "438ec033-b8ec-4e93-aa6a-d1a8889bc773",
+              "f878d20b-17f8-40bd-814e-7b667815a75f",
+              "f1c96035-65fc-4369-9d12-a2502cde2fa6"
+            ],
+            "knowledge_object_ids": [
+              "manual:03#method:slow-start-window-increase:7"
+            ],
+            "paper_ids": [
+              "manual:03"
+            ],
+            "quote": "\u2022 On each ack for new data, increase cwnd by one packet."
+          }
+        ],
+        "contradicting": [],
+        "status": "rejected",
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "model_stated",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "reasoning agent reported 0.50 for this claim"
+            },
+            {
+              "name": "evidence_count",
+              "value": 0.75,
+              "weight": 1.0,
+              "observation": "3 evidence item(s) resolved to real bundles"
+            },
+            {
+              "name": "paper_support",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "supported by 1 paper(s): ['manual:03']"
+            }
+          ]
+        },
+        "limitations": [],
+        "derived_from_hypothesis": null,
+        "produced_by": "reasoning",
+        "iteration": 0,
+        "created_at": "2026-08-10T16:26:54.593719Z"
+      },
+      {
+        "id": "F-aeb855d6",
+        "question_id": "RQ2",
+        "statement": "Metastable failures can occur at high RPS, even with small delays.",
+        "reasoning": "",
+        "citations": [
+          {
+            "bundle_id": "bundle:query:02fb4c8969ac0b73",
+            "evidence_ids": [
+              "87f911d7-94a0-44fc-9353-6ddb263da470",
+              "cb3dbf7f-408e-44ee-88ad-de1795720112"
+            ],
+            "knowledge_object_ids": [
+              "manual:02#dataset:rps-(requests-per-second):1"
+            ],
+            "paper_ids": [
+              "manual:02"
+            ],
+            "quote": "5.1.2 Inducing Metastable Failures To illustrate the metastability, we vary RPS over time and plot the relevant metrics in Figure 4a. The initial RPS increase causes queue length and the GC duration to increase. Even as RPS is reduced over time, the sustaining effect causes the queue length and GC duration to remain high."
+          }
+        ],
+        "contradicting": [],
+        "status": "rejected",
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "model_stated",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "reasoning agent reported 0.50 for this claim"
+            },
+            {
+              "name": "evidence_count",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "2 evidence item(s) resolved to real bundles"
+            },
+            {
+              "name": "paper_support",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "supported by 1 paper(s): ['manual:02']"
+            }
+          ]
+        },
+        "limitations": [],
+        "derived_from_hypothesis": null,
+        "produced_by": "reasoning",
+        "iteration": 0,
+        "created_at": "2026-08-10T16:26:54.593777Z"
+      },
+      {
+        "id": "F-ffa88a7e",
+        "question_id": "RQ2",
+        "statement": "Index-level decentralized mapping can help mitigate overload-driven cascading failure.",
+        "reasoning": "",
+        "citations": [
+          {
+            "bundle_id": "bundle:query:02fb4c8969ac0b73",
+            "evidence_ids": [
+              "751a2914-7656-410b-9dcb-7ab64cd0ac96"
+            ],
+            "knowledge_object_ids": [
+              "manual:13#method:agentfacts-level:1"
+            ],
+            "paper_ids": [
+              "manual:13"
+            ],
+            "quote": "1.\u200b Index Level (Anchor Tier) : \u25cb\u200b Provides decentralized mapping from agent identifiers (IDs) to metadata URLs i.e. AgentAddr (\u2264 120 B) containing TTL and pointers (FactsURL, PrivateFactsURL, AdaptiveResolverURL). \u25cb\u200b Records are cacheable and Ed25519-signed, slashing index-write overheads while blocking tampering. Maintains only essential, static metadata such as Agent ID, credential hashes, TTL, and URLs for dynamic agent facts. \u25cb\u200b Supports resolution via short-lived, cacheable records that are resistant to tampering and unauthorized updates.\u200b 2.\u200b AgentFacts Level (Metadata Distribution Tier): \u25cb\u200b Hosts self-describing JSON-LD documents (AgentFacts), each signed as a W3C VC., that contain endpoint lists, capability descriptors, telemetry configurations, authentication protocols, and credentialed evaluations. \u25cb\u200b Enables frequent, independent updates without requiring index-level intervention."
+          }
+        ],
+        "contradicting": [],
+        "status": "rejected",
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "model_stated",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "reasoning agent reported 0.50 for this claim"
+            },
+            {
+              "name": "evidence_count",
+              "value": 0.25,
+              "weight": 1.0,
+              "observation": "1 evidence item(s) resolved to real bundles"
+            },
+            {
+              "name": "paper_support",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "supported by 1 paper(s): ['manual:13']"
+            }
+          ]
+        },
+        "limitations": [],
+        "derived_from_hypothesis": null,
+        "produced_by": "reasoning",
+        "iteration": 0,
+        "created_at": "2026-08-10T16:26:54.593818Z"
+      },
+      {
+        "id": "F-8bca6cb4",
+        "question_id": "RQ2",
+        "statement": "The choice of base model can affect protocol-level latency conclusions.",
+        "reasoning": "",
+        "citations": [
+          {
+            "bundle_id": "bundle:query:02fb4c8969ac0b73",
+            "evidence_ids": [
+              "5e14faa8-3d11-437f-b8b2-30abed48b665"
+            ],
+            "knowledge_object_ids": [
+              "manual:07#result:per_request_latency-on-cross-model-streaming-que:2"
+            ],
+            "paper_ids": [
+              "manual:07"
+            ],
+            "quote": "To probe how sensitive our protocol-level latency conclusions are to the choice of base model, we repeat the Streaming Queue experiments with other strong LLMs (GPT-4o and a Gemini-family model) under the same load, topology, and controls as in the main text. Table 11 reports the mean per-request latency (in milliseconds) for each protocol\u2013model pair. While the absolute latency values vary modestly across base models, the relative ordering between protocols remains stable: ACP consistently achieves the lowest latency, followed by A2A, with ANP and Agora incurring higher latency while offering stronger security and identity guarantees. In all cases, the model is fixed per run and the same coordinator/worker topology as in Section 5 is used."
+          }
+        ],
+        "contradicting": [],
+        "status": "rejected",
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "model_stated",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "reasoning agent reported 0.50 for this claim"
+            },
+            {
+              "name": "evidence_count",
+              "value": 0.25,
+              "weight": 1.0,
+              "observation": "1 evidence item(s) resolved to real bundles"
+            },
+            {
+              "name": "paper_support",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "supported by 1 paper(s): ['manual:07']"
+            }
+          ]
+        },
+        "limitations": [],
+        "derived_from_hypothesis": null,
+        "produced_by": "reasoning",
+        "iteration": 0,
+        "created_at": "2026-08-10T16:26:54.593854Z"
+      },
+      {
+        "id": "F-0a684918",
+        "question_id": "RQ2",
+        "statement": "Some systems mitigate overload-driven cascading failure through packet conservation principles and index-level decentralized mapping.",
+        "reasoning": "",
+        "citations": [
+          {
+            "bundle_id": "bundle:query:02fb4c8969ac0b73",
+            "evidence_ids": [
+              "438ec033-b8ec-4e93-aa6a-d1a8889bc773",
+              "f878d20b-17f8-40bd-814e-7b667815a75f",
+              "f1c96035-65fc-4369-9d12-a2502cde2fa6",
+              "751a2914-7656-410b-9dcb-7ab64cd0ac96"
+            ],
+            "knowledge_object_ids": [
+              "manual:03#method:slow-start-window-increase:7",
+              "manual:13#method:agentfacts-level:1"
+            ],
+            "paper_ids": [
+              "manual:03",
+              "manual:13"
+            ],
+            "quote": "\u2022 On each ack for new data, increase cwnd by one packet."
+          }
+        ],
+        "contradicting": [],
+        "status": "rejected",
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "model_stated",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "reasoning agent reported 0.50 for this claim"
+            },
+            {
+              "name": "evidence_count",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "4 evidence item(s) resolved to real bundles"
+            },
+            {
+              "name": "paper_support",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "supported by 2 paper(s): ['manual:03', 'manual:13']"
+            }
+          ]
+        },
+        "limitations": [],
+        "derived_from_hypothesis": null,
+        "produced_by": "reasoning",
+        "iteration": 0,
+        "created_at": "2026-08-10T16:26:54.593891Z"
+      },
+      {
+        "id": "F-228cb2a2",
+        "question_id": "RQ2",
+        "statement": "Metastable failures can occur at high RPS, even with small delays, and the choice of base model can affect protocol-level latency conclusions.",
+        "reasoning": "",
+        "citations": [
+          {
+            "bundle_id": "bundle:query:02fb4c8969ac0b73",
+            "evidence_ids": [
+              "87f911d7-94a0-44fc-9353-6ddb263da470",
+              "cb3dbf7f-408e-44ee-88ad-de1795720112",
+              "5e14faa8-3d11-437f-b8b2-30abed48b665"
+            ],
+            "knowledge_object_ids": [
+              "manual:02#dataset:rps-(requests-per-second):1",
+              "manual:07#result:per_request_latency-on-cross-model-streaming-que:2"
+            ],
+            "paper_ids": [
+              "manual:02",
+              "manual:07"
+            ],
+            "quote": "5.1.2 Inducing Metastable Failures To illustrate the metastability, we vary RPS over time and plot the relevant metrics in Figure 4a. The initial RPS increase causes queue length and the GC duration to increase. Even as RPS is reduced over time, the sustaining effect causes the queue length and GC duration to remain high."
+          }
+        ],
+        "contradicting": [],
+        "status": "rejected",
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "model_stated",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "reasoning agent reported 0.50 for this claim"
+            },
+            {
+              "name": "evidence_count",
+              "value": 0.75,
+              "weight": 1.0,
+              "observation": "3 evidence item(s) resolved to real bundles"
+            },
+            {
+              "name": "paper_support",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "supported by 2 paper(s): ['manual:02', 'manual:07']"
+            }
+          ]
+        },
+        "limitations": [],
+        "derived_from_hypothesis": null,
+        "produced_by": "reasoning",
+        "iteration": 0,
+        "created_at": "2026-08-10T16:26:54.593927Z"
+      }
+    ],
+    "verifications": [
+      {
+        "finding_id": "F-0ea7de5b",
+        "verdict": "insufficient_evidence",
+        "reasoning": "The cited evidence does not provide a clear answer to the research question RQ1: Which techniques do these papers report for mitigating overload in distributed systems? The majority of the evidence focuses on analyzing failure modes, metastability, and vulnerabilities in various systems, but it does not explicitly mention techniques for mitigating overload. Some papers discuss potential solutions or strategies, such as changing routing and queueing policies (evidence_id=b4337944-0838-4a1f-bd42-1b7a273b75d7), but these are not directly related to the question of which techniques are reported for mitigating overload. Therefore, it is unclear whether the finding holds or not.",
+        "supporting": [],
+        "contradicting": [],
+        "unsupported_claims": [],
+        "overstatements": [],
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "2 of 2 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.0,
+              "weight": 1.0,
+              "observation": "verifier independently cited 0 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T16:27:09.446599Z"
+      },
+      {
+        "finding_id": "F-a8bfa604",
+        "verdict": "insufficient_evidence",
+        "reasoning": "The cited evidence does not mention 'slow-start window increase' as a technique for mitigating overload in distributed systems.",
+        "supporting": [],
+        "contradicting": [],
+        "unsupported_claims": [],
+        "overstatements": [],
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "2 of 2 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.0,
+              "weight": 1.0,
+              "observation": "verifier independently cited 0 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T16:27:19.189189Z"
+      },
+      {
+        "finding_id": "F-00839e2b",
+        "verdict": "insufficient_evidence",
+        "reasoning": "The cited evidence does not mention 'index-level mapping' or any technique specifically for mitigating overload in distributed systems. The papers cited discuss various topics such as metastable failures, routing policies, queueing policies, and network congestion, but none of them explicitly mention index-level mapping.",
+        "supporting": [],
+        "contradicting": [],
+        "unsupported_claims": [],
+        "overstatements": [],
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "1 of 1 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.0,
+              "weight": 1.0,
+              "observation": "verifier independently cited 0 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T16:27:29.981897Z"
+      },
+      {
+        "finding_id": "F-18592c61",
+        "verdict": "insufficient_evidence",
+        "reasoning": "The cited evidence does not provide any information about packet conservation principles or their application in mitigating overload-driven cascading failure.",
+        "supporting": [],
+        "contradicting": [],
+        "unsupported_claims": [],
+        "overstatements": [],
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "3 of 3 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.0,
+              "weight": 1.0,
+              "observation": "verifier independently cited 0 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T16:27:42.475107Z"
+      },
+      {
+        "finding_id": "F-aeb855d6",
+        "verdict": "insufficient_evidence",
+        "reasoning": "The cited evidence (87f911d7-94a0-44fc-9353-6ddb263da470) states that at high RPS, even small delays would cause the system to fall into a metastable failure state. This contradicts the finding that 'Metastable failures can occur at high RPS, even with small delays.' The evidence suggests that small delays are sufficient to cause metastable failures at high RPS, not that they can occur regardless of delay.",
+        "supporting": [],
+        "contradicting": [],
+        "unsupported_claims": [],
+        "overstatements": [],
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "2 of 2 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.0,
+              "weight": 1.0,
+              "observation": "verifier independently cited 0 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T16:27:56.950984Z"
+      },
+      {
+        "finding_id": "F-ffa88a7e",
+        "verdict": "insufficient_evidence",
+        "reasoning": "The cited evidence does not provide any information about the effectiveness of index-level decentralized mapping in mitigating overload-driven cascading failure.",
+        "supporting": [],
+        "contradicting": [],
+        "unsupported_claims": [],
+        "overstatements": [],
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "1 of 1 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.0,
+              "weight": 1.0,
+              "observation": "verifier independently cited 0 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T16:28:09.426996Z"
+      }
+    ],
+    "reviews": [
+      {
+        "decision": "reject",
+        "accepted_findings": [],
+        "rejected_findings": [
+          "F-0ea7de5b",
+          "F-a8bfa604",
+          "F-00839e2b",
+          "F-18592c61",
+          "F-aeb855d6",
+          "F-ffa88a7e",
+          "F-8bca6cb4",
+          "F-0a684918",
+          "F-228cb2a2"
+        ],
+        "issues": [
+          {
+            "code": "verdict_insufficient_evidence",
+            "message": "verification returned insufficient_evidence",
+            "finding_id": "F-0ea7de5b",
+            "blocking": true
+          },
+          {
+            "code": "single_source",
+            "message": "supported by 1 paper(s); 2 expected",
+            "finding_id": "F-0ea7de5b",
+            "blocking": false
+          },
+          {
+            "code": "verdict_insufficient_evidence",
+            "message": "verification returned insufficient_evidence",
+            "finding_id": "F-a8bfa604",
+            "blocking": true
+          },
+          {
+            "code": "single_source",
+            "message": "supported by 1 paper(s); 2 expected",
+            "finding_id": "F-a8bfa604",
+            "blocking": false
+          },
+          {
+            "code": "verdict_insufficient_evidence",
+            "message": "verification returned insufficient_evidence",
+            "finding_id": "F-00839e2b",
+            "blocking": true
+          },
+          {
+            "code": "single_source",
+            "message": "supported by 1 paper(s); 2 expected",
+            "finding_id": "F-00839e2b",
+            "blocking": false
+          },
+          {
+            "code": "verdict_insufficient_evidence",
+            "message": "verification returned insufficient_evidence",
+            "finding_id": "F-18592c61",
+            "blocking": true
+          },
+          {
+            "code": "single_source",
+            "message": "supported by 1 paper(s); 2 expected",
+            "finding_id": "F-18592c61",
+            "blocking": false
+          },
+          {
+            "code": "verdict_insufficient_evidence",
+            "message": "verification returned insufficient_evidence",
+            "finding_id": "F-aeb855d6",
+            "blocking": true
+          },
+          {
+            "code": "single_source",
+            "message": "supported by 1 paper(s); 2 expected",
+            "finding_id": "F-aeb855d6",
+            "blocking": false
+          },
+          {
+            "code": "verdict_insufficient_evidence",
+            "message": "verification returned insufficient_evidence",
+            "finding_id": "F-ffa88a7e",
+            "blocking": true
+          },
+          {
+            "code": "single_source",
+            "message": "supported by 1 paper(s); 2 expected",
+            "finding_id": "F-ffa88a7e",
+            "blocking": false
+          },
+          {
+            "code": "not_verified",
+            "message": "no verification result for this finding",
+            "finding_id": "F-8bca6cb4",
+            "blocking": true
+          },
+          {
+            "code": "single_source",
+            "message": "supported by 1 paper(s); 2 expected",
+            "finding_id": "F-8bca6cb4",
+            "blocking": false
+          },
+          {
+            "code": "not_verified",
+            "message": "no verification result for this finding",
+            "finding_id": "F-0a684918",
+            "blocking": true
+          },
+          {
+            "code": "not_verified",
+            "message": "no verification result for this finding",
+            "finding_id": "F-228cb2a2",
+            "blocking": true
+          }
+        ],
+        "evidence_coverage": 1.0,
+        "citation_completeness": 1.0,
+        "source_diversity": 0.6111,
+        "unsupported_claim_rate": 0.0,
+        "critique": "",
+        "reviewed_by": "reviewer",
+        "iteration": 1,
+        "reviewed_at": "2026-08-10T16:28:20.519617Z"
+      }
+    ],
+    "tool_calls": [
+      {
+        "tool": "build_bundle",
+        "arguments": {
+          "query": "overload-driven cascading failure mitigation techniques"
+        },
+        "result_count": 25,
+        "latency_ms": 41.91158299727249,
+        "succeeded": true,
+        "error": null,
+        "agent": "retrieval",
+        "iteration": 0,
+        "called_at": "2026-08-10T16:26:08.939838Z"
+      },
+      {
+        "tool": "build_bundle",
+        "arguments": {
+          "query": "distributed systems overload prevention methods"
+        },
+        "result_count": 25,
+        "latency_ms": 26.086124998982996,
+        "succeeded": true,
+        "error": null,
+        "agent": "retrieval",
+        "iteration": 0,
+        "called_at": "2026-08-10T16:26:08.965936Z"
+      },
+      {
+        "tool": "build_bundle",
+        "arguments": {
+          "query": "overload-driven cascading failure mitigation"
+        },
+        "result_count": 25,
+        "latency_ms": 40.94808299851138,
+        "succeeded": true,
+        "error": null,
+        "agent": "retrieval",
+        "iteration": 0,
+        "called_at": "2026-08-10T16:26:12.239891Z"
+      },
+      {
+        "tool": "build_bundle",
+        "arguments": {
+          "query": "limitation preventing generalization"
+        },
+        "result_count": 25,
+        "latency_ms": 47.76504099936574,
+        "succeeded": true,
+        "error": null,
+        "agent": "retrieval",
+        "iteration": 0,
+        "called_at": "2026-08-10T16:26:12.287663Z"
+      },
+      {
+        "tool": "build_bundle",
+        "arguments": {
+          "query": "overload-driven cascading failure mitigation techniques"
+        },
+        "result_count": 25,
+        "latency_ms": 41.91158299727249,
+        "succeeded": true,
+        "error": null,
+        "agent": "retrieval",
+        "iteration": 0,
+        "called_at": "2026-08-10T16:26:08.939838Z"
+      },
+      {
+        "tool": "build_bundle",
+        "arguments": {
+          "query": "distributed systems overload prevention methods"
+        },
+        "result_count": 25,
+        "latency_ms": 26.086124998982996,
+        "succeeded": true,
+        "error": null,
+        "agent": "retrieval",
+        "iteration": 0,
+        "called_at": "2026-08-10T16:26:08.965936Z"
+      },
+      {
+        "tool": "build_bundle",
+        "arguments": {
+          "query": "overload-driven cascading failure mitigation"
+        },
+        "result_count": 25,
+        "latency_ms": 40.94808299851138,
+        "succeeded": true,
+        "error": null,
+        "agent": "retrieval",
+        "iteration": 0,
+        "called_at": "2026-08-10T16:26:12.239891Z"
+      },
+      {
+        "tool": "build_bundle",
+        "arguments": {
+          "query": "limitation preventing generalization"
+        },
+        "result_count": 25,
+        "latency_ms": 47.76504099936574,
+        "succeeded": true,
+        "error": null,
+        "agent": "retrieval",
+        "iteration": 0,
+        "called_at": "2026-08-10T16:26:12.287663Z"
+      },
+      {
+        "tool": "get_provenance",
+        "arguments": {},
+        "result_count": 2,
+        "latency_ms": 7.3410420009167865,
+        "succeeded": true,
+        "error": null,
+        "agent": "verification",
+        "iteration": 0,
+        "called_at": "2026-08-10T16:26:54.610400Z"
+      },
+      {
+        "tool": "get_provenance",
+        "arguments": {},
+        "result_count": 2,
+        "latency_ms": 6.435249997593928,
+        "succeeded": true,
+        "error": null,
+        "agent": "verification",
+        "iteration": 0,
+        "called_at": "2026-08-10T16:27:09.454391Z"
+      },
+      {
+        "tool": "get_provenance",
+        "arguments": {},
+        "result_count": 1,
+        "latency_ms": 4.738666000775993,
+        "succeeded": true,
+        "error": null,
+        "agent": "verification",
+        "iteration": 0,
+        "called_at": "2026-08-10T16:27:19.195389Z"
+      },
+      {
+        "tool": "get_provenance",
+        "arguments": {},
+        "result_count": 3,
+        "latency_ms": 11.77983300294727,
+        "succeeded": true,
+        "error": null,
+        "agent": "verification",
+        "iteration": 0,
+        "called_at": "2026-08-10T16:27:29.994295Z"
+      },
+      {
+        "tool": "get_provenance",
+        "arguments": {},
+        "result_count": 2,
+        "latency_ms": 7.477125000150409,
+        "succeeded": true,
+        "error": null,
+        "agent": "verification",
+        "iteration": 0,
+        "called_at": "2026-08-10T16:27:42.483547Z"
+      },
+      {
+        "tool": "get_provenance",
+        "arguments": {},
+        "result_count": 1,
+        "latency_ms": 5.712750000384403,
+        "succeeded": true,
+        "error": null,
+        "agent": "verification",
+        "iteration": 0,
+        "called_at": "2026-08-10T16:27:56.957966Z"
+      }
+    ],
+    "bundle_ids": [
+      "bundle:query:dbc13780b02d062d",
+      "bundle:query:631fbb2a7a93677c",
+      "bundle:query:0d7b9a1142c52814",
+      "bundle:query:02fb4c8969ac0b73"
+    ],
+    "unresolved_questions": [
+      "acknowledged limitations related to generalizing overload mitigations"
+    ],
+    "terminated": true,
+    "termination_reason": "reviewer_rejected",
+    "started_at": "2026-08-10T16:26:07.394280Z"
+  },
+  "audits": [
+    {
+      "finding_id": "F-0ea7de5b",
+      "question_id": "RQ1",
+      "statement": "The papers report several techniques to mitigate overload in distributed systems.",
+      "status": "rejected",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "How do systems in this corpus mitigate overload-driven cascading failure, on what evidence, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "How do systems in this corpus mitigate overload-driven cascading failure, on what evidence, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "Which techniques do these papers report for mitigating overload in distributed systems?",
+          "iteration": 0,
+          "references": [
+            "RQ1"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 2 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:dbc13780b02d062d",
+            "bundle:query:631fbb2a7a93677c"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "The papers report several techniques to mitigate overload in distributed systems.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:dbc13780b02d062d"
+          ]
+        },
+        {
+          "stage": "verification",
+          "actor": "verification",
+          "summary": "insufficient_evidence: The cited evidence does not provide a clear answer to the research question RQ1: Which techniques do these papers report for mitigating overload in distributed ",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "reject; this finding rejected",
+          "iteration": 1,
+          "references": [
+            "verdict_insufficient_evidence",
+            "single_source"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:dbc13780b02d062d",
+          "evidence_ids": [
+            "d59991e6-3eae-4927-89e9-f2a669fab77d",
+            "87f911d7-94a0-44fc-9353-6ddb263da470"
+          ],
+          "knowledge_object_ids": [
+            "manual:02#method:comprehensive-analysis:0",
+            "manual:02#dataset:rps-(requests-per-second):1"
+          ],
+          "paper_ids": [
+            "manual:02"
+          ],
+          "quote": "We perform a comprehensive analysis of these incidents, focusing on impact, trigger, work ampli\ufb01cation mechanisms, and mitigation practices. To study the impact, we focus on the duration and number of impacted services. This information is usually readily available in the reports. For the triggers, we identify the triggers and classify them into several distinct categories. We use a similar identi\ufb01cation and classi\ufb01cation process to distill work-ampli\ufb01cation mechanisms and mitiga- tion patterns. We present our summarized \ufb01ndings in Table 1. 2.2 Summary of Metastable Failures in the Wild In Table 1, we provide a breakdown of metastable failure incidents we have found. The examples include instances from both major cloud providers (e.g., Microsoft, Amazon, Google, IBM) and smaller companies and projects (e.g., Spo- tify, Elasticsearch, Apache Cassandra). Our summary table describes high-level aspects of these failures: duration of the incident, impacted services, triggers leading to the outage, the sustaining effect mechanism, and corrective actions taken by the engineers."
+        }
+      ],
+      "provenance": [
+        "manual:02 p.3 \u00a7Abstract \u00b614",
+        "manual:02 p.11 \u00a75.1.1 Experiment Setup \u00b61"
+      ],
+      "verification": {
+        "finding_id": "F-0ea7de5b",
+        "verdict": "insufficient_evidence",
+        "reasoning": "The cited evidence does not provide a clear answer to the research question RQ1: Which techniques do these papers report for mitigating overload in distributed systems? The majority of the evidence focuses on analyzing failure modes, metastability, and vulnerabilities in various systems, but it does not explicitly mention techniques for mitigating overload. Some papers discuss potential solutions or strategies, such as changing routing and queueing policies (evidence_id=b4337944-0838-4a1f-bd42-1b7a273b75d7), but these are not directly related to the question of which techniques are reported for mitigating overload. Therefore, it is unclear whether the finding holds or not.",
+        "supporting": [],
+        "contradicting": [],
+        "unsupported_claims": [],
+        "overstatements": [],
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "2 of 2 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.0,
+              "weight": 1.0,
+              "observation": "verifier independently cited 0 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T16:27:09.446599Z"
+      }
+    },
+    {
+      "finding_id": "F-a8bfa604",
+      "question_id": "RQ1",
+      "statement": "The papers report on the use of slow-start window increase to mitigate overload in distributed systems.",
+      "status": "rejected",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "How do systems in this corpus mitigate overload-driven cascading failure, on what evidence, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "How do systems in this corpus mitigate overload-driven cascading failure, on what evidence, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "Which techniques do these papers report for mitigating overload in distributed systems?",
+          "iteration": 0,
+          "references": [
+            "RQ1"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 2 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:dbc13780b02d062d",
+            "bundle:query:631fbb2a7a93677c"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "The papers report on the use of slow-start window increase to mitigate overload in distributed systems.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:631fbb2a7a93677c"
+          ]
+        },
+        {
+          "stage": "verification",
+          "actor": "verification",
+          "summary": "insufficient_evidence: The cited evidence does not mention 'slow-start window increase' as a technique for mitigating overload in distributed systems.",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "reject; this finding rejected",
+          "iteration": 1,
+          "references": [
+            "verdict_insufficient_evidence",
+            "single_source"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:631fbb2a7a93677c",
+          "evidence_ids": [
+            "438ec033-b8ec-4e93-aa6a-d1a8889bc773",
+            "f878d20b-17f8-40bd-814e-7b667815a75f"
+          ],
+          "knowledge_object_ids": [
+            "manual:03#method:slow-start-window-increase:7"
+          ],
+          "paper_ids": [
+            "manual:03"
+          ],
+          "quote": "\u2022 On each ack for new data, increase cwnd by one packet."
+        }
+      ],
+      "provenance": [
+        "manual:03 p.4 \u00a77 14 15 \u00b65",
+        "manual:03 p.4 \u00a77 14 15 \u00b64"
+      ],
+      "verification": {
+        "finding_id": "F-a8bfa604",
+        "verdict": "insufficient_evidence",
+        "reasoning": "The cited evidence does not mention 'slow-start window increase' as a technique for mitigating overload in distributed systems.",
+        "supporting": [],
+        "contradicting": [],
+        "unsupported_claims": [],
+        "overstatements": [],
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "2 of 2 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.0,
+              "weight": 1.0,
+              "observation": "verifier independently cited 0 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T16:27:19.189189Z"
+      }
+    },
+    {
+      "finding_id": "F-00839e2b",
+      "question_id": "RQ1",
+      "statement": "The papers report on the use of index-level mapping to mitigate overload in distributed systems.",
+      "status": "rejected",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "How do systems in this corpus mitigate overload-driven cascading failure, on what evidence, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "How do systems in this corpus mitigate overload-driven cascading failure, on what evidence, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "Which techniques do these papers report for mitigating overload in distributed systems?",
+          "iteration": 0,
+          "references": [
+            "RQ1"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 2 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:dbc13780b02d062d",
+            "bundle:query:631fbb2a7a93677c"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "The papers report on the use of index-level mapping to mitigate overload in distributed systems.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:631fbb2a7a93677c"
+          ]
+        },
+        {
+          "stage": "verification",
+          "actor": "verification",
+          "summary": "insufficient_evidence: The cited evidence does not mention 'index-level mapping' or any technique specifically for mitigating overload in distributed systems. The papers cited discuss",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "reject; this finding rejected",
+          "iteration": 1,
+          "references": [
+            "verdict_insufficient_evidence",
+            "single_source"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:631fbb2a7a93677c",
+          "evidence_ids": [
+            "751a2914-7656-410b-9dcb-7ab64cd0ac96"
+          ],
+          "knowledge_object_ids": [
+            "manual:13#method:index-level:0"
+          ],
+          "paper_ids": [
+            "manual:13"
+          ],
+          "quote": "1.\u200b Index Level (Anchor Tier) : \u25cb\u200b Provides decentralized mapping from agent identifiers (IDs) to metadata URLs i.e. AgentAddr (\u2264 120 B) containing TTL and pointers (FactsURL, PrivateFactsURL, AdaptiveResolverURL). \u25cb\u200b Records are cacheable and Ed25519-signed, slashing index-write overheads while blocking tampering. Maintains only essential, static metadata such as Agent ID, credential hashes, TTL, and URLs for dynamic agent facts. \u25cb\u200b Supports resolution via short-lived, cacheable records that are resistant to tampering and unauthorized updates.\u200b 2.\u200b AgentFacts Level (Metadata Distribution Tier): \u25cb\u200b Hosts self-describing JSON-LD documents (AgentFacts), each signed as a W3C VC., that contain endpoint lists, capability descriptors, telemetry configurations, authentication protocols, and credentialed evaluations. \u25cb\u200b Enables frequent, independent updates without requiring index-level intervention."
+        }
+      ],
+      "provenance": [
+        "manual:13 p.6 \u00a7III. SYSTEM ARCHITECTURE OVERVIEW \u00b62"
+      ],
+      "verification": {
+        "finding_id": "F-00839e2b",
+        "verdict": "insufficient_evidence",
+        "reasoning": "The cited evidence does not mention 'index-level mapping' or any technique specifically for mitigating overload in distributed systems. The papers cited discuss various topics such as metastable failures, routing policies, queueing policies, and network congestion, but none of them explicitly mention index-level mapping.",
+        "supporting": [],
+        "contradicting": [],
+        "unsupported_claims": [],
+        "overstatements": [],
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "1 of 1 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.0,
+              "weight": 1.0,
+              "observation": "verifier independently cited 0 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T16:27:29.981897Z"
+      }
+    },
+    {
+      "finding_id": "F-18592c61",
+      "question_id": "RQ2",
+      "statement": "Some systems mitigate overload-driven cascading failure through packet conservation principles.",
+      "status": "rejected",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "How do systems in this corpus mitigate overload-driven cascading failure, on what evidence, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "How do systems in this corpus mitigate overload-driven cascading failure, on what evidence, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "What limitations do the papers acknowledge that prevent generalising overload mitigations?",
+          "iteration": 0,
+          "references": [
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 2 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:0d7b9a1142c52814",
+            "bundle:query:02fb4c8969ac0b73"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "Some systems mitigate overload-driven cascading failure through packet conservation principles.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:02fb4c8969ac0b73"
+          ]
+        },
+        {
+          "stage": "verification",
+          "actor": "verification",
+          "summary": "insufficient_evidence: The cited evidence does not provide any information about packet conservation principles or their application in mitigating overload-driven cascading failure.",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "reject; this finding rejected",
+          "iteration": 1,
+          "references": [
+            "verdict_insufficient_evidence",
+            "single_source"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:02fb4c8969ac0b73",
+          "evidence_ids": [
+            "438ec033-b8ec-4e93-aa6a-d1a8889bc773",
+            "f878d20b-17f8-40bd-814e-7b667815a75f",
+            "f1c96035-65fc-4369-9d12-a2502cde2fa6"
+          ],
+          "knowledge_object_ids": [
+            "manual:03#method:slow-start-window-increase:7"
+          ],
+          "paper_ids": [
+            "manual:03"
+          ],
+          "quote": "\u2022 On each ack for new data, increase cwnd by one packet."
+        }
+      ],
+      "provenance": [
+        "manual:03 p.4 \u00a77 14 15 \u00b65",
+        "manual:03 p.4 \u00a77 14 15 \u00b64",
+        "manual:03 p.4 \u00a77 14 15 \u00b66"
+      ],
+      "verification": {
+        "finding_id": "F-18592c61",
+        "verdict": "insufficient_evidence",
+        "reasoning": "The cited evidence does not provide any information about packet conservation principles or their application in mitigating overload-driven cascading failure.",
+        "supporting": [],
+        "contradicting": [],
+        "unsupported_claims": [],
+        "overstatements": [],
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "3 of 3 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.0,
+              "weight": 1.0,
+              "observation": "verifier independently cited 0 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T16:27:42.475107Z"
+      }
+    },
+    {
+      "finding_id": "F-aeb855d6",
+      "question_id": "RQ2",
+      "statement": "Metastable failures can occur at high RPS, even with small delays.",
+      "status": "rejected",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "How do systems in this corpus mitigate overload-driven cascading failure, on what evidence, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "How do systems in this corpus mitigate overload-driven cascading failure, on what evidence, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "What limitations do the papers acknowledge that prevent generalising overload mitigations?",
+          "iteration": 0,
+          "references": [
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 2 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:0d7b9a1142c52814",
+            "bundle:query:02fb4c8969ac0b73"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "Metastable failures can occur at high RPS, even with small delays.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:02fb4c8969ac0b73"
+          ]
+        },
+        {
+          "stage": "verification",
+          "actor": "verification",
+          "summary": "insufficient_evidence: The cited evidence (87f911d7-94a0-44fc-9353-6ddb263da470) states that at high RPS, even small delays would cause the system to fall into a metastable failure st",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "reject; this finding rejected",
+          "iteration": 1,
+          "references": [
+            "verdict_insufficient_evidence",
+            "single_source"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:02fb4c8969ac0b73",
+          "evidence_ids": [
+            "87f911d7-94a0-44fc-9353-6ddb263da470",
+            "cb3dbf7f-408e-44ee-88ad-de1795720112"
+          ],
+          "knowledge_object_ids": [
+            "manual:02#dataset:rps-(requests-per-second):1"
+          ],
+          "paper_ids": [
+            "manual:02"
+          ],
+          "quote": "5.1.2 Inducing Metastable Failures To illustrate the metastability, we vary RPS over time and plot the relevant metrics in Figure 4a. The initial RPS increase causes queue length and the GC duration to increase. Even as RPS is reduced over time, the sustaining effect causes the queue length and GC duration to remain high."
+        }
+      ],
+      "provenance": [
+        "manual:02 p.11 \u00a75.1.1 Experiment Setup \u00b61",
+        "manual:02 p.11 \u00a75.1.1 Experiment Setup \u00b65"
+      ],
+      "verification": {
+        "finding_id": "F-aeb855d6",
+        "verdict": "insufficient_evidence",
+        "reasoning": "The cited evidence (87f911d7-94a0-44fc-9353-6ddb263da470) states that at high RPS, even small delays would cause the system to fall into a metastable failure state. This contradicts the finding that 'Metastable failures can occur at high RPS, even with small delays.' The evidence suggests that small delays are sufficient to cause metastable failures at high RPS, not that they can occur regardless of delay.",
+        "supporting": [],
+        "contradicting": [],
+        "unsupported_claims": [],
+        "overstatements": [],
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "2 of 2 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.0,
+              "weight": 1.0,
+              "observation": "verifier independently cited 0 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T16:27:56.950984Z"
+      }
+    },
+    {
+      "finding_id": "F-ffa88a7e",
+      "question_id": "RQ2",
+      "statement": "Index-level decentralized mapping can help mitigate overload-driven cascading failure.",
+      "status": "rejected",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "How do systems in this corpus mitigate overload-driven cascading failure, on what evidence, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "How do systems in this corpus mitigate overload-driven cascading failure, on what evidence, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "What limitations do the papers acknowledge that prevent generalising overload mitigations?",
+          "iteration": 0,
+          "references": [
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 2 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:0d7b9a1142c52814",
+            "bundle:query:02fb4c8969ac0b73"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "Index-level decentralized mapping can help mitigate overload-driven cascading failure.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:02fb4c8969ac0b73"
+          ]
+        },
+        {
+          "stage": "verification",
+          "actor": "verification",
+          "summary": "insufficient_evidence: The cited evidence does not provide any information about the effectiveness of index-level decentralized mapping in mitigating overload-driven cascading failure",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "reject; this finding rejected",
+          "iteration": 1,
+          "references": [
+            "verdict_insufficient_evidence",
+            "single_source"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:02fb4c8969ac0b73",
+          "evidence_ids": [
+            "751a2914-7656-410b-9dcb-7ab64cd0ac96"
+          ],
+          "knowledge_object_ids": [
+            "manual:13#method:agentfacts-level:1"
+          ],
+          "paper_ids": [
+            "manual:13"
+          ],
+          "quote": "1.\u200b Index Level (Anchor Tier) : \u25cb\u200b Provides decentralized mapping from agent identifiers (IDs) to metadata URLs i.e. AgentAddr (\u2264 120 B) containing TTL and pointers (FactsURL, PrivateFactsURL, AdaptiveResolverURL). \u25cb\u200b Records are cacheable and Ed25519-signed, slashing index-write overheads while blocking tampering. Maintains only essential, static metadata such as Agent ID, credential hashes, TTL, and URLs for dynamic agent facts. \u25cb\u200b Supports resolution via short-lived, cacheable records that are resistant to tampering and unauthorized updates.\u200b 2.\u200b AgentFacts Level (Metadata Distribution Tier): \u25cb\u200b Hosts self-describing JSON-LD documents (AgentFacts), each signed as a W3C VC., that contain endpoint lists, capability descriptors, telemetry configurations, authentication protocols, and credentialed evaluations. \u25cb\u200b Enables frequent, independent updates without requiring index-level intervention."
+        }
+      ],
+      "provenance": [
+        "manual:13 p.6 \u00a7III. SYSTEM ARCHITECTURE OVERVIEW \u00b62"
+      ],
+      "verification": {
+        "finding_id": "F-ffa88a7e",
+        "verdict": "insufficient_evidence",
+        "reasoning": "The cited evidence does not provide any information about the effectiveness of index-level decentralized mapping in mitigating overload-driven cascading failure.",
+        "supporting": [],
+        "contradicting": [],
+        "unsupported_claims": [],
+        "overstatements": [],
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "1 of 1 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.0,
+              "weight": 1.0,
+              "observation": "verifier independently cited 0 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T16:28:09.426996Z"
+      }
+    },
+    {
+      "finding_id": "F-8bca6cb4",
+      "question_id": "RQ2",
+      "statement": "The choice of base model can affect protocol-level latency conclusions.",
+      "status": "rejected",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "How do systems in this corpus mitigate overload-driven cascading failure, on what evidence, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "How do systems in this corpus mitigate overload-driven cascading failure, on what evidence, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "What limitations do the papers acknowledge that prevent generalising overload mitigations?",
+          "iteration": 0,
+          "references": [
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 2 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:0d7b9a1142c52814",
+            "bundle:query:02fb4c8969ac0b73"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "The choice of base model can affect protocol-level latency conclusions.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:02fb4c8969ac0b73"
+          ]
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "reject; this finding rejected",
+          "iteration": 1,
+          "references": [
+            "not_verified",
+            "single_source"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:02fb4c8969ac0b73",
+          "evidence_ids": [
+            "5e14faa8-3d11-437f-b8b2-30abed48b665"
+          ],
+          "knowledge_object_ids": [
+            "manual:07#result:per_request_latency-on-cross-model-streaming-que:2"
+          ],
+          "paper_ids": [
+            "manual:07"
+          ],
+          "quote": "To probe how sensitive our protocol-level latency conclusions are to the choice of base model, we repeat the Streaming Queue experiments with other strong LLMs (GPT-4o and a Gemini-family model) under the same load, topology, and controls as in the main text. Table 11 reports the mean per-request latency (in milliseconds) for each protocol\u2013model pair. While the absolute latency values vary modestly across base models, the relative ordering between protocols remains stable: ACP consistently achieves the lowest latency, followed by A2A, with ANP and Agora incurring higher latency while offering stronger security and identity guarantees. In all cases, the model is fixed per run and the same coordinator/worker topology as in Section 5 is used."
+        }
+      ],
+      "provenance": [
+        "manual:07 p.23 \u00a7F.6 Cross-model Streaming Queue experiments \u00b60"
+      ],
+      "verification": null
+    },
+    {
+      "finding_id": "F-0a684918",
+      "question_id": "RQ2",
+      "statement": "Some systems mitigate overload-driven cascading failure through packet conservation principles and index-level decentralized mapping.",
+      "status": "rejected",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "How do systems in this corpus mitigate overload-driven cascading failure, on what evidence, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "How do systems in this corpus mitigate overload-driven cascading failure, on what evidence, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "What limitations do the papers acknowledge that prevent generalising overload mitigations?",
+          "iteration": 0,
+          "references": [
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 2 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:0d7b9a1142c52814",
+            "bundle:query:02fb4c8969ac0b73"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "Some systems mitigate overload-driven cascading failure through packet conservation principles and index-level decentralized mapping.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:02fb4c8969ac0b73"
+          ]
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "reject; this finding rejected",
+          "iteration": 1,
+          "references": [
+            "not_verified"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:02fb4c8969ac0b73",
+          "evidence_ids": [
+            "438ec033-b8ec-4e93-aa6a-d1a8889bc773",
+            "f878d20b-17f8-40bd-814e-7b667815a75f",
+            "f1c96035-65fc-4369-9d12-a2502cde2fa6",
+            "751a2914-7656-410b-9dcb-7ab64cd0ac96"
+          ],
+          "knowledge_object_ids": [
+            "manual:03#method:slow-start-window-increase:7",
+            "manual:13#method:agentfacts-level:1"
+          ],
+          "paper_ids": [
+            "manual:03",
+            "manual:13"
+          ],
+          "quote": "\u2022 On each ack for new data, increase cwnd by one packet."
+        }
+      ],
+      "provenance": [
+        "manual:03 p.4 \u00a77 14 15 \u00b65",
+        "manual:03 p.4 \u00a77 14 15 \u00b64",
+        "manual:03 p.4 \u00a77 14 15 \u00b66",
+        "manual:13 p.6 \u00a7III. SYSTEM ARCHITECTURE OVERVIEW \u00b62"
+      ],
+      "verification": null
+    },
+    {
+      "finding_id": "F-228cb2a2",
+      "question_id": "RQ2",
+      "statement": "Metastable failures can occur at high RPS, even with small delays, and the choice of base model can affect protocol-level latency conclusions.",
+      "status": "rejected",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "How do systems in this corpus mitigate overload-driven cascading failure, on what evidence, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "How do systems in this corpus mitigate overload-driven cascading failure, on what evidence, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "What limitations do the papers acknowledge that prevent generalising overload mitigations?",
+          "iteration": 0,
+          "references": [
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 2 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:0d7b9a1142c52814",
+            "bundle:query:02fb4c8969ac0b73"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "Metastable failures can occur at high RPS, even with small delays, and the choice of base model can affect protocol-level latency conclusions.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:02fb4c8969ac0b73"
+          ]
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "reject; this finding rejected",
+          "iteration": 1,
+          "references": [
+            "not_verified"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:02fb4c8969ac0b73",
+          "evidence_ids": [
+            "87f911d7-94a0-44fc-9353-6ddb263da470",
+            "cb3dbf7f-408e-44ee-88ad-de1795720112",
+            "5e14faa8-3d11-437f-b8b2-30abed48b665"
+          ],
+          "knowledge_object_ids": [
+            "manual:02#dataset:rps-(requests-per-second):1",
+            "manual:07#result:per_request_latency-on-cross-model-streaming-que:2"
+          ],
+          "paper_ids": [
+            "manual:02",
+            "manual:07"
+          ],
+          "quote": "5.1.2 Inducing Metastable Failures To illustrate the metastability, we vary RPS over time and plot the relevant metrics in Figure 4a. The initial RPS increase causes queue length and the GC duration to increase. Even as RPS is reduced over time, the sustaining effect causes the queue length and GC duration to remain high."
+        }
+      ],
+      "provenance": [
+        "manual:02 p.11 \u00a75.1.1 Experiment Setup \u00b61",
+        "manual:02 p.11 \u00a75.1.1 Experiment Setup \u00b65",
+        "manual:07 p.23 \u00a7F.6 Cross-model Streaming Queue experiments \u00b60"
+      ],
+      "verification": null
+    }
+  ]
+}

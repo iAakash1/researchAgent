@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 from pydantic import BaseModel
 
-from researchagent.agents.registry import build_agent
+from researchagent.agents.base import BaseAgent
+from researchagent.agents.registry import AGENTS, build_agent
 from researchagent.config.loader import ConfigLoader
 from researchagent.config.schemas import (
     AgentConfig,
@@ -16,6 +18,7 @@ from researchagent.config.schemas import (
     GraphConfig,
     KnowledgeConfig,
     ModelCatalog,
+    ReasoningConfig,
     RetrievalConfig,
     SourcesConfig,
     WorkflowConfig,
@@ -28,6 +31,7 @@ from researchagent.core.interfaces.llm import (
     LLMProvider,
     Message,
     ProviderHealth,
+    StructuredResult,
     TokenUsage,
     TSchema,
 )
@@ -44,6 +48,7 @@ from researchagent.repositories.document_repository import JsonDocumentRepositor
 from researchagent.repositories.evidence_repository import JsonEvidenceRepository
 from researchagent.repositories.knowledge_repository import JsonKnowledgeRepository
 from researchagent.repositories.paper_repository import JsonPaperRepository
+from researchagent.services.audit import AuditTrailBuilder
 from researchagent.services.deduplication import PaperDeduplicator
 from researchagent.services.discovery_service import DiscoveryService
 from researchagent.services.document import (
@@ -77,6 +82,8 @@ from researchagent.services.ranking import HeuristicScorer
 from researchagent.services.retrieval import KnowledgeIndexer
 from researchagent.services.retrieval.registry import build_retrieval_arms, select_active
 from researchagent.services.retrieval_service import RetrievalService
+from researchagent.services.tools import ServiceToolbox
+from researchagent.workflows.reasoning_runner import ReasoningRunner
 from researchagent.workflows.research import build_research_graph
 from researchagent.workflows.runner import WorkflowRunner
 
@@ -125,6 +132,7 @@ class FakeLLMProvider(LLMProvider):
         structured_sequence: list[BaseModel] | None = None,
         fail_times: int = 0,
         error: Exception | None = None,
+        usage: TokenUsage | None = None,
     ) -> None:
         self.text = text
         self.structured = structured
@@ -132,6 +140,9 @@ class FakeLLMProvider(LLMProvider):
         self.structured_sequence = list(structured_sequence or [])
         self.fail_times = fail_times
         self.error = error
+        # None models a provider that reports nothing, which is a real case (Ollama
+        # structured output before include_raw) and must stay distinguishable from zero.
+        self.usage = usage
         self.calls: list[list[Message]] = []
         self.closed = False
 
@@ -155,6 +166,17 @@ class FakeLLMProvider(LLMProvider):
         self._maybe_fail()
         for token in self.text.split():
             yield token + " "
+
+    async def complete_structured_with_usage(
+        self,
+        messages: list[Message],
+        *,
+        model: str,
+        params: GenerationParams,
+        schema: type[TSchema],
+    ) -> StructuredResult[TSchema]:
+        value = await self.complete_structured(messages, model=model, params=params, schema=schema)
+        return StructuredResult[TSchema](value=value, usage=self.usage)
 
     async def complete_structured(
         self,
@@ -243,9 +265,11 @@ def container(
     manual library, so no test ever touches a remote index."""
     graph_config = config_loader.load("graph", GraphConfig)
     graph_repository = InMemoryGraphRepository()
+    reasoning_config = config_loader.load("reasoning", ReasoningConfig)
 
     graph_config = config_loader.load("graph", GraphConfig)
     graph_repository = InMemoryGraphRepository()
+    reasoning_config = config_loader.load("reasoning", ReasoningConfig)
 
     service = LLMService(model_catalog, settings, event_bus=event_bus)
     monkeypatch.setattr(service, "_provider", lambda _name: fake_provider)
@@ -328,6 +352,30 @@ def container(
         prompts=prompt_library,
         event_bus=event_bus,
     )
+    toolbox = ServiceToolbox(
+        active_knowledge_retriever,
+        evidence_service,
+        knowledge_repository,
+        evidence_repository,
+        paper_repository,
+        bundle_repository,
+        graph_repository,
+        GraphQueries(graph_repository),
+    )
+
+    def agent_for(name: str, iteration: int) -> BaseAgent[Any, Any]:
+        spec = agent_config.spec_for(name)
+        agent_cls = AGENTS.get(name)
+        kwargs: dict[str, Any] = {"event_bus": event_bus}
+        if name in {"retrieval", "verification"}:
+            kwargs["toolbox"] = toolbox.for_agent(name, iteration)
+        return agent_cls(
+            BoundLLM(spec.model, model_catalog.spec_for(spec.model), fake_provider),
+            spec,
+            prompt_library,
+            **kwargs,
+        )
+
     graph = build_research_graph(
         planner=planner,
         discovery=discovery_service,
@@ -388,6 +436,14 @@ def container(
             event_bus=event_bus,
         ),
         graph_queries=GraphQueries(graph_repository),
+        # v0.9. The toolbox is real — it composes the same services — but the LLM behind
+        # every agent is faked, so the loop runs offline and deterministically.
+        reasoning_config=reasoning_config,
+        toolbox=toolbox,
+        audit_trail=AuditTrailBuilder(bundle_repository, evidence_repository),
+        reasoning_runner=ReasoningRunner(
+            agent_for, bundle_repository, reasoning_config, event_bus=event_bus
+        ),
         workflow_runner=WorkflowRunner(graph, workflow_config),
     )
 

@@ -34,6 +34,7 @@ from researchagent.core.interfaces.llm import (
     LLMProvider,
     Message,
     ProviderHealth,
+    StructuredResult,
     TokenUsage,
     TSchema,
 )
@@ -146,6 +147,20 @@ class GroqProvider(LLMProvider):
         params: GenerationParams,
         schema: type[TSchema],
     ) -> TSchema:
+        result = await self.complete_structured_with_usage(
+            messages, model=model, params=params, schema=schema
+        )
+        return result.value
+
+    async def complete_structured_with_usage(
+        self,
+        messages: list[Message],
+        *,
+        model: str,
+        params: GenerationParams,
+        schema: type[TSchema],
+    ) -> StructuredResult[TSchema]:
+        """Groq reports usage on every response, so structured calls are fully budgeted."""
         payload = _payload(messages, model=model, params=params) | {
             "response_format": {
                 "type": "json_schema",
@@ -159,7 +174,9 @@ class GroqProvider(LLMProvider):
         body, _ = await self._post_with_retry("/chat/completions", payload, model=model)
         text = _first_choice_text(body, model=model)
         try:
-            return schema.model_validate_json(text)
+            return StructuredResult[TSchema](
+                value=schema.model_validate_json(text), usage=_usage(body)
+            )
         except ValidationError as exc:
             # Retryable by taxonomy: a resample often satisfies the schema.
             raise OutputParsingError(

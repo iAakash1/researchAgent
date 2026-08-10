@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 
+from pydantic import BaseModel, Field
+
 from researchagent.config.schemas import ModelCatalog, ModelSpec
 from researchagent.core.events import EventBus, EventType, LLMCallPayload
 from researchagent.core.exceptions import ConfigurationError
@@ -18,6 +20,7 @@ from researchagent.core.interfaces.llm import (
     LLMProvider,
     Message,
     ProviderHealth,
+    TokenUsage,
     TSchema,
 )
 from researchagent.core.logging import get_logger
@@ -25,6 +28,34 @@ from researchagent.core.settings import Settings
 from researchagent.integrations.registry import build_llm_provider
 
 logger = get_logger(__name__)
+
+
+class UsageReport(BaseModel):
+    """What one handle has spent, and how much of that is actually known.
+
+    ``unmeasured_calls`` is the honesty field. A provider that reports nothing produces
+    zero *measured* tokens, which is indistinguishable from a free call unless the count
+    of unmeasured calls is carried alongside — and a budget that cannot tell "cheap" from
+    "unknown" is not enforcing anything.
+    """
+
+    model_config = {"frozen": True}
+
+    usage: TokenUsage = Field(default_factory=TokenUsage)
+    calls: int = Field(default=0, ge=0)
+    unmeasured_calls: int = Field(default=0, ge=0)
+
+    @property
+    def is_complete(self) -> bool:
+        """Whether every call in this report reported its cost."""
+        return self.unmeasured_calls == 0
+
+    def plus(self, usage: TokenUsage | None) -> UsageReport:
+        return UsageReport(
+            usage=self.usage + (usage or TokenUsage()),
+            calls=self.calls + 1,
+            unmeasured_calls=self.unmeasured_calls + (1 if usage is None else 0),
+        )
 
 
 class BoundLLM:
@@ -42,6 +73,19 @@ class BoundLLM:
         self.spec = spec
         self._provider = provider
         self._event_bus = event_bus
+        # Accumulated here rather than returned to every call site: agents care about
+        # their answer, the loop cares about the bill, and neither should have to thread
+        # the other's concern through its own signatures.
+        self._usage = UsageReport()
+
+    @property
+    def usage(self) -> UsageReport:
+        """Everything this handle has spent since it was constructed.
+
+        Handles are built per agent per iteration, so this is exactly one agent's spend
+        for one round.
+        """
+        return self._usage
 
     @property
     def model(self) -> str:
@@ -60,6 +104,7 @@ class BoundLLM:
         response = await self._provider.complete(
             messages, model=self.model, params=self._params(params)
         )
+        self._usage = self._usage.plus(response.usage)
         await self._emit(response)
         return response
 
@@ -78,9 +123,11 @@ class BoundLLM:
         *,
         params: GenerationParams | None = None,
     ) -> TSchema:
-        return await self._provider.complete_structured(
+        result = await self._provider.complete_structured_with_usage(
             messages, model=self.model, params=self._params(params), schema=schema
         )
+        self._usage = self._usage.plus(result.usage)
+        return result.value
 
     def _params(self, override: GenerationParams | None) -> GenerationParams:
         return self.spec.params.merged_with(override)
