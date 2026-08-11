@@ -54,8 +54,10 @@ select = [
 ignore = ["ANN401"]
 
 [tool.ruff.lint.per-file-ignores]
-# Tests may assert, and their fixtures don't need return annotations.
-"tests/*" = ["ANN", "S101"]
+# Tests may assert, and their fixtures don't need return annotations. A blocking
+# filesystem check inside an async test is the assertion itself — reaching for an async
+# filesystem library there would add a dependency to verify nothing extra.
+"tests/*" = ["ANN", "S101", "ASYNC240"]
 # Scripts are command-line entry points: printing is how they report, and a single
 # blocking mkdir when writing a results file is correct there — swapping in an async
 # filesystem library would add a dependency to save nothing.

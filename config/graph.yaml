@@ -4,10 +4,11 @@
 # and evidence repositories, which remain the source of truth. Deleting the graph store
 # costs a rebuild, never a fact.
 
-# `memory` keeps the graph in-process: no server, no Docker, works offline. `neo4j`
-# persists it. Both satisfy the same GraphRepository port, so this is the only line that
-# changes.
-backend: memory
+# `memory` keeps the graph in-process: no server, no Docker, works offline, and does not
+# survive the process. `json` persists it under data/graphs, which is what a reproducible
+# experiment needs. `neo4j` persists it in a server. All three satisfy the same
+# GraphRepository port, so this is the only line that changes.
+backend: json
 
 neo4j:
   # Credentials come from RESEARCHAGENT_NEO4J__* settings, never from this file.

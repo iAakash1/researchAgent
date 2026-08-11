@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 
 from researchagent.config.schemas import ModelCatalog, ModelSpec
 from researchagent.core.events import EventBus, EventType, LLMCallPayload
-from researchagent.core.exceptions import ConfigurationError
+from researchagent.core.exceptions import BudgetExhaustedError, ConfigurationError
 from researchagent.core.interfaces.llm import (
     CompletionResponse,
     GenerationParams,
@@ -77,6 +77,18 @@ class BoundLLM:
         # their answer, the loop cares about the bill, and neither should have to thread
         # the other's concern through its own signatures.
         self._usage = UsageReport()
+        self._token_ceiling: int | None = None
+
+    def with_token_ceiling(self, remaining: int | None) -> BoundLLM:
+        """Refuse to start a call once ``remaining`` measured tokens are gone.
+
+        Enforced on *spent* tokens, never on a prediction of what a call will cost:
+        estimating a request's size would be inventing usage, which the accounting rules
+        forbid. So this is an honest floor — no call begins after the budget is gone —
+        and not a claim that a single call cannot overshoot it.
+        """
+        self._token_ceiling = remaining
+        return self
 
     @property
     def usage(self) -> UsageReport:
@@ -101,6 +113,7 @@ class BoundLLM:
         *,
         params: GenerationParams | None = None,
     ) -> CompletionResponse:
+        self._require_budget()
         response = await self._provider.complete(
             messages, model=self.model, params=self._params(params)
         )
@@ -123,11 +136,23 @@ class BoundLLM:
         *,
         params: GenerationParams | None = None,
     ) -> TSchema:
+        self._require_budget()
         result = await self._provider.complete_structured_with_usage(
             messages, model=self.model, params=self._params(params), schema=schema
         )
         self._usage = self._usage.plus(result.usage)
         return result.value
+
+    def _require_budget(self) -> None:
+        if self._token_ceiling is None:
+            return
+        if self._usage.usage.total_tokens >= self._token_ceiling:
+            raise BudgetExhaustedError(
+                "Token budget exhausted before this call",
+                alias=self.alias,
+                spent=self._usage.usage.total_tokens,
+                ceiling=self._token_ceiling,
+            )
 
     def _params(self, override: GenerationParams | None) -> GenerationParams:
         return self.spec.params.merged_with(override)

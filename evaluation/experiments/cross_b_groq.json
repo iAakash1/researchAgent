@@ -1,0 +1,985 @@
+{
+  "run_id": "2b5fe5d6-e4ec-44c3-a49f-263714aff3fc",
+  "label": "cross_b_groq",
+  "identity": {
+    "corpus_fingerprint": "95759ff21faab1cd",
+    "papers": 12,
+    "knowledge_objects": 222,
+    "evidence_objects": 137,
+    "graph_version": "s1-x1-r1-cd1deb5a496ac",
+    "index_version": "1-nomic-embed-text",
+    "embedding_model": "nomic-embed-text",
+    "active_retriever": "deterministic",
+    "llm_provider": "groq",
+    "llm_model": "openai/gpt-oss-120b",
+    "model_alias": "reasoning_remote",
+    "config_digest": "3900150123bd43a6",
+    "budget": {
+      "max_iterations": 3,
+      "max_retrieval_attempts": 8,
+      "max_tool_calls": 40,
+      "max_tokens_per_agent": 32000,
+      "max_total_tokens": 200000
+    }
+  },
+  "research_goal": "Across these papers, how do retries and retransmission contribute to overload, and do the papers' recommendations for controlling them agree?",
+  "research_questions": [
+    "How do these papers describe retries or retransmission as a contributor to overload or congestion?",
+    "What do the papers recommend for controlling retry behaviour, and do their recommendations agree?"
+  ],
+  "metrics": {
+    "findings_total": 6,
+    "verdict_verified": 2,
+    "accepted_findings": 2,
+    "partially_supported": 4,
+    "contradicted": 0,
+    "insufficient_evidence": 0,
+    "unverifiable": 0,
+    "hypotheses": 0,
+    "cross_paper_findings": 2,
+    "citation_completeness": 1.0,
+    "evidence_coverage": 1.0,
+    "source_diversity": 0.6667,
+    "unsupported_claim_rate": 0.0,
+    "review_decision": "revise",
+    "review_accepted": 2,
+    "review_rejected": 4,
+    "review_acceptance_rate": 0.3333,
+    "iterations": 1,
+    "retrieval_attempts": 2,
+    "tool_calls": 16,
+    "bundles": 5,
+    "prompt_tokens": 33980,
+    "completion_tokens": 7164,
+    "total_tokens": 41144,
+    "tokens_by_agent": {
+      "retrieval": 2313,
+      "reasoning": 9860,
+      "verification": 27059,
+      "reviewer": 1912
+    },
+    "unmeasured_llm_calls": 0,
+    "termination_reason": "all_questions_answered",
+    "latency_ms": 278392.1,
+    "graph_expansion_used": false
+  },
+  "findings": [
+    {
+      "id": "F-a8b91566",
+      "question_id": "RQ1",
+      "statement": "Retransmissions/retries are described as a factor that can increase load and contribute to overload or congestion.",
+      "status": "rejected",
+      "papers": [
+        "manual:15"
+      ],
+      "bundle_ids": [
+        "bundle:query:fedc9c89f4fd5f82"
+      ],
+      "verdict": "partially_supported",
+      "overstatements": [
+        "\"retries add traffic that can worsen overload conditions\""
+      ]
+    },
+    {
+      "id": "F-d1417e37",
+      "question_id": "RQ1",
+      "statement": "The papers recommend controlling retries by disabling them entirely or by applying circuit\u2011breaker\u2011style policies that limit or turn off retries during overload.",
+      "status": "rejected",
+      "papers": [
+        "manual:15",
+        "manual:01"
+      ],
+      "bundle_ids": [
+        "bundle:query:fedc9c89f4fd5f82"
+      ],
+      "verdict": "partially_supported",
+      "overstatements": [
+        "The finding claims that the papers recommend \"circuit\u2011breaker\u2011style policies that limit or turn off retries during overload,\" but the cited evidence only mentions disabling failover, not explicitly limiting or disabling retries."
+      ]
+    },
+    {
+      "id": "F-6ab97236",
+      "question_id": "RQ2",
+      "statement": "Disabling retries entirely is recommended as a way to control retry behaviour during overload.",
+      "status": "rejected",
+      "papers": [
+        "manual:15"
+      ],
+      "bundle_ids": [
+        "bundle:query:1bd6d6a69e586c3a"
+      ],
+      "verdict": "partially_supported",
+      "overstatements": [
+        "\"Disabling retries entirely is recommended as a way to control retry behaviour during overload\""
+      ]
+    },
+    {
+      "id": "F-fc0d46cf",
+      "question_id": "RQ2",
+      "statement": "Assigning a lower priority to retried queries is recommended to avoid feedback loops and reduce overload.",
+      "status": "rejected",
+      "papers": [
+        "manual:01"
+      ],
+      "bundle_ids": [
+        "bundle:query:1bd6d6a69e586c3a"
+      ],
+      "verdict": "partially_supported",
+      "overstatements": [
+        "The claim that assigning lower priority \"reduces overload\" is not directly supported by the cited evidence."
+      ]
+    },
+    {
+      "id": "F-29391960",
+      "question_id": "RQ2",
+      "statement": "The lack of a default retry policy is highlighted, indicating the need for explicit retry policy configuration.",
+      "status": "verified",
+      "papers": [
+        "manual:15"
+      ],
+      "bundle_ids": [
+        "bundle:query:1bd6d6a69e586c3a"
+      ],
+      "verdict": "verified",
+      "overstatements": []
+    },
+    {
+      "id": "F-c4ff18f4",
+      "question_id": "RQ2",
+      "statement": "The papers do not fully agree on the preferred control mechanism for retries; one recommends disabling retries entirely while another recommends lowering their priority.",
+      "status": "verified",
+      "papers": [
+        "manual:15",
+        "manual:01"
+      ],
+      "bundle_ids": [
+        "bundle:query:1bd6d6a69e586c3a"
+      ],
+      "verdict": "verified",
+      "overstatements": []
+    }
+  ],
+  "audits": [
+    {
+      "finding_id": "F-a8b91566",
+      "question_id": "RQ1",
+      "statement": "Retransmissions/retries are described as a factor that can increase load and contribute to overload or congestion.",
+      "status": "rejected",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "Across these papers, how do retries and retransmission contribute to overload, and do the papers' recommendations for controlling them agree?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "Across these papers, how do retries and retransmission contribute to overload, and do the papers' recommendations for controlling them agree?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "How do these papers describe retries or retransmission as a contributor to overload or congestion?",
+          "iteration": 0,
+          "references": [
+            "RQ1"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 2 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:3f7593b8eb20a25f",
+            "bundle:query:fedc9c89f4fd5f82"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "Retransmissions/retries are described as a factor that can increase load and contribute to overload or congestion.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:fedc9c89f4fd5f82"
+          ]
+        },
+        {
+          "stage": "verification",
+          "actor": "verification",
+          "summary": "partially_supported: The cited evidence shows that retries are enabled by default and can be disabled (evidence_id=3b8879b2-3158-4d53-8564-adc2c9b9b35b, evidence_id=9b535a61-e5e7-4e",
+          "iteration": 0,
+          "references": [
+            "bundle:query:fedc9c89f4fd5f82"
+          ]
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "revise; this finding rejected",
+          "iteration": 1,
+          "references": [
+            "verdict_partially_supported",
+            "overclaiming",
+            "single_source"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:fedc9c89f4fd5f82",
+          "evidence_ids": [
+            "3b8879b2-3158-4d53-8564-adc2c9b9b35b",
+            "9b535a61-e5e7-4eab-9de3-e5145c6bb7aa"
+          ],
+          "knowledge_object_ids": [
+            "manual:15#limitation:disable-retries:1",
+            "manual:15#limitation:no-default-retry-policy:0"
+          ],
+          "paper_ids": [
+            "manual:15"
+          ],
+          "quote": "You can also disable retries entirely when creating a channel, which disables transparent retries and any configured retry policies."
+        }
+      ],
+      "provenance": [
+        "manual:15 p.2 \u00a7Retry configuration \u00b64",
+        "manual:15 p.1 \u00a7Retry configuration \u00b60"
+      ],
+      "verification": {
+        "finding_id": "F-a8b91566",
+        "verdict": "partially_supported",
+        "reasoning": "The cited evidence shows that retries are enabled by default and can be disabled (evidence_id=3b8879b2-3158-4d53-8564-adc2c9b9b35b, evidence_id=9b535a61-e5e7-4eab-9de3-e5145c6bb7aa), indicating they are considered a configurable factor. However, none of the excerpts explicitly state that retries increase load or directly contribute to overload or congestion, so the claim that they \"add traffic that can worsen overload conditions\" is not directly supported.",
+        "supporting": [
+          {
+            "bundle_id": "bundle:query:fedc9c89f4fd5f82",
+            "evidence_ids": [
+              "3b8879b2-3158-4d53-8564-adc2c9b9b35b",
+              "9b535a61-e5e7-4eab-9de3-e5145c6bb7aa"
+            ],
+            "knowledge_object_ids": [],
+            "paper_ids": [
+              "manual:15"
+            ],
+            "quote": null
+          }
+        ],
+        "contradicting": [],
+        "unsupported_claims": [
+          "The finding that retries are described as a factor that can increase load and contribute to overload or congestion is not directly evidenced by the cited excerpts."
+        ],
+        "overstatements": [
+          "\"retries add traffic that can worsen overload conditions\""
+        ],
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "2 of 2 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "verifier independently cited 1 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T17:24:20.514223Z"
+      }
+    },
+    {
+      "finding_id": "F-d1417e37",
+      "question_id": "RQ1",
+      "statement": "The papers recommend controlling retries by disabling them entirely or by applying circuit\u2011breaker\u2011style policies that limit or turn off retries during overload.",
+      "status": "rejected",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "Across these papers, how do retries and retransmission contribute to overload, and do the papers' recommendations for controlling them agree?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "Across these papers, how do retries and retransmission contribute to overload, and do the papers' recommendations for controlling them agree?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "How do these papers describe retries or retransmission as a contributor to overload or congestion?",
+          "iteration": 0,
+          "references": [
+            "RQ1"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 2 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:3f7593b8eb20a25f",
+            "bundle:query:fedc9c89f4fd5f82"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "The papers recommend controlling retries by disabling them entirely or by applying circuit\u2011breaker\u2011style policies that limit or turn off retries during overload.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:fedc9c89f4fd5f82"
+          ]
+        },
+        {
+          "stage": "verification",
+          "actor": "verification",
+          "summary": "partially_supported: One cited paper (3b8879b2-3158-4d53-8564-adc2c9b9b35b) explicitly recommends disabling retries entirely, which directly supports the first part of the finding. ",
+          "iteration": 0,
+          "references": [
+            "bundle:query:fedc9c89f4fd5f82"
+          ]
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "revise; this finding rejected",
+          "iteration": 1,
+          "references": [
+            "verdict_partially_supported",
+            "overclaiming"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:fedc9c89f4fd5f82",
+          "evidence_ids": [
+            "3b8879b2-3158-4d53-8564-adc2c9b9b35b",
+            "b4337944-0838-4a1f-bd42-1b7a273b75d7"
+          ],
+          "knowledge_object_ids": [
+            "manual:15#limitation:disable-retries:1",
+            "manual:01#dataset:load-shedding:4"
+          ],
+          "paper_ids": [
+            "manual:15",
+            "manual:01"
+          ],
+          "quote": "You can also disable retries entirely when creating a channel, which disables transparent retries and any configured retry policies."
+        }
+      ],
+      "provenance": [
+        "manual:15 p.2 \u00a7Retry configuration \u00b64",
+        "manual:01 p.4 \u00a73 Approaches to Handling Metastability \u00b62"
+      ],
+      "verification": {
+        "finding_id": "F-d1417e37",
+        "verdict": "partially_supported",
+        "reasoning": "One cited paper (3b8879b2-3158-4d53-8564-adc2c9b9b35b) explicitly recommends disabling retries entirely, which directly supports the first part of the finding. The other cited paper (b4337944-0838-4a1f-bd42-1b7a273b75d7) discusses changing routing and queueing policies during overload and gives the example of disabling failover, but it does not explicitly mention limiting or turning off retries. Therefore the claim that the papers recommend \"circuit\u2011breaker\u2011style policies that limit or turn off retries during overload\" overstates what the evidence actually says.",
+        "supporting": [
+          {
+            "bundle_id": "bundle:query:fedc9c89f4fd5f82",
+            "evidence_ids": [
+              "3b8879b2-3158-4d53-8564-adc2c9b9b35b",
+              "b4337944-0838-4a1f-bd42-1b7a273b75d7"
+            ],
+            "knowledge_object_ids": [],
+            "paper_ids": [
+              "manual:01",
+              "manual:15"
+            ],
+            "quote": null
+          }
+        ],
+        "contradicting": [],
+        "unsupported_claims": [],
+        "overstatements": [
+          "The finding claims that the papers recommend \"circuit\u2011breaker\u2011style policies that limit or turn off retries during overload,\" but the cited evidence only mentions disabling failover, not explicitly limiting or disabling retries."
+        ],
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "2 of 2 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "verifier independently cited 1 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T17:24:57.840370Z"
+      }
+    },
+    {
+      "finding_id": "F-6ab97236",
+      "question_id": "RQ2",
+      "statement": "Disabling retries entirely is recommended as a way to control retry behaviour during overload.",
+      "status": "rejected",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "Across these papers, how do retries and retransmission contribute to overload, and do the papers' recommendations for controlling them agree?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "Across these papers, how do retries and retransmission contribute to overload, and do the papers' recommendations for controlling them agree?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "What do the papers recommend for controlling retry behaviour, and do their recommendations agree?",
+          "iteration": 0,
+          "references": [
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 3 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:d6fdde4a14287105",
+            "bundle:query:eed468c34c1cc5b4",
+            "bundle:query:1bd6d6a69e586c3a"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "Disabling retries entirely is recommended as a way to control retry behaviour during overload.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:1bd6d6a69e586c3a"
+          ]
+        },
+        {
+          "stage": "verification",
+          "actor": "verification",
+          "summary": "partially_supported: The cited evidence (3b8879b2-3158-4d53-8564-adc2c9b9b35b) states that retries can be disabled when creating a channel, which would stop transparent retries and ",
+          "iteration": 0,
+          "references": [
+            "bundle:query:1bd6d6a69e586c3a"
+          ]
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "revise; this finding rejected",
+          "iteration": 1,
+          "references": [
+            "verdict_partially_supported",
+            "overclaiming",
+            "single_source"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:1bd6d6a69e586c3a",
+          "evidence_ids": [
+            "3b8879b2-3158-4d53-8564-adc2c9b9b35b"
+          ],
+          "knowledge_object_ids": [
+            "manual:15#limitation:disable-retries:1"
+          ],
+          "paper_ids": [
+            "manual:15"
+          ],
+          "quote": "You can also disable retries entirely when creating a channel, which disables transparent retries and any configured retry policies."
+        }
+      ],
+      "provenance": [
+        "manual:15 p.2 \u00a7Retry configuration \u00b64"
+      ],
+      "verification": {
+        "finding_id": "F-6ab97236",
+        "verdict": "partially_supported",
+        "reasoning": "The cited evidence (3b8879b2-3158-4d53-8564-adc2c9b9b35b) states that retries can be disabled when creating a channel, which would stop transparent retries and any configured retry policies. This shows that disabling retries can control retry behaviour, but the evidence does not say that this is a recommended strategy for handling overload. No other cited sources recommend disabling retries for overload control, so the claim that it is \"recommended\" is an overstatement.",
+        "supporting": [
+          {
+            "bundle_id": "bundle:query:1bd6d6a69e586c3a",
+            "evidence_ids": [
+              "3b8879b2-3158-4d53-8564-adc2c9b9b35b"
+            ],
+            "knowledge_object_ids": [],
+            "paper_ids": [
+              "manual:15"
+            ],
+            "quote": null
+          }
+        ],
+        "contradicting": [],
+        "unsupported_claims": [
+          "The recommendation that disabling retries is the advised approach for overload control"
+        ],
+        "overstatements": [
+          "\"Disabling retries entirely is recommended as a way to control retry behaviour during overload\""
+        ],
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "1 of 1 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "verifier independently cited 1 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T17:25:36.954953Z"
+      }
+    },
+    {
+      "finding_id": "F-fc0d46cf",
+      "question_id": "RQ2",
+      "statement": "Assigning a lower priority to retried queries is recommended to avoid feedback loops and reduce overload.",
+      "status": "rejected",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "Across these papers, how do retries and retransmission contribute to overload, and do the papers' recommendations for controlling them agree?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "Across these papers, how do retries and retransmission contribute to overload, and do the papers' recommendations for controlling them agree?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "What do the papers recommend for controlling retry behaviour, and do their recommendations agree?",
+          "iteration": 0,
+          "references": [
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 3 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:d6fdde4a14287105",
+            "bundle:query:eed468c34c1cc5b4",
+            "bundle:query:1bd6d6a69e586c3a"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "Assigning a lower priority to retried queries is recommended to avoid feedback loops and reduce overload.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:1bd6d6a69e586c3a"
+          ]
+        },
+        {
+          "stage": "verification",
+          "actor": "verification",
+          "summary": "partially_supported: The cited evidence (3decf172-22ec-4caf-8692-593f70e77806) explicitly recommends using a lower priority for retried queries to avoid perpetuating the feedback lo",
+          "iteration": 0,
+          "references": [
+            "bundle:query:1bd6d6a69e586c3a"
+          ]
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "revise; this finding rejected",
+          "iteration": 1,
+          "references": [
+            "verdict_partially_supported",
+            "overclaiming",
+            "single_source"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:1bd6d6a69e586c3a",
+          "evidence_ids": [
+            "3decf172-22ec-4caf-8692-593f70e77806"
+          ],
+          "knowledge_object_ids": [
+            "manual:01#method:prioritization:1"
+          ],
+          "paper_ids": [
+            "manual:01"
+          ],
+          "quote": "Prioritization: Another way to retain efficiency when a resource is exhausted is to use priorities. For example, in the retry case study (\u00a7 2.1), using a lower priority for retried queries would avoid perpetuating the feedback loop\u2014 future user queries would be prioritized and succeed, thus eliminating the retries."
+        }
+      ],
+      "provenance": [
+        "manual:01 p.4 \u00a73 Approaches to Handling Metastability \u00b65"
+      ],
+      "verification": {
+        "finding_id": "F-fc0d46cf",
+        "verdict": "partially_supported",
+        "reasoning": "The cited evidence (3decf172-22ec-4caf-8692-593f70e77806) explicitly recommends using a lower priority for retried queries to avoid perpetuating the feedback loop, which supports the first part of the finding. However, the evidence does not explicitly state that this practice reduces overload, so that portion of the claim is not directly backed by the cited source.",
+        "supporting": [
+          {
+            "bundle_id": "bundle:query:1bd6d6a69e586c3a",
+            "evidence_ids": [
+              "3decf172-22ec-4caf-8692-593f70e77806"
+            ],
+            "knowledge_object_ids": [],
+            "paper_ids": [
+              "manual:01"
+            ],
+            "quote": null
+          }
+        ],
+        "contradicting": [],
+        "unsupported_claims": [
+          "reduce overload"
+        ],
+        "overstatements": [
+          "The claim that assigning lower priority \"reduces overload\" is not directly supported by the cited evidence."
+        ],
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "1 of 1 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "verifier independently cited 1 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T17:26:03.858772Z"
+      }
+    },
+    {
+      "finding_id": "F-29391960",
+      "question_id": "RQ2",
+      "statement": "The lack of a default retry policy is highlighted, indicating the need for explicit retry policy configuration.",
+      "status": "verified",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "Across these papers, how do retries and retransmission contribute to overload, and do the papers' recommendations for controlling them agree?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "Across these papers, how do retries and retransmission contribute to overload, and do the papers' recommendations for controlling them agree?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "What do the papers recommend for controlling retry behaviour, and do their recommendations agree?",
+          "iteration": 0,
+          "references": [
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 3 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:d6fdde4a14287105",
+            "bundle:query:eed468c34c1cc5b4",
+            "bundle:query:1bd6d6a69e586c3a"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "The lack of a default retry policy is highlighted, indicating the need for explicit retry policy configuration.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:1bd6d6a69e586c3a"
+          ]
+        },
+        {
+          "stage": "verification",
+          "actor": "verification",
+          "summary": "verified: Evidence 9b535a61-e5e7-4eab-9de3-e5145c6bb7aa explicitly states that retries are enabled by default but there is no default retry policy, and that without a pol",
+          "iteration": 0,
+          "references": [
+            "bundle:query:1bd6d6a69e586c3a"
+          ]
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "revise; this finding accepted",
+          "iteration": 1,
+          "references": [
+            "single_source"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:1bd6d6a69e586c3a",
+          "evidence_ids": [
+            "9b535a61-e5e7-4eab-9de3-e5145c6bb7aa"
+          ],
+          "knowledge_object_ids": [
+            "manual:15#limitation:no-default-retry-policy:0"
+          ],
+          "paper_ids": [
+            "manual:15"
+          ],
+          "quote": "Retries are enabled by default, but there is no default retry policy. Without a retry policy, gRPC cannot safely retry RPCs in most cases. Only RPCs that failed due to low-level races are retried, and only if gRPC is certain the RPCs have not been processed by a server. This is known as \u201ctransparent retry.\u201d You can configure a retry policy to allow gRPC to retry RPCs in more circumstances and more aggressively."
+        }
+      ],
+      "provenance": [
+        "manual:15 p.1 \u00a7Retry configuration \u00b60"
+      ],
+      "verification": {
+        "finding_id": "F-29391960",
+        "verdict": "verified",
+        "reasoning": "Evidence 9b535a61-e5e7-4eab-9de3-e5145c6bb7aa explicitly states that retries are enabled by default but there is no default retry policy, and that without a policy gRPC cannot safely retry RPCs, which directly supports the claim that the lack of a default retry policy is highlighted and that explicit retry policy configuration is needed.",
+        "supporting": [
+          {
+            "bundle_id": "bundle:query:1bd6d6a69e586c3a",
+            "evidence_ids": [
+              "9b535a61-e5e7-4eab-9de3-e5145c6bb7aa"
+            ],
+            "knowledge_object_ids": [],
+            "paper_ids": [
+              "manual:15"
+            ],
+            "quote": null
+          }
+        ],
+        "contradicting": [],
+        "unsupported_claims": [],
+        "overstatements": [],
+        "confidence": {
+          "score": 1.0,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "1 of 1 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "verifier independently cited 1 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T17:26:37.780821Z"
+      }
+    },
+    {
+      "finding_id": "F-c4ff18f4",
+      "question_id": "RQ2",
+      "statement": "The papers do not fully agree on the preferred control mechanism for retries; one recommends disabling retries entirely while another recommends lowering their priority.",
+      "status": "verified",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "Across these papers, how do retries and retransmission contribute to overload, and do the papers' recommendations for controlling them agree?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "Across these papers, how do retries and retransmission contribute to overload, and do the papers' recommendations for controlling them agree?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "What do the papers recommend for controlling retry behaviour, and do their recommendations agree?",
+          "iteration": 0,
+          "references": [
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 3 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:d6fdde4a14287105",
+            "bundle:query:eed468c34c1cc5b4",
+            "bundle:query:1bd6d6a69e586c3a"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "The papers do not fully agree on the preferred control mechanism for retries; one recommends disabling retries entirely while another recommends lowering their priority.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:1bd6d6a69e586c3a"
+          ]
+        },
+        {
+          "stage": "verification",
+          "actor": "verification",
+          "summary": "verified: Evidence 3b8879b2-3158-4d53-8564-adc2c9b9b35b explicitly recommends disabling retries entirely, while evidence 3decf172-22ec-4caf-8692-593f70e77806 recommends u",
+          "iteration": 0,
+          "references": [
+            "bundle:query:1bd6d6a69e586c3a"
+          ]
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "revise; this finding accepted",
+          "iteration": 1,
+          "references": []
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:1bd6d6a69e586c3a",
+          "evidence_ids": [
+            "3b8879b2-3158-4d53-8564-adc2c9b9b35b",
+            "3decf172-22ec-4caf-8692-593f70e77806"
+          ],
+          "knowledge_object_ids": [
+            "manual:15#limitation:disable-retries:1",
+            "manual:01#method:prioritization:1"
+          ],
+          "paper_ids": [
+            "manual:15",
+            "manual:01"
+          ],
+          "quote": "You can also disable retries entirely when creating a channel, which disables transparent retries and any configured retry policies."
+        }
+      ],
+      "provenance": [
+        "manual:15 p.2 \u00a7Retry configuration \u00b64",
+        "manual:01 p.4 \u00a73 Approaches to Handling Metastability \u00b65"
+      ],
+      "verification": {
+        "finding_id": "F-c4ff18f4",
+        "verdict": "verified",
+        "reasoning": "Evidence 3b8879b2-3158-4d53-8564-adc2c9b9b35b explicitly recommends disabling retries entirely, while evidence 3decf172-22ec-4caf-8692-593f70e77806 recommends using a lower priority for retried queries, showing the papers disagree on the preferred control mechanism.",
+        "supporting": [
+          {
+            "bundle_id": "bundle:query:1bd6d6a69e586c3a",
+            "evidence_ids": [
+              "3b8879b2-3158-4d53-8564-adc2c9b9b35b",
+              "3decf172-22ec-4caf-8692-593f70e77806"
+            ],
+            "knowledge_object_ids": [],
+            "paper_ids": [
+              "manual:01",
+              "manual:15"
+            ],
+            "quote": null
+          }
+        ],
+        "contradicting": [],
+        "unsupported_claims": [],
+        "overstatements": [],
+        "confidence": {
+          "score": 1.0,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "2 of 2 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "verifier independently cited 1 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T17:27:03.534361Z"
+      }
+    }
+  ],
+  "accepted_without_provenance": [],
+  "run_at": "2026-08-10T17:27:21.720739+00:00"
+}

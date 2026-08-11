@@ -332,6 +332,20 @@ class IndexIncompatibleError(ResearchAgentError):
     remedy = "Rebuild the index with the configured embedding model"
 
 
+class BudgetExhaustedError(ResearchAgentError):
+    """A bounded resource ran out before the work could be done.
+
+    Fatal by design: retrying spends the budget that is already gone. Raised *before* the
+    work happens rather than reported after, which is the difference between a ceiling and
+    a stopping condition.
+    """
+
+    code = "budget_exhausted"
+    http_status = 429
+    recoverability = Recoverability.FATAL
+    remedy = "Raise the limit in config/reasoning.yaml, or narrow the research question"
+
+
 class GraphNotBuiltError(ResearchAgentError):
     """A graph query arrived before any generation was built.
 

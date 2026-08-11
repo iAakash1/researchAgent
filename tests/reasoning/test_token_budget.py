@@ -97,7 +97,7 @@ async def _runner(
         async def find_contradictions(self, paper_ids: tuple[str, ...] = ()) -> tuple[()]:
             return ()
 
-    def agent_for(name: str, iteration: int) -> object:
+    def agent_for(name: str, iteration: int, tokens_remaining: int | None = None) -> object:
         spec = container.agent_config.spec_for(name)
         provider = FakeLLMProvider(structured_sequence=list(scripts[name]), usage=usage)
         kwargs: dict[str, object] = {}

@@ -29,7 +29,11 @@ from researchagent.agents.retrieval.schemas import (
     RetrievalStrategy,
     SufficiencyDraft,
 )
-from researchagent.core.exceptions import ConfigurationError, ResearchAgentError
+from researchagent.core.exceptions import (
+    BudgetExhaustedError,
+    ConfigurationError,
+    ResearchAgentError,
+)
 from researchagent.core.interfaces.tools import ResearchToolbox
 from researchagent.core.prompts import PromptLibrary
 from researchagent.models.bundle import EvidenceBundle
@@ -152,6 +156,11 @@ class RetrievalAgent(BaseAgent[RetrievalInput, RetrievalOutput]):
         for query in decision.queries:
             try:
                 bundle = await self._toolbox.build_bundle(query)
+            except BudgetExhaustedError:
+                # Deliberately not swallowed: a budget ceiling that degrades into
+                # "skip this query" is a stopping condition wearing a ceiling's name.
+                self.logger.info("retrieval_stopped_on_budget", query=query[:60])
+                raise
             except ResearchAgentError as exc:
                 self.logger.warning("bundle_build_failed", query=query[:60], error=exc.code)
                 continue

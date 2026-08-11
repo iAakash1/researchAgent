@@ -43,6 +43,7 @@ from researchagent.memory.checkpoints import build_checkpointer
 from researchagent.repositories.bundle_repository import JsonBundleRepository
 from researchagent.repositories.document_repository import JsonDocumentRepository
 from researchagent.repositories.evidence_repository import JsonEvidenceRepository
+from researchagent.repositories.graph_repository import JsonGraphRepository
 from researchagent.repositories.knowledge_repository import JsonKnowledgeRepository
 from researchagent.repositories.paper_repository import JsonPaperRepository
 from researchagent.services.audit import AuditTrailBuilder
@@ -85,6 +86,7 @@ from researchagent.services.retrieval.registry import (
 )
 from researchagent.services.retrieval_service import RetrievalService
 from researchagent.services.tools import ServiceToolbox
+from researchagent.services.tools.toolbox import ToolBudget
 from researchagent.workflows.reasoning_runner import ReasoningRunner
 from researchagent.workflows.research import build_research_graph
 from researchagent.workflows.runner import WorkflowRunner
@@ -310,6 +312,8 @@ def build_container(settings: Settings | None = None) -> Container:
         bundle_repository,
         graph_repository,
         graph_queries,
+        budget=ToolBudget(max_tool_calls=reasoning_config.budget.max_tool_calls),
+        event_bus=event_bus,
     )
     audit_trail = AuditTrailBuilder(bundle_repository, evidence_repository)
 
@@ -326,8 +330,16 @@ def build_container(settings: Settings | None = None) -> Container:
             kwargs["toolbox"] = toolbox.for_agent(name, iteration)
         return agent_cls(llm_service.get(spec.model), spec, prompt_library, **kwargs)
 
+    def budgeted_agent_for(
+        name: str, iteration: int, tokens_remaining: int | None = None
+    ) -> BaseAgent[Any, Any]:
+        """An agent whose LLM refuses to start once the run's tokens are spent."""
+        agent = agent_for(name, iteration)
+        agent.llm.with_token_ceiling(tokens_remaining)
+        return agent
+
     reasoning_runner = ReasoningRunner(
-        agent_for, bundle_repository, reasoning_config, event_bus=event_bus
+        budgeted_agent_for, bundle_repository, reasoning_config, event_bus=event_bus
     )
 
     planner = build_agent(
@@ -412,6 +424,10 @@ def _build_graph_repository(config: GraphConfig, settings: Settings) -> GraphRep
     Kept here rather than in a registry because there are exactly two and one of them is a
     test seam. Credentials come from ``Settings``; ``config/graph.yaml`` holds no secrets.
     """
+    if config.backend == "json":
+        # Survives the process that built it, with no server. The graph is still derived:
+        # deleting this directory costs a rebuild, never a fact.
+        return JsonGraphRepository(settings.data_dir / "graphs")
     if config.backend == "neo4j":
         return Neo4jGraphRepository(
             uri=settings.neo4j.uri,

@@ -14,8 +14,11 @@ from __future__ import annotations
 import time
 from typing import ClassVar
 
+from pydantic import BaseModel, Field
+
 from researchagent.core.constants import SECONDS_PER_MILLISECOND
-from researchagent.core.exceptions import ResearchAgentError
+from researchagent.core.events import Event, EventBus, EventType, ToolCallPayload
+from researchagent.core.exceptions import BudgetExhaustedError, ResearchAgentError
 from researchagent.core.interfaces.graph_repository import GraphRepository
 from researchagent.core.interfaces.retrieval import KnowledgeRetriever
 from researchagent.core.interfaces.tools import (
@@ -47,6 +50,36 @@ MAX_IDS = 50
 MAX_QUERY_CHARS = 500
 
 
+class ToolBudget(BaseModel):
+    """A ceiling on tool calls, shared by every view of one toolbox.
+
+    Held as a mutable object rather than folded into the ledger after the fact: a limit
+    checked only between rounds is a stopping condition, and a round that begins under it
+    can still finish above it. Checking here makes it a ceiling — the call that would
+    cross the line does not happen.
+    """
+
+    max_tool_calls: int = Field(default=0, ge=0, description="0 disables the ceiling")
+    spent: int = Field(default=0, ge=0)
+
+    @property
+    def remaining(self) -> int | None:
+        """Calls left, or None when no ceiling is configured."""
+        return None if self.max_tool_calls <= 0 else max(0, self.max_tool_calls - self.spent)
+
+    def reserve(self, tool: ToolName) -> None:
+        """Claim one call, or refuse. Reserved before the work, not billed after."""
+        remaining = self.remaining
+        if remaining is not None and remaining <= 0:
+            raise BudgetExhaustedError(
+                "Tool-call budget exhausted",
+                tool=tool.value,
+                max_tool_calls=self.max_tool_calls,
+                spent=self.spent,
+            )
+        self.spent += 1
+
+
 class ServiceToolbox(ResearchToolbox):
     """Domain verbs over the existing services."""
 
@@ -63,6 +96,8 @@ class ServiceToolbox(ResearchToolbox):
         graph_repository: GraphRepository | None = None,
         graph_queries: GraphQueries | None = None,
         *,
+        budget: ToolBudget | None = None,
+        event_bus: EventBus | None = None,
         agent: str = "",
         iteration: int = 0,
     ) -> None:
@@ -74,6 +109,8 @@ class ServiceToolbox(ResearchToolbox):
         self._bundles = bundle_repository
         self._graph_repository = graph_repository
         self._graph_queries = graph_queries
+        self._budget = budget if budget is not None else ToolBudget()
+        self._event_bus = event_bus
         self._agent = agent
         self._iteration = iteration
         self._calls: list[ToolCall] = []
@@ -81,6 +118,10 @@ class ServiceToolbox(ResearchToolbox):
     @property
     def calls(self) -> tuple[ToolCall, ...]:
         return tuple(self._calls)
+
+    @property
+    def budget(self) -> ToolBudget:
+        return self._budget
 
     def for_agent(self, agent: str, iteration: int) -> ServiceToolbox:
         """A view that attributes its calls to one agent, sharing the same call log."""
@@ -93,6 +134,8 @@ class ServiceToolbox(ResearchToolbox):
             self._bundles,
             self._graph_repository,
             self._graph_queries,
+            budget=self._budget,
+            event_bus=self._event_bus,
             agent=agent,
             iteration=iteration,
         )
@@ -102,7 +145,7 @@ class ServiceToolbox(ResearchToolbox):
     async def search_knowledge(
         self, query: str, *, kinds: tuple[str, ...] = (), limit: int = 10
     ) -> KnowledgeSearchResult:
-        started = time.perf_counter()
+        started = await self._begin(ToolName.SEARCH_KNOWLEDGE)
         try:
             request = ResearchQuery(
                 text=_clean_query(query),
@@ -112,7 +155,9 @@ class ServiceToolbox(ResearchToolbox):
             )
             result = await self._retriever.retrieve(request)
         except ResearchAgentError as exc:
-            self._record(ToolName.SEARCH_KNOWLEDGE, started, error=exc, query=query)
+            await self._complete(
+                self._record(ToolName.SEARCH_KNOWLEDGE, started, error=exc, query=query)
+            )
             return KnowledgeSearchResult(degraded=True)
 
         found = KnowledgeSearchResult(
@@ -120,15 +165,21 @@ class ServiceToolbox(ResearchToolbox):
             retrieved_by=result.retrieved_by,
             degraded=result.degraded,
         )
-        self._record(
-            ToolName.SEARCH_KNOWLEDGE, started, count=len(found.objects), query=query, limit=limit
+        await self._complete(
+            self._record(
+                ToolName.SEARCH_KNOWLEDGE,
+                started,
+                count=len(found.objects),
+                query=query,
+                limit=limit,
+            )
         )
         return found
 
     async def retrieve_evidence(
         self, knowledge_object_ids: tuple[str, ...], *, limit: int = 20
     ) -> EvidenceSearchResult:
-        started = time.perf_counter()
+        started = await self._begin(ToolName.RETRIEVE_EVIDENCE)
         wanted = set(knowledge_object_ids[:MAX_IDS])
         cap = _clamp(limit, MAX_LIMIT)
 
@@ -146,10 +197,10 @@ class ServiceToolbox(ResearchToolbox):
                 if len(records) >= cap:
                     break
         except ResearchAgentError as exc:
-            self._record(ToolName.RETRIEVE_EVIDENCE, started, error=exc)
+            await self._complete(self._record(ToolName.RETRIEVE_EVIDENCE, started, error=exc))
             return EvidenceSearchResult(degraded=True)
 
-        self._record(ToolName.RETRIEVE_EVIDENCE, started, count=len(records))
+        await self._complete(self._record(ToolName.RETRIEVE_EVIDENCE, started, count=len(records)))
         return EvidenceSearchResult(records=tuple(records))
 
     async def build_bundle(
@@ -160,7 +211,7 @@ class ServiceToolbox(ResearchToolbox):
         Raises rather than degrading: an agent that continues without a bundle would be
         reasoning over nothing, and every downstream citation traces to a bundle id.
         """
-        started = time.perf_counter()
+        started = await self._begin(ToolName.BUILD_BUNDLE)
         request = ResearchQuery(
             text=_clean_query(query),
             intent=QueryIntent.ANSWER,
@@ -176,26 +227,34 @@ class ServiceToolbox(ResearchToolbox):
             if self._bundles is not None:
                 await self._bundles.save(bundle)
         except ResearchAgentError as exc:
-            self._record(ToolName.BUILD_BUNDLE, started, error=exc, query=query)
+            await self._complete(
+                self._record(ToolName.BUILD_BUNDLE, started, error=exc, query=query)
+            )
             raise
 
-        self._record(
-            ToolName.BUILD_BUNDLE, started, count=len(bundle.knowledge_objects), query=query
+        await self._complete(
+            self._record(
+                ToolName.BUILD_BUNDLE, started, count=len(bundle.knowledge_objects), query=query
+            )
         )
         return bundle
 
     async def search_graph(
         self, entity_name: str, *, depth: int = 1, limit: int = 25
     ) -> GraphSearchResult:
-        started = time.perf_counter()
+        started = await self._begin(ToolName.SEARCH_GRAPH)
         if self._graph_repository is None or self._graph_queries is None:
-            self._record(ToolName.SEARCH_GRAPH, started, count=0, entity=entity_name)
+            await self._complete(
+                self._record(ToolName.SEARCH_GRAPH, started, count=0, entity=entity_name)
+            )
             return GraphSearchResult(available=False)
 
         try:
             versions = await self._graph_repository.versions()
             if not versions:
-                self._record(ToolName.SEARCH_GRAPH, started, count=0, entity=entity_name)
+                await self._complete(
+                    self._record(ToolName.SEARCH_GRAPH, started, count=0, entity=entity_name)
+                )
                 return GraphSearchResult(available=False)
 
             subgraph = await self._graph_repository.neighbours(
@@ -219,14 +278,18 @@ class ServiceToolbox(ResearchToolbox):
                     )
                 )
         except ResearchAgentError as exc:
-            self._record(ToolName.SEARCH_GRAPH, started, error=exc, entity=entity_name)
+            await self._complete(
+                self._record(ToolName.SEARCH_GRAPH, started, error=exc, entity=entity_name)
+            )
             return GraphSearchResult(available=False)
 
-        self._record(ToolName.SEARCH_GRAPH, started, count=len(nodes), entity=entity_name)
+        await self._complete(
+            self._record(ToolName.SEARCH_GRAPH, started, count=len(nodes), entity=entity_name)
+        )
         return GraphSearchResult(nodes=tuple(nodes), citations=citations)
 
     async def get_provenance(self, evidence_ids: tuple[str, ...]) -> tuple[str, ...]:
-        started = time.perf_counter()
+        started = await self._begin(ToolName.GET_PROVENANCE)
         addresses: list[str] = []
         try:
             for evidence_id in evidence_ids[:MAX_IDS]:
@@ -234,16 +297,16 @@ class ServiceToolbox(ResearchToolbox):
                 if record is not None:
                     addresses.append(record.evidence.location.describe())
         except ResearchAgentError as exc:
-            self._record(ToolName.GET_PROVENANCE, started, error=exc)
+            await self._complete(self._record(ToolName.GET_PROVENANCE, started, error=exc))
             return ()
 
-        self._record(ToolName.GET_PROVENANCE, started, count=len(addresses))
+        await self._complete(self._record(ToolName.GET_PROVENANCE, started, count=len(addresses)))
         return tuple(addresses)
 
     async def find_contradictions(
         self, paper_ids: tuple[str, ...] = ()
     ) -> tuple[Contradiction, ...]:
-        started = time.perf_counter()
+        started = await self._begin(ToolName.FIND_CONTRADICTIONS)
         try:
             wanted = tuple(paper_ids[:MAX_IDS]) or tuple(await self._knowledge.list_ids())
             objects: list[KnowledgeObject] = []
@@ -255,23 +318,27 @@ class ServiceToolbox(ResearchToolbox):
 
             found = ContradictionDetector().detect(tuple(objects))
         except ResearchAgentError as exc:
-            self._record(ToolName.FIND_CONTRADICTIONS, started, error=exc)
+            await self._complete(self._record(ToolName.FIND_CONTRADICTIONS, started, error=exc))
             return ()
 
-        self._record(ToolName.FIND_CONTRADICTIONS, started, count=len(found))
+        await self._complete(self._record(ToolName.FIND_CONTRADICTIONS, started, count=len(found)))
         return found
 
     async def get_paper_context(self, paper_id: str) -> PaperContext:
-        started = time.perf_counter()
+        started = await self._begin(ToolName.GET_PAPER_CONTEXT)
         try:
             stored = await self._knowledge.get(paper_id)
             record = await self._papers.get(paper_id)
         except ResearchAgentError as exc:
-            self._record(ToolName.GET_PAPER_CONTEXT, started, error=exc, paper_id=paper_id)
+            await self._complete(
+                self._record(ToolName.GET_PAPER_CONTEXT, started, error=exc, paper_id=paper_id)
+            )
             return PaperContext(paper_id=paper_id, found=False)
 
         if stored is None:
-            self._record(ToolName.GET_PAPER_CONTEXT, started, count=0, paper_id=paper_id)
+            await self._complete(
+                self._record(ToolName.GET_PAPER_CONTEXT, started, count=0, paper_id=paper_id)
+            )
             return PaperContext(paper_id=paper_id, found=False)
 
         context = PaperContext(
@@ -280,10 +347,30 @@ class ServiceToolbox(ResearchToolbox):
             year=record.paper.year if record else None,
             objects=stored.value.objects,
         )
-        self._record(
-            ToolName.GET_PAPER_CONTEXT, started, count=len(context.objects), paper_id=paper_id
+        await self._complete(
+            self._record(
+                ToolName.GET_PAPER_CONTEXT, started, count=len(context.objects), paper_id=paper_id
+            )
         )
         return context
+
+    async def _begin(self, tool: ToolName) -> float:
+        """Reserve the call against the ceiling, announce it, and start the clock.
+
+        Reservation happens first: a call that cannot be paid for must not run, and must
+        not appear in the event stream as though it did.
+        """
+        self._budget.reserve(tool)
+        await self._publish(
+            EventType.TOOL_CALLED,
+            ToolCallPayload(agent=self._agent, tool=tool.value, iteration=self._iteration),
+        )
+        return time.perf_counter()
+
+    async def _publish(self, event_type: EventType, payload: ToolCallPayload) -> None:
+        if self._event_bus is None:
+            return
+        await self._event_bus.publish(Event(type=event_type, payload=payload))
 
     def _record(
         self,
@@ -293,7 +380,7 @@ class ServiceToolbox(ResearchToolbox):
         count: int = 0,
         error: ResearchAgentError | None = None,
         **arguments: str | int | float | bool | None,
-    ) -> None:
+    ) -> ToolCall:
         call = ToolCall(
             tool=tool,
             arguments={key: value for key, value in arguments.items() if value is not None},
@@ -311,6 +398,22 @@ class ServiceToolbox(ResearchToolbox):
             agent=self._agent,
             results=count,
             succeeded=call.succeeded,
+        )
+        return call
+
+    async def _complete(self, call: ToolCall) -> None:
+        """Announce the outcome. Arguments are never echoed — only counts and status."""
+        await self._publish(
+            EventType.TOOL_COMPLETED,
+            ToolCallPayload(
+                agent=call.agent,
+                tool=call.tool.value,
+                iteration=call.iteration,
+                result_count=call.result_count,
+                latency_ms=call.latency_ms,
+                succeeded=call.succeeded,
+                error_code=None if call.succeeded else "tool_failed",
+            ),
         )
 
 

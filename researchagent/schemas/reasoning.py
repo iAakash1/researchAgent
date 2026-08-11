@@ -13,6 +13,7 @@ from enum import StrEnum
 from pydantic import BaseModel, Field, model_validator
 
 from researchagent.config.schemas import ResearchBudget
+from researchagent.core.interfaces.llm import TokenUsage
 from researchagent.core.interfaces.tools import ToolCall
 from researchagent.models.reasoning import (
     Citation,
@@ -32,6 +33,10 @@ class BudgetLedger(BaseModel):
     retrieval_attempts: int = Field(default=0, ge=0)
     tool_calls: int = Field(default=0, ge=0)
     total_tokens: int = Field(default=0, ge=0)
+    # Kept split as well as summed: comparing two reasoning models is largely a question
+    # of how much each spends thinking versus reading, and a single total hides that.
+    prompt_tokens: int = Field(default=0, ge=0)
+    completion_tokens: int = Field(default=0, ge=0)
     tokens_by_agent: dict[str, int] = Field(default_factory=dict)
     # LLM calls whose provider reported no usage. Their real cost is unknown, so it is
     # counted rather than assumed to be zero — the difference is what stops a
@@ -56,11 +61,16 @@ class BudgetLedger(BaseModel):
             return TerminationReason.BUDGET_EXHAUSTED
         return None
 
-    def with_tokens(self, agent: str, tokens: int) -> BudgetLedger:
+    def with_tokens(self, agent: str, usage: TokenUsage) -> BudgetLedger:
         by_agent = dict(self.tokens_by_agent)
-        by_agent[agent] = by_agent.get(agent, 0) + tokens
+        by_agent[agent] = by_agent.get(agent, 0) + usage.total_tokens
         return self.model_copy(
-            update={"total_tokens": self.total_tokens + tokens, "tokens_by_agent": by_agent}
+            update={
+                "total_tokens": self.total_tokens + usage.total_tokens,
+                "prompt_tokens": self.prompt_tokens + usage.prompt_tokens,
+                "completion_tokens": self.completion_tokens + usage.completion_tokens,
+                "tokens_by_agent": by_agent,
+            }
         )
 
 

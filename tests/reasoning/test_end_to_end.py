@@ -71,7 +71,7 @@ async def _runner(
         async def get_provenance(self, evidence_ids: tuple[str, ...]) -> tuple[str, ...]:
             return tuple(f"{eid} @ manual:01 p.4" for eid in evidence_ids)
 
-    def agent_for(name: str, iteration: int) -> object:
+    def agent_for(name: str, iteration: int, tokens_remaining: int | None = None) -> object:
         spec = container.agent_config.spec_for(name)
         provider = FakeLLMProvider(structured_sequence=list(scripts.get(name, [])))
         kwargs: dict[str, object] = {}

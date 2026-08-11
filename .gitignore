@@ -34,3 +34,7 @@ storage/papers/raw/downloaded/
 .DS_Store
 .idea/
 .vscode/
+
+# Ad-hoc research runs are scratch output; the reproducible experiment artifacts
+# under evaluation/experiments/ are what gets committed.
+evaluation/results/research_*.json

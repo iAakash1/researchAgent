@@ -6,6 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from researchagent.config.schemas import ResearchBudget
+from researchagent.core.interfaces.llm import TokenUsage
 from researchagent.models.reasoning import TerminationReason
 from researchagent.schemas.reasoning import BudgetLedger, QuestionState, ReasoningSession
 
@@ -37,15 +38,28 @@ class TestBudget:
         assert ledger.exceeded(ResearchBudget()) is TerminationReason.BUDGET_EXHAUSTED
 
     def test_token_accounting_is_per_agent_and_total(self) -> None:
-        ledger = BudgetLedger().with_tokens("reasoning", 100).with_tokens("reasoning", 50)
+        ledger = (
+            BudgetLedger()
+            .with_tokens("reasoning", TokenUsage(prompt_tokens=80, completion_tokens=20))
+            .with_tokens("reasoning", TokenUsage(prompt_tokens=40, completion_tokens=10))
+        )
 
         assert ledger.total_tokens == 150
         assert ledger.tokens_by_agent == {"reasoning": 150}
 
+    def test_the_prompt_completion_split_is_preserved(self) -> None:
+        """Comparing two reasoning models turns on how much each spends thinking."""
+        ledger = BudgetLedger().with_tokens(
+            "reasoning", TokenUsage(prompt_tokens=800, completion_tokens=200)
+        )
+
+        assert (ledger.prompt_tokens, ledger.completion_tokens) == (800, 200)
+        assert ledger.total_tokens == 1000
+
     def test_the_ledger_is_never_mutated_in_place(self) -> None:
         original = BudgetLedger()
 
-        original.with_tokens("reasoning", 100)
+        original.with_tokens("reasoning", TokenUsage(prompt_tokens=100, completion_tokens=0))
 
         assert original.total_tokens == 0
 

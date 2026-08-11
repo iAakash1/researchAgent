@@ -83,6 +83,7 @@ from researchagent.services.retrieval import KnowledgeIndexer
 from researchagent.services.retrieval.registry import build_retrieval_arms, select_active
 from researchagent.services.retrieval_service import RetrievalService
 from researchagent.services.tools import ServiceToolbox
+from researchagent.services.tools.toolbox import ToolBudget
 from researchagent.workflows.reasoning_runner import ReasoningRunner
 from researchagent.workflows.research import build_research_graph
 from researchagent.workflows.runner import WorkflowRunner
@@ -361,9 +362,13 @@ def container(
         bundle_repository,
         graph_repository,
         GraphQueries(graph_repository),
+        budget=ToolBudget(max_tool_calls=reasoning_config.budget.max_tool_calls),
+        event_bus=event_bus,
     )
 
-    def agent_for(name: str, iteration: int) -> BaseAgent[Any, Any]:
+    def agent_for(
+        name: str, iteration: int, tokens_remaining: int | None = None
+    ) -> BaseAgent[Any, Any]:
         spec = agent_config.spec_for(name)
         agent_cls = AGENTS.get(name)
         kwargs: dict[str, Any] = {"event_bus": event_bus}

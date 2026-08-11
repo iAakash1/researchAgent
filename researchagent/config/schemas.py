@@ -439,7 +439,7 @@ class GraphConfig(BaseModel):
 
     # `memory` is the default so the graph works offline and the test suite never needs a
     # running Neo4j. Persisting is a one-line config change.
-    backend: Literal["memory", "neo4j"] = "memory"
+    backend: Literal["memory", "json", "neo4j"] = "memory"
     neo4j: GraphNeo4jSettings = Field(default_factory=GraphNeo4jSettings)
     build: GraphBuildSettings = Field(default_factory=GraphBuildSettings)
     schema_identity: GraphSchemaSettings = Field(

@@ -1,0 +1,626 @@
+{
+  "run_id": "43127a9c-388d-4e53-aaf6-8df3a523e07f",
+  "label": "run_c_adversarial",
+  "identity": {
+    "corpus_fingerprint": "95759ff21faab1cd",
+    "papers": 12,
+    "knowledge_objects": 222,
+    "evidence_objects": 137,
+    "graph_version": "s1-x1-r1-cd1deb5a496ac",
+    "index_version": "1-nomic-embed-text",
+    "embedding_model": "nomic-embed-text",
+    "active_retriever": "deterministic",
+    "llm_provider": "groq",
+    "llm_model": "openai/gpt-oss-120b",
+    "model_alias": "reasoning_remote",
+    "config_digest": "3900150123bd43a6",
+    "budget": {
+      "max_iterations": 3,
+      "max_retrieval_attempts": 8,
+      "max_tool_calls": 40,
+      "max_tokens_per_agent": 32000,
+      "max_total_tokens": 200000
+    }
+  },
+  "research_goal": "Do the agent-protocol benchmarks and the distributed-systems failure studies in this corpus agree on which failure modes dominate, and is there quantitative evidence that permits comparing them?",
+  "research_questions": [
+    "Which failure modes do the agent-protocol benchmark papers and the distributed-systems failure papers each report as dominant?",
+    "Is there any shared metric or dataset that allows the agent-protocol results to be compared quantitatively with the distributed-systems results?"
+  ],
+  "metrics": {
+    "findings_total": 4,
+    "verified": 0,
+    "partially_supported": 2,
+    "contradicted": 0,
+    "insufficient_evidence": 0,
+    "unverifiable": 0,
+    "hypotheses": 1,
+    "cross_paper_findings": 1,
+    "citation_completeness": null,
+    "evidence_coverage": null,
+    "source_diversity": null,
+    "unsupported_claim_rate": null,
+    "review_decision": null,
+    "review_accepted": 0,
+    "review_rejected": 0,
+    "review_acceptance_rate": 0.0,
+    "iterations": 2,
+    "retrieval_attempts": 4,
+    "tool_calls": 40,
+    "bundles": 9,
+    "prompt_tokens": 39864,
+    "completion_tokens": 6058,
+    "total_tokens": 45922,
+    "tokens_by_agent": {
+      "retrieval": 4877,
+      "reasoning": 24046,
+      "verification": 16999
+    },
+    "unmeasured_llm_calls": 0,
+    "termination_reason": "budget_exhausted",
+    "latency_ms": 369958.5,
+    "graph_expansion_used": false
+  },
+  "findings": [
+    {
+      "id": "F-b17bea9b",
+      "question_id": "RQ1",
+      "statement": "Distributed-systems failure studies report metastable failures as the dominant failure mode.",
+      "status": "supported",
+      "papers": [
+        "manual:02"
+      ],
+      "bundle_ids": [
+        "bundle:query:211f1294e662341e"
+      ],
+      "verdict": "partially_supported",
+      "overstatements": [
+        "claims that metastable failures are the dominant failure mode across distributed\u2011systems failure studies"
+      ]
+    },
+    {
+      "id": "F-e927b98f",
+      "question_id": "RQ1",
+      "statement": "Distributed\u2011systems failure papers report metastable failures as a recurring and substantial failure mode in severe outages.",
+      "status": "insufficient_evidence",
+      "papers": [
+        "manual:02"
+      ],
+      "bundle_ids": [
+        "bundle:query:9ed1af267ad9dd83",
+        "bundle:query:211f1294e662341e"
+      ],
+      "verdict": "verified",
+      "overstatements": []
+    },
+    {
+      "id": "F-72b9aaa5",
+      "question_id": "RQ1",
+      "statement": "Agent\u2011protocol benchmark papers analyse failure\u2011mode rates across multiple benchmarks (e.g., MMLU, GSM, OlympiadBench) but do not identify a single dominant failure mode.",
+      "status": "supported",
+      "papers": [
+        "manual:10"
+      ],
+      "bundle_ids": [
+        "bundle:query:9c6b151e9e485a52"
+      ],
+      "verdict": "partially_supported",
+      "overstatements": [
+        "do not identify a single dominant failure mode"
+      ]
+    },
+    {
+      "id": "F-ae98972c",
+      "question_id": "RQ2",
+      "statement": "The available evidence shows that agent\u2011protocol studies report failure\u2011rate metrics and use the MAST\u2011Data failure dataset, while distributed\u2011systems studies report latency\u2011ranking metrics and use request\u2011per\u2011second (RPS) workload data, with no overlapping metric or dataset identified.",
+      "status": "supported",
+      "papers": [
+        "manual:10",
+        "manual:07",
+        "manual:02"
+      ],
+      "bundle_ids": [
+        "bundle:query:e3197f62321f35ad",
+        "bundle:query:13734b97313a29ea"
+      ],
+      "verdict": null,
+      "overstatements": []
+    }
+  ],
+  "audits": [
+    {
+      "finding_id": "F-b17bea9b",
+      "question_id": "RQ1",
+      "statement": "Distributed-systems failure studies report metastable failures as the dominant failure mode.",
+      "status": "supported",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "Do the agent-protocol benchmarks and the distributed-systems failure studies in this corpus agree on which failure modes dominate, and is there quantitative evidence that permits comparing them?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "Do the agent-protocol benchmarks and the distributed-systems failure studies in this corpus agree on which failure modes dominate, and is there quantitative evidence that permits comparing them?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "Which failure modes do the agent-protocol benchmark papers and the distributed-systems failure papers each report as dominant?",
+          "iteration": 0,
+          "references": [
+            "RQ1"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "2 retrieval attempt(s) produced 5 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:26e03bd9fe939db5",
+            "bundle:query:211f1294e662341e",
+            "bundle:query:a4b30c013992584c",
+            "bundle:query:9ed1af267ad9dd83",
+            "bundle:query:9c6b151e9e485a52"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "Distributed-systems failure studies report metastable failures as the dominant failure mode.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:211f1294e662341e"
+          ]
+        },
+        {
+          "stage": "verification",
+          "actor": "verification",
+          "summary": "partially_supported: The cited papers (5ae06b90-7f71-47de-bdb0-9e1167a9e756 and 0e3c8f24-019b-442a-ab1d-0b32e1bf9662) report that metastable failures are universally observed and co",
+          "iteration": 0,
+          "references": [
+            "bundle:query:211f1294e662341e"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:211f1294e662341e",
+          "evidence_ids": [
+            "5ae06b90-7f71-47de-bdb0-9e1167a9e756",
+            "0e3c8f24-019b-442a-ab1d-0b32e1bf9662"
+          ],
+          "knowledge_object_ids": [
+            "manual:02#future_work:develop-solutions-to-metastable-failures.:1",
+            "manual:02#method:example-applications:2"
+          ],
+          "paper_ids": [
+            "manual:02"
+          ],
+          "quote": "Our main \ufb01ndings are threefold. First, metastable failures are universally observed\u2014we present an in-depth study of 22 metastable failures from 11 different organizations. Second, metastable failures are a recurring pattern in many severe outages\u2014e.g., at least 4 out of 15 major outages in the last decade at Amazon Web Services were caused by metastable failures. Third, we extend the model by Bronson et al. to better re\ufb02ect the metastable failures seen in the wild by cate- gorizing two types of triggers and two types of ampli\ufb01cation mechanisms, which we con\ufb01rm through developing multi- ple example applications that reproduce different types of metastable failures in a controlled environment. We believe our work will aid in a deeper understanding of metastable failures and in coming up with solutions to them. 1 Introduction Building reliable distributed systems has been the holy grail of distributed computing research. Historically, academic re- searchers studied the reliability of distributed systems under the assumptions of fail-stop [31,42,46] and Byzantine [8,32] failure modes. The proliferation of cloud services led to previously unseen scales and the discovery of new failure modes, such as stragglers [9,12,62], fail-slow hardware fail- ures [3,27,29], and scalability failures [34,53]. Most recently, Bronson et al. [7] introduced a new class of failures called metastable failures."
+        }
+      ],
+      "provenance": [
+        "manual:02 p.2 \u00a7Abstract \u00b61",
+        "manual:02 p.3 \u00a7Abstract \u00b69"
+      ],
+      "verification": {
+        "finding_id": "F-b17bea9b",
+        "verdict": "partially_supported",
+        "reasoning": "The cited papers (5ae06b90-7f71-47de-bdb0-9e1167a9e756 and 0e3c8f24-019b-442a-ab1d-0b32e1bf9662) report that metastable failures are universally observed and constitute a substantial portion of severe outages, indicating they are common and important. However, they do not explicitly claim that metastable failures are the *dominant* failure mode across all distributed\u2011systems failure studies, so the finding overstates the evidence by asserting dominance.",
+        "supporting": [
+          {
+            "bundle_id": "bundle:query:211f1294e662341e",
+            "evidence_ids": [
+              "5ae06b90-7f71-47de-bdb0-9e1167a9e756",
+              "0e3c8f24-019b-442a-ab1d-0b32e1bf9662"
+            ],
+            "knowledge_object_ids": [],
+            "paper_ids": [
+              "manual:02"
+            ],
+            "quote": null
+          }
+        ],
+        "contradicting": [],
+        "unsupported_claims": [],
+        "overstatements": [
+          "claims that metastable failures are the dominant failure mode across distributed\u2011systems failure studies"
+        ],
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "2 of 2 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "verifier independently cited 1 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T17:00:23.032036Z"
+      }
+    },
+    {
+      "finding_id": "F-e927b98f",
+      "question_id": "RQ1",
+      "statement": "Distributed\u2011systems failure papers report metastable failures as a recurring and substantial failure mode in severe outages.",
+      "status": "insufficient_evidence",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "Do the agent-protocol benchmarks and the distributed-systems failure studies in this corpus agree on which failure modes dominate, and is there quantitative evidence that permits comparing them?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "Do the agent-protocol benchmarks and the distributed-systems failure studies in this corpus agree on which failure modes dominate, and is there quantitative evidence that permits comparing them?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "Which failure modes do the agent-protocol benchmark papers and the distributed-systems failure papers each report as dominant?",
+          "iteration": 0,
+          "references": [
+            "RQ1"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "2 retrieval attempt(s) produced 5 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:26e03bd9fe939db5",
+            "bundle:query:211f1294e662341e",
+            "bundle:query:a4b30c013992584c",
+            "bundle:query:9ed1af267ad9dd83",
+            "bundle:query:9c6b151e9e485a52"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "Distributed\u2011systems failure papers report metastable failures as a recurring and substantial failure mode in severe outages.",
+          "iteration": 1,
+          "references": [
+            "bundle:query:9ed1af267ad9dd83",
+            "bundle:query:211f1294e662341e"
+          ]
+        },
+        {
+          "stage": "verification",
+          "actor": "verification",
+          "summary": "verified: The cited evidence (ID 5ae06b90-7f71-47de-bdb0-9e1167a9e756) explicitly states that metastable failures are universally observed and constitute a recurring patt",
+          "iteration": 1,
+          "references": [
+            "bundle:query:211f1294e662341e"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:9ed1af267ad9dd83",
+          "evidence_ids": [
+            "5ae06b90-7f71-47de-bdb0-9e1167a9e756"
+          ],
+          "knowledge_object_ids": [
+            "manual:02#future_work:develop-solutions-to-metastable-failures.:1"
+          ],
+          "paper_ids": [
+            "manual:02"
+          ],
+          "quote": "Our main \ufb01ndings are threefold. First, metastable failures are universally observed\u2014we present an in-depth study of 22 metastable failures from 11 different organizations. Second, metastable failures are a recurring pattern in many severe outages\u2014e.g., at least 4 out of 15 major outages in the last decade at Amazon Web Services were caused by metastable failures. Third, we extend the model by Bronson et al. to better re\ufb02ect the metastable failures seen in the wild by cate- gorizing two types of triggers and two types of ampli\ufb01cation mechanisms, which we con\ufb01rm through developing multi- ple example applications that reproduce different types of metastable failures in a controlled environment. We believe our work will aid in a deeper understanding of metastable failures and in coming up with solutions to them. 1 Introduction Building reliable distributed systems has been the holy grail of distributed computing research. Historically, academic re- searchers studied the reliability of distributed systems under the assumptions of fail-stop [31,42,46] and Byzantine [8,32] failure modes. The proliferation of cloud services led to previously unseen scales and the discovery of new failure modes, such as stragglers [9,12,62], fail-slow hardware fail- ures [3,27,29], and scalability failures [34,53]. Most recently, Bronson et al. [7] introduced a new class of failures called metastable failures."
+        },
+        {
+          "bundle_id": "bundle:query:211f1294e662341e",
+          "evidence_ids": [
+            "0e3c8f24-019b-442a-ab1d-0b32e1bf9662"
+          ],
+          "knowledge_object_ids": [
+            "manual:02#method:example-applications:2"
+          ],
+          "paper_ids": [
+            "manual:02"
+          ],
+          "quote": "In this paper, we make four contributions that extend the work of Bronson et al. and increase our understanding of metastable failures: \u2022 A study of metastable failures in the wild that con\ufb01rms metastable failures are universally observed and comprise a substantial fraction of the most severe outages (Section 2). \u2022 An improved model that categorizes two types of triggers and two types of ampli\ufb01cation mechanisms, which better explains how metastable failures happen (Section 3). \u2022 An insider view at Twitter of a new type of metastable failure where garbage collection acts as an ampli\ufb01cation mechanism (Section 4). \u2022 Three example applications on which metastable failures are experimentally reproduced, which helps researchers propose and test solutions to metastable failures (Section 5). We have open-sourced these examples at https://github.com/ lexiangh/Metastability."
+        }
+      ],
+      "provenance": [
+        "manual:02 p.2 \u00a7Abstract \u00b61",
+        "manual:02 p.3 \u00a7Abstract \u00b69"
+      ],
+      "verification": {
+        "finding_id": "F-e927b98f",
+        "verdict": "verified",
+        "reasoning": "The cited evidence (ID 5ae06b90-7f71-47de-bdb0-9e1167a9e756) explicitly states that metastable failures are universally observed and constitute a recurring pattern in many severe outages, directly supporting the claim that distributed\u2011systems failure papers report metastable failures as a recurring and substantial failure mode.",
+        "supporting": [
+          {
+            "bundle_id": "bundle:query:211f1294e662341e",
+            "evidence_ids": [
+              "5ae06b90-7f71-47de-bdb0-9e1167a9e756"
+            ],
+            "knowledge_object_ids": [],
+            "paper_ids": [
+              "manual:02"
+            ],
+            "quote": null
+          }
+        ],
+        "contradicting": [],
+        "unsupported_claims": [],
+        "overstatements": [],
+        "confidence": {
+          "score": 1.0,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "2 of 2 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "verifier independently cited 1 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 1,
+        "checked_at": "2026-08-10T17:03:18.285915Z"
+      }
+    },
+    {
+      "finding_id": "F-72b9aaa5",
+      "question_id": "RQ1",
+      "statement": "Agent\u2011protocol benchmark papers analyse failure\u2011mode rates across multiple benchmarks (e.g., MMLU, GSM, OlympiadBench) but do not identify a single dominant failure mode.",
+      "status": "supported",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "Do the agent-protocol benchmarks and the distributed-systems failure studies in this corpus agree on which failure modes dominate, and is there quantitative evidence that permits comparing them?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "Do the agent-protocol benchmarks and the distributed-systems failure studies in this corpus agree on which failure modes dominate, and is there quantitative evidence that permits comparing them?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "Which failure modes do the agent-protocol benchmark papers and the distributed-systems failure papers each report as dominant?",
+          "iteration": 0,
+          "references": [
+            "RQ1"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "2 retrieval attempt(s) produced 5 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:26e03bd9fe939db5",
+            "bundle:query:211f1294e662341e",
+            "bundle:query:a4b30c013992584c",
+            "bundle:query:9ed1af267ad9dd83",
+            "bundle:query:9c6b151e9e485a52"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "Agent\u2011protocol benchmark papers analyse failure\u2011mode rates across multiple benchmarks (e.g., MMLU, GSM, OlympiadBench) but do not identify a single dominant failure mode.",
+          "iteration": 1,
+          "references": [
+            "bundle:query:9c6b151e9e485a52"
+          ]
+        },
+        {
+          "stage": "verification",
+          "actor": "verification",
+          "summary": "partially_supported: The cited evidence (7251b5c3-87d1-432c-bc63-7cff4b7f2665) shows that the paper analyzes failure\u2011mode rates across benchmarks such as MMLU, GSM, and OlympiadBenc",
+          "iteration": 1,
+          "references": [
+            "bundle:query:9c6b151e9e485a52"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:9c6b151e9e485a52",
+          "evidence_ids": [
+            "7251b5c3-87d1-432c-bc63-7cff4b7f2665"
+          ],
+          "knowledge_object_ids": [
+            "manual:10#metric:failure-rate:0"
+          ],
+          "paper_ids": [
+            "manual:10"
+          ],
+          "quote": "We also analyze the rate of failure modes on different benchmarks, ranging from general question answering like MMLU to math problems like GSM and harder reasoning problems in OlympiadBench. For this, we fixed the MAS framework (AG2) and the model (GPT-4o) while varying the benchmark. The results are presented in Table 8. The failure rate is normalized by the number of traces. We observed that the more challenging the benchmark is (e.g., Olympiad vs. GSM), the higher the failure rate. The distribution also changes significantly. While the failure profiles for MMLU and Olympiad are similar, the GSM benchmark results in a much lower number of Inter-Agent Misalignment and Specification failures."
+        }
+      ],
+      "provenance": [
+        "manual:10 p.30 \u00a7J.2 Failure Mode Occurrence Rates on Different Benchmarks \u00b60"
+      ],
+      "verification": {
+        "finding_id": "F-72b9aaa5",
+        "verdict": "partially_supported",
+        "reasoning": "The cited evidence (7251b5c3-87d1-432c-bc63-7cff4b7f2665) shows that the paper analyzes failure\u2011mode rates across benchmarks such as MMLU, GSM, and OlympiadBench, supporting the first part of the finding. However, the excerpt does not state whether a single dominant failure mode was identified or not, so the claim that the papers \u201cdo not identify a single dominant failure mode\u201d is not substantiated and is an overstatement.",
+        "supporting": [
+          {
+            "bundle_id": "bundle:query:9c6b151e9e485a52",
+            "evidence_ids": [
+              "7251b5c3-87d1-432c-bc63-7cff4b7f2665"
+            ],
+            "knowledge_object_ids": [],
+            "paper_ids": [
+              "manual:10"
+            ],
+            "quote": null
+          }
+        ],
+        "contradicting": [],
+        "unsupported_claims": [],
+        "overstatements": [
+          "do not identify a single dominant failure mode"
+        ],
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "1 of 1 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "verifier independently cited 1 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 1,
+        "checked_at": "2026-08-10T17:04:00.885738Z"
+      }
+    },
+    {
+      "finding_id": "F-ae98972c",
+      "question_id": "RQ2",
+      "statement": "The available evidence shows that agent\u2011protocol studies report failure\u2011rate metrics and use the MAST\u2011Data failure dataset, while distributed\u2011systems studies report latency\u2011ranking metrics and use request\u2011per\u2011second (RPS) workload data, with no overlapping metric or dataset identified.",
+      "status": "supported",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "Do the agent-protocol benchmarks and the distributed-systems failure studies in this corpus agree on which failure modes dominate, and is there quantitative evidence that permits comparing them?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "Do the agent-protocol benchmarks and the distributed-systems failure studies in this corpus agree on which failure modes dominate, and is there quantitative evidence that permits comparing them?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "Is there any shared metric or dataset that allows the agent-protocol results to be compared quantitatively with the distributed-systems results?",
+          "iteration": 0,
+          "references": [
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "2 retrieval attempt(s) produced 4 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:971ef5e9a65e4f65",
+            "bundle:query:13734b97313a29ea",
+            "bundle:query:275d4109ca4518f4",
+            "bundle:query:e3197f62321f35ad"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "The available evidence shows that agent\u2011protocol studies report failure\u2011rate metrics and use the MAST\u2011Data failure dataset, while distributed\u2011systems studies report latency\u2011ranking metrics and use request\u2011per\u2011second (RPS) workload data, with no overlapping metric or dataset identified.",
+          "iteration": 1,
+          "references": [
+            "bundle:query:e3197f62321f35ad",
+            "bundle:query:13734b97313a29ea"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:e3197f62321f35ad",
+          "evidence_ids": [
+            "7251b5c3-87d1-432c-bc63-7cff4b7f2665",
+            "5e14faa8-3d11-437f-b8b2-30abed48b665",
+            "87f911d7-94a0-44fc-9353-6ddb263da470"
+          ],
+          "knowledge_object_ids": [
+            "manual:10#metric:failure-rate:0",
+            "manual:07#result:per_request_latency-on-cross-model-streaming-que:2",
+            "manual:02#dataset:rps-(requests-per-second):1"
+          ],
+          "paper_ids": [
+            "manual:10",
+            "manual:07",
+            "manual:02"
+          ],
+          "quote": "We also analyze the rate of failure modes on different benchmarks, ranging from general question answering like MMLU to math problems like GSM and harder reasoning problems in OlympiadBench. For this, we fixed the MAS framework (AG2) and the model (GPT-4o) while varying the benchmark. The results are presented in Table 8. The failure rate is normalized by the number of traces. We observed that the more challenging the benchmark is (e.g., Olympiad vs. GSM), the higher the failure rate. The distribution also changes significantly. While the failure profiles for MMLU and Olympiad are similar, the GSM benchmark results in a much lower number of Inter-Agent Misalignment and Specification failures."
+        },
+        {
+          "bundle_id": "bundle:query:13734b97313a29ea",
+          "evidence_ids": [
+            "47d77faf-cbd2-41cc-95e1-971bdb4db6d9"
+          ],
+          "knowledge_object_ids": [
+            "manual:10#dataset:mast-data:0"
+          ],
+          "paper_ids": [
+            "manual:10"
+          ],
+          "quote": "\u2022 We introduce and open-source MAST-Data, the first large-scale MAS failure dataset with consistent annotations from 7 MAS and four model families. And MAST-Data-human, a detailed inter- annotator study results with human labels. Together serve to facilitate research into MAS failures. \u2022 We introduce MAST, the first empirically grounded taxonomy of MAS failures, providing a structured framework for defining, understanding and annotating failures. \u2022 We develop a scalable LLM-as-a-judge annotation pipeline integrated with MAST for efficiently annotating MAST-Data and enabling analysis of MAS performance, diagnosis of failure modes, and understanding of failure breakdowns. \u2022 We demonstrate through case studies that failures identified by MAST often stem from system design issues, not just LLM limitations or simple prompt following, and require more than superficial fixes, thereby highlighting the need for structural MAS redesigns."
+        }
+      ],
+      "provenance": [
+        "manual:10 p.30 \u00a7J.2 Failure Mode Occurrence Rates on Different Benchmarks \u00b60",
+        "manual:07 p.23 \u00a7F.6 Cross-model Streaming Queue experiments \u00b60",
+        "manual:02 p.11 \u00a75.1.1 Experiment Setup \u00b61",
+        "manual:10 p.3 \u00a7MAS Benchmark LLM Annotation Trace # \u00b66"
+      ],
+      "verification": null
+    }
+  ],
+  "accepted_without_provenance": [],
+  "run_at": "2026-08-10T17:05:27.291914+00:00"
+}

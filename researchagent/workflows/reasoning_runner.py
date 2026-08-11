@@ -25,7 +25,9 @@ from researchagent.workflows.reasoning import build_reasoning_graph
 
 logger = get_logger(__name__)
 
-AgentFactory = Callable[[str, int], BaseAgent[Any, Any]]
+# (name, iteration, tokens_remaining) -> agent. `tokens_remaining` is None when the
+# caller does not budget tokens, which keeps the factory usable in tests.
+AgentFactory = Callable[..., BaseAgent[Any, Any]]
 
 
 class ReasoningRunner:

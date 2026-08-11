@@ -13,10 +13,24 @@ An optional external provider is available for the reasoning-heavy stages: set
 `LLMProvider` port, so nothing above `integrations/` changes. Leave `GROQ_API_KEY` unset
 and the system stays fully local and offline — including the test suite.
 
-> **Status: v0.6** — a research goal becomes a plan, then real papers, then validated
+> **Status: v0.9** — a research goal becomes a plan, then real papers, then validated
 > documents, then evidence-backed knowledge: methods, datasets, metrics, results,
 > limitations and future work, each traceable to the page and paragraph that states it.
-> Evidence retrieval lands in v0.6. See [ROADMAP](#roadmap).
+> From v0.9 four agents reason over that evidence in a bounded loop — retrieve, reason,
+> verify, review — and a conclusion is only accepted if its citations resolve all the way
+> back to a source location. See [ROADMAP](#roadmap).
+
+Run a research question over the local corpus, and compare two reasoning models on it:
+
+```bash
+uv run python scripts/run_experiment.py --alias reasoning --label local \
+  --goal "<research goal>" --question "<research question>"
+uv run python scripts/compare_runs.py local other_run
+```
+
+`--alias reasoning` uses Ollama; `--alias reasoning_remote` uses Groq GPT-OSS 120B. The
+comparison refuses to run when the two artifacts disagree on corpus, index or
+configuration, so only the model can differ.
 
 **Nothing is believed without evidence.** Every quote a model produces is located in the
 source PDF before it becomes a fact; what cannot be located is discarded, and the

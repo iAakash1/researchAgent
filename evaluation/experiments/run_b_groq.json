@@ -1,0 +1,1309 @@
+{
+  "run_id": "8f2289ba-b5dc-488f-b045-d956a5c1e180",
+  "label": "run_b_groq",
+  "identity": {
+    "corpus_fingerprint": "95759ff21faab1cd",
+    "papers": 12,
+    "knowledge_objects": 222,
+    "evidence_objects": 137,
+    "graph_version": null,
+    "index_version": "1-nomic-embed-text",
+    "embedding_model": "nomic-embed-text",
+    "active_retriever": "deterministic",
+    "llm_provider": "groq",
+    "llm_model": "openai/gpt-oss-120b",
+    "model_alias": "reasoning_remote",
+    "config_digest": "3900150123bd43a6",
+    "budget": {
+      "max_iterations": 3,
+      "max_retrieval_attempts": 8,
+      "max_tool_calls": 40,
+      "max_tokens_per_agent": 32000,
+      "max_total_tokens": 200000
+    }
+  },
+  "research_goal": "Which techniques do these papers report for mitigating overload-driven cascading failure, and what limitations prevent a general conclusion?",
+  "research_questions": [
+    "Which techniques do these papers report for mitigating overload in distributed systems?",
+    "What limitations do the papers acknowledge that prevent generalising overload mitigations?"
+  ],
+  "metrics": {
+    "findings_total": 10,
+    "verified": 3,
+    "partially_supported": 0,
+    "contradicted": 0,
+    "insufficient_evidence": 3,
+    "unverifiable": 0,
+    "hypotheses": 1,
+    "cross_paper_findings": 0,
+    "citation_completeness": 1.0,
+    "evidence_coverage": 1.0,
+    "source_diversity": 0.5,
+    "unsupported_claim_rate": 0.0,
+    "review_decision": "revise",
+    "review_accepted": 3,
+    "review_rejected": 7,
+    "review_acceptance_rate": 0.3,
+    "iterations": 1,
+    "retrieval_attempts": 2,
+    "tool_calls": 14,
+    "bundles": 3,
+    "prompt_tokens": 30279,
+    "completion_tokens": 7976,
+    "total_tokens": 38255,
+    "tokens_by_agent": {
+      "retrieval": 2111,
+      "reasoning": 9970,
+      "verification": 23144,
+      "reviewer": 3030
+    },
+    "unmeasured_llm_calls": 0,
+    "termination_reason": "all_questions_answered",
+    "latency_ms": 259373.6,
+    "graph_expansion_used": false
+  },
+  "findings": [
+    {
+      "id": "F-9f0b0f72",
+      "question_id": "RQ1",
+      "statement": "Changing routing and queueing policies during overload to maintain goodput is reported as a mitigation technique.",
+      "status": "verified",
+      "papers": [
+        "manual:01"
+      ],
+      "bundle_ids": [
+        "bundle:query:8a128746198030ae"
+      ],
+      "verdict": "verified",
+      "overstatements": []
+    },
+    {
+      "id": "F-20df12a8",
+      "question_id": "RQ1",
+      "statement": "Optimizing error handling via fast error paths, such as sending failures to a dedicated bounded logging thread, is reported as a mitigation technique.",
+      "status": "verified",
+      "papers": [
+        "manual:01"
+      ],
+      "bundle_ids": [
+        "bundle:query:8a128746198030ae"
+      ],
+      "verdict": "verified",
+      "overstatements": []
+    },
+    {
+      "id": "F-92865b19",
+      "question_id": "RQ1",
+      "statement": "TCP slow\u2011start mechanisms that increase the congestion window per ACK and reset it on loss are reported as a technique to mitigate overload.",
+      "status": "rejected",
+      "papers": [
+        "manual:03"
+      ],
+      "bundle_ids": [
+        "bundle:query:8a128746198030ae"
+      ],
+      "verdict": "insufficient_evidence",
+      "overstatements": [
+        "TCP slow\u2011start mechanisms that increase the congestion window per ACK and reset it on loss are reported as a technique to mitigate overload."
+      ]
+    },
+    {
+      "id": "F-627155c2",
+      "question_id": "RQ1",
+      "statement": "Precise simulation of complex distributed systems is computationally expensive, limiting thorough evaluation of overload\u2011mitigation techniques.",
+      "status": "rejected",
+      "papers": [
+        "manual:01"
+      ],
+      "bundle_ids": [
+        "bundle:query:8a128746198030ae"
+      ],
+      "verdict": "insufficient_evidence",
+      "overstatements": [
+        "The claim that high computational cost of detailed simulations prevents extensive testing of mitigation methods is not supported by the cited evidence."
+      ]
+    },
+    {
+      "id": "F-71c588f5",
+      "question_id": "RQ1",
+      "statement": "Simplified models may fail to capture metastability, reducing the ability to draw general conclusions about overload mitigation.",
+      "status": "verified",
+      "papers": [
+        "manual:01"
+      ],
+      "bundle_ids": [
+        "bundle:query:8a128746198030ae"
+      ],
+      "verdict": "verified",
+      "overstatements": []
+    },
+    {
+      "id": "F-245115a8",
+      "question_id": "RQ1",
+      "statement": "Self\u2011clocking protocols have difficulty starting, which can restrict the applicability of congestion\u2011control based overload mitigation techniques.",
+      "status": "rejected",
+      "papers": [
+        "manual:03"
+      ],
+      "bundle_ids": [
+        "bundle:query:8a128746198030ae"
+      ],
+      "verdict": "insufficient_evidence",
+      "overstatements": [
+        "Self\u2011clocking protocols have difficulty starting, which can restrict the applicability of congestion\u2011control based overload mitigation techniques."
+      ]
+    },
+    {
+      "id": "F-a7ffed48",
+      "question_id": "RQ2",
+      "statement": "Changing routing and queueing policies during overload (e.g., disabling failover) is reported as a mitigation technique for overload\u2011driven cascading failure.",
+      "status": "rejected",
+      "papers": [
+        "manual:01"
+      ],
+      "bundle_ids": [
+        "bundle:query:a817347639f61f90"
+      ],
+      "verdict": null,
+      "overstatements": []
+    },
+    {
+      "id": "F-26f398c1",
+      "question_id": "RQ2",
+      "statement": "Monitoring minimum queueing latency and switching to a server policy designed to maximize goodput is reported as a mitigation technique.",
+      "status": "rejected",
+      "papers": [
+        "manual:01"
+      ],
+      "bundle_ids": [
+        "bundle:query:a817347639f61f90"
+      ],
+      "verdict": null,
+      "overstatements": []
+    },
+    {
+      "id": "F-bd8bd687",
+      "question_id": "RQ2",
+      "statement": "TCP slow\u2011start window increase (incrementing cwnd per ACK, resetting cwnd to one after loss, and limiting send rate by the advertised window) is reported as a mitigation technique for overload.",
+      "status": "rejected",
+      "papers": [
+        "manual:03"
+      ],
+      "bundle_ids": [
+        "bundle:query:a817347639f61f90"
+      ],
+      "verdict": null,
+      "overstatements": []
+    },
+    {
+      "id": "F-e055ebf1",
+      "question_id": "RQ2",
+      "statement": "Reconfiguration as a recovery strategy is limited because it reduces capacity in the short term due to required state transfers and metadata updates.",
+      "status": "rejected",
+      "papers": [
+        "manual:01"
+      ],
+      "bundle_ids": [
+        "bundle:query:a817347639f61f90"
+      ],
+      "verdict": null,
+      "overstatements": []
+    }
+  ],
+  "audits": [
+    {
+      "finding_id": "F-9f0b0f72",
+      "question_id": "RQ1",
+      "statement": "Changing routing and queueing policies during overload to maintain goodput is reported as a mitigation technique.",
+      "status": "verified",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "Which techniques do these papers report for mitigating overload-driven cascading failure, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "Which techniques do these papers report for mitigating overload-driven cascading failure, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "Which techniques do these papers report for mitigating overload in distributed systems?",
+          "iteration": 0,
+          "references": [
+            "RQ1"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 2 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:dbc13780b02d062d",
+            "bundle:query:8a128746198030ae"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "Changing routing and queueing policies during overload to maintain goodput is reported as a mitigation technique.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:8a128746198030ae"
+          ]
+        },
+        {
+          "stage": "verification",
+          "actor": "verification",
+          "summary": "verified: The cited evidence (b4337944-0838-4a1f-bd42-1b7a273b75d7) explicitly states that changing routing and queueing policies during overload is a technique to keep g",
+          "iteration": 0,
+          "references": [
+            "bundle:query:8a128746198030ae"
+          ]
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "revise; this finding accepted",
+          "iteration": 1,
+          "references": [
+            "single_source"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:8a128746198030ae",
+          "evidence_ids": [
+            "b4337944-0838-4a1f-bd42-1b7a273b75d7"
+          ],
+          "knowledge_object_ids": [
+            "manual:01#dataset:circuit-breaker-pattern:0"
+          ],
+          "paper_ids": [
+            "manual:01"
+          ],
+          "quote": "Change of Policy during Overload: One way to weaken or break the feedback loops is to ensure that goodput remains high even during overload. This can be done by changing routing and queueing policies during an overload. For ex- ample, we might disable failover and retries or set a retry budget [4], switch to LIFO scheduling to allow some requests to meet their deadline, reduce internal queue sizes, enforce priorities during overload [12], shed load by rejecting a frac- tion of requests or clients, or even use the Circuit Breaker pattern to block all requests [14]. A major challenge with adaptive policies is coordination, as retry and failover deci- sions are made by each client. The best decisions are made using global information, but the communication required to distribute status information can be a new way in which a failure can have a sustaining effect."
+        }
+      ],
+      "provenance": [
+        "manual:01 p.4 \u00a73 Approaches to Handling Metastability \u00b62"
+      ],
+      "verification": {
+        "finding_id": "F-9f0b0f72",
+        "verdict": "verified",
+        "reasoning": "The cited evidence (b4337944-0838-4a1f-bd42-1b7a273b75d7) explicitly states that changing routing and queueing policies during overload is a technique to keep goodput high, matching the finding's claim that this is reported as a mitigation technique. No contradictory evidence is present, and the claim does not exceed what the evidence supports.",
+        "supporting": [
+          {
+            "bundle_id": "bundle:query:8a128746198030ae",
+            "evidence_ids": [
+              "b4337944-0838-4a1f-bd42-1b7a273b75d7"
+            ],
+            "knowledge_object_ids": [],
+            "paper_ids": [
+              "manual:01"
+            ],
+            "quote": null
+          }
+        ],
+        "contradicting": [],
+        "unsupported_claims": [],
+        "overstatements": [],
+        "confidence": {
+          "score": 1.0,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "1 of 1 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "verifier independently cited 1 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T16:55:23.258634Z"
+      }
+    },
+    {
+      "finding_id": "F-20df12a8",
+      "question_id": "RQ1",
+      "statement": "Optimizing error handling via fast error paths, such as sending failures to a dedicated bounded logging thread, is reported as a mitigation technique.",
+      "status": "verified",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "Which techniques do these papers report for mitigating overload-driven cascading failure, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "Which techniques do these papers report for mitigating overload-driven cascading failure, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "Which techniques do these papers report for mitigating overload in distributed systems?",
+          "iteration": 0,
+          "references": [
+            "RQ1"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 2 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:dbc13780b02d062d",
+            "bundle:query:8a128746198030ae"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "Optimizing error handling via fast error paths, such as sending failures to a dedicated bounded logging thread, is reported as a mitigation technique.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:8a128746198030ae"
+          ]
+        },
+        {
+          "stage": "verification",
+          "actor": "verification",
+          "summary": "verified: The cited evidence (b202d442-175e-4fa2-8e9f-a17b85431b63) explicitly describes a \"Fast Error Paths\" technique that isolates error handling by sending failures t",
+          "iteration": 0,
+          "references": [
+            "bundle:query:8a128746198030ae"
+          ]
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "revise; this finding accepted",
+          "iteration": 1,
+          "references": [
+            "single_source"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:8a128746198030ae",
+          "evidence_ids": [
+            "b202d442-175e-4fa2-8e9f-a17b85431b63"
+          ],
+          "knowledge_object_ids": [
+            "manual:01#dataset:error-logging-thread:16"
+          ],
+          "paper_ids": [
+            "manual:01"
+          ],
+          "quote": "Fast Error Paths: Optimizing the success paths is a well- known practice. We think distributed systems should also have highly-optimized error paths. One pattern for isolating error handling is to send failures to a dedicated error logging thread via a bounded-size lock-free queue. If the queue over- flows then errors are only reflected in a counter, reducing the per-failure overhead dramatically. Similarly, expensive information like stack traces can be throttled; when there are many errors, a sample is enough for diagnosing the problem."
+        }
+      ],
+      "provenance": [
+        "manual:01 p.5 \u00a73 Approaches to Handling Metastability \u00b613"
+      ],
+      "verification": {
+        "finding_id": "F-20df12a8",
+        "verdict": "verified",
+        "reasoning": "The cited evidence (b202d442-175e-4fa2-8e9f-a17b85431b63) explicitly describes a \"Fast Error Paths\" technique that isolates error handling by sending failures to a dedicated bounded error\u2011logging thread, matching the finding's description of optimizing error handling via fast error paths as a mitigation technique. No contradictory evidence is present, and the claim does not exceed what the evidence supports.",
+        "supporting": [
+          {
+            "bundle_id": "bundle:query:8a128746198030ae",
+            "evidence_ids": [
+              "b202d442-175e-4fa2-8e9f-a17b85431b63"
+            ],
+            "knowledge_object_ids": [],
+            "paper_ids": [
+              "manual:01"
+            ],
+            "quote": null
+          }
+        ],
+        "contradicting": [],
+        "unsupported_claims": [],
+        "overstatements": [],
+        "confidence": {
+          "score": 1.0,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "1 of 1 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "verifier independently cited 1 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T16:56:05.954080Z"
+      }
+    },
+    {
+      "finding_id": "F-92865b19",
+      "question_id": "RQ1",
+      "statement": "TCP slow\u2011start mechanisms that increase the congestion window per ACK and reset it on loss are reported as a technique to mitigate overload.",
+      "status": "rejected",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "Which techniques do these papers report for mitigating overload-driven cascading failure, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "Which techniques do these papers report for mitigating overload-driven cascading failure, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "Which techniques do these papers report for mitigating overload in distributed systems?",
+          "iteration": 0,
+          "references": [
+            "RQ1"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 2 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:dbc13780b02d062d",
+            "bundle:query:8a128746198030ae"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "TCP slow\u2011start mechanisms that increase the congestion window per ACK and reset it on loss are reported as a technique to mitigate overload.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:8a128746198030ae"
+          ]
+        },
+        {
+          "stage": "verification",
+          "actor": "verification",
+          "summary": "insufficient_evidence: The cited excerpts (438ec033-b8ec-4e93-aa6a-d1a8889bc773, f878d20b-17f8-40bd-814e-7b667815a75f, f1c96035-65fc-4369-9d12-a2502cde2fa6) merely describe TCP slow\u2011s",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "revise; this finding rejected",
+          "iteration": 1,
+          "references": [
+            "verdict_insufficient_evidence",
+            "overclaiming",
+            "single_source"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:8a128746198030ae",
+          "evidence_ids": [
+            "438ec033-b8ec-4e93-aa6a-d1a8889bc773",
+            "f878d20b-17f8-40bd-814e-7b667815a75f",
+            "f1c96035-65fc-4369-9d12-a2502cde2fa6"
+          ],
+          "knowledge_object_ids": [
+            "manual:03#method:slow-start-window-increase:7"
+          ],
+          "paper_ids": [
+            "manual:03"
+          ],
+          "quote": "\u2022 On each ack for new data, increase cwnd by one packet."
+        }
+      ],
+      "provenance": [
+        "manual:03 p.4 \u00a77 14 15 \u00b65",
+        "manual:03 p.4 \u00a77 14 15 \u00b64",
+        "manual:03 p.4 \u00a77 14 15 \u00b66"
+      ],
+      "verification": {
+        "finding_id": "F-92865b19",
+        "verdict": "insufficient_evidence",
+        "reasoning": "The cited excerpts (438ec033-b8ec-4e93-aa6a-d1a8889bc773, f878d20b-17f8-40bd-814e-7b667815a75f, f1c96035-65fc-4369-9d12-a2502cde2fa6) merely describe TCP slow\u2011start actions (increase cwnd per ACK, reset cwnd on loss, send min of advertised window and cwnd). None of them state that these mechanisms are employed as a technique to mitigate overload in distributed systems. Therefore the finding is not substantiated by the provided evidence.",
+        "supporting": [],
+        "contradicting": [],
+        "unsupported_claims": [
+          "The claim that the papers report TCP slow\u2011start as an overload\u2011mitigation technique"
+        ],
+        "overstatements": [
+          "TCP slow\u2011start mechanisms that increase the congestion window per ACK and reset it on loss are reported as a technique to mitigate overload."
+        ],
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "3 of 3 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.0,
+              "weight": 1.0,
+              "observation": "verifier independently cited 0 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T16:56:34.653407Z"
+      }
+    },
+    {
+      "finding_id": "F-627155c2",
+      "question_id": "RQ1",
+      "statement": "Precise simulation of complex distributed systems is computationally expensive, limiting thorough evaluation of overload\u2011mitigation techniques.",
+      "status": "rejected",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "Which techniques do these papers report for mitigating overload-driven cascading failure, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "Which techniques do these papers report for mitigating overload-driven cascading failure, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "Which techniques do these papers report for mitigating overload in distributed systems?",
+          "iteration": 0,
+          "references": [
+            "RQ1"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 2 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:dbc13780b02d062d",
+            "bundle:query:8a128746198030ae"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "Precise simulation of complex distributed systems is computationally expensive, limiting thorough evaluation of overload\u2011mitigation techniques.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:8a128746198030ae"
+          ]
+        },
+        {
+          "stage": "verification",
+          "actor": "verification",
+          "summary": "insufficient_evidence: The cited evidence (b371dd1f-13e4-48bf-9c3b-5a8cb12eeeae) discusses how abstraction and aggregate statistics can obscure the causes of metastability and suggest",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "revise; this finding rejected",
+          "iteration": 1,
+          "references": [
+            "verdict_insufficient_evidence",
+            "overclaiming",
+            "single_source"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:8a128746198030ae",
+          "evidence_ids": [
+            "b371dd1f-13e4-48bf-9c3b-5a8cb12eeeae"
+          ],
+          "knowledge_object_ids": [
+            "manual:01#limitation:simplified-models-may-not-capture-metastability:0"
+          ],
+          "paper_ids": [
+            "manual:01"
+          ],
+          "quote": "As illustrated by the example in \u00a7 2.4, the cause of metasta- bility can easily be obscured by abstraction or by aggregate statistics, so simplified models are likely to be insufficient. Distributed systems are composed of a myriad of queues, from an SSD\u2019s I/O scheduler to the queues in a network switch, any of which may need to be adjusted to account for reduced scale. This makes small-scale reproduction of com- plex metastable failures challenging. The queues are very high performance, so precise simulation is painfully slow."
+        }
+      ],
+      "provenance": [
+        "manual:01 p.6 \u00a74 Discussion and Research Directions \u00b619"
+      ],
+      "verification": {
+        "finding_id": "F-627155c2",
+        "verdict": "insufficient_evidence",
+        "reasoning": "The cited evidence (b371dd1f-13e4-48bf-9c3b-5a8cb12eeeae) discusses how abstraction and aggregate statistics can obscure the causes of metastability and suggests that simplified models may be insufficient for distributed systems. It does not mention the computational cost of precise simulations nor that this cost limits thorough evaluation of overload\u2011mitigation techniques. Therefore the finding is not substantiated by the provided citation.",
+        "supporting": [],
+        "contradicting": [],
+        "unsupported_claims": [
+          "Precise simulation of complex distributed systems is computationally expensive, limiting thorough evaluation of overload\u2011mitigation techniques."
+        ],
+        "overstatements": [
+          "The claim that high computational cost of detailed simulations prevents extensive testing of mitigation methods is not supported by the cited evidence."
+        ],
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "1 of 1 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.0,
+              "weight": 1.0,
+              "observation": "verifier independently cited 0 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T16:57:04.537982Z"
+      }
+    },
+    {
+      "finding_id": "F-71c588f5",
+      "question_id": "RQ1",
+      "statement": "Simplified models may fail to capture metastability, reducing the ability to draw general conclusions about overload mitigation.",
+      "status": "verified",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "Which techniques do these papers report for mitigating overload-driven cascading failure, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "Which techniques do these papers report for mitigating overload-driven cascading failure, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "Which techniques do these papers report for mitigating overload in distributed systems?",
+          "iteration": 0,
+          "references": [
+            "RQ1"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 2 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:dbc13780b02d062d",
+            "bundle:query:8a128746198030ae"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "Simplified models may fail to capture metastability, reducing the ability to draw general conclusions about overload mitigation.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:8a128746198030ae"
+          ]
+        },
+        {
+          "stage": "verification",
+          "actor": "verification",
+          "summary": "verified: The cited evidence (b371dd1f-13e4-48bf-9c3b-5a8cb12eeeae) explicitly states that the cause of metastability can be obscured by abstraction and that simplified m",
+          "iteration": 0,
+          "references": [
+            "bundle:query:8a128746198030ae"
+          ]
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "revise; this finding accepted",
+          "iteration": 1,
+          "references": [
+            "single_source"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:8a128746198030ae",
+          "evidence_ids": [
+            "b371dd1f-13e4-48bf-9c3b-5a8cb12eeeae"
+          ],
+          "knowledge_object_ids": [
+            "manual:01#limitation:simplified-models-may-not-capture-metastability:0"
+          ],
+          "paper_ids": [
+            "manual:01"
+          ],
+          "quote": "As illustrated by the example in \u00a7 2.4, the cause of metasta- bility can easily be obscured by abstraction or by aggregate statistics, so simplified models are likely to be insufficient. Distributed systems are composed of a myriad of queues, from an SSD\u2019s I/O scheduler to the queues in a network switch, any of which may need to be adjusted to account for reduced scale. This makes small-scale reproduction of com- plex metastable failures challenging. The queues are very high performance, so precise simulation is painfully slow."
+        }
+      ],
+      "provenance": [
+        "manual:01 p.6 \u00a74 Discussion and Research Directions \u00b619"
+      ],
+      "verification": {
+        "finding_id": "F-71c588f5",
+        "verdict": "verified",
+        "reasoning": "The cited evidence (b371dd1f-13e4-48bf-9c3b-5a8cb12eeeae) explicitly states that the cause of metastability can be obscured by abstraction and that simplified models are likely insufficient, which directly supports the claim that simplified models may fail to capture metastability and thus limit general conclusions about overload mitigation.",
+        "supporting": [
+          {
+            "bundle_id": "bundle:query:8a128746198030ae",
+            "evidence_ids": [
+              "b371dd1f-13e4-48bf-9c3b-5a8cb12eeeae"
+            ],
+            "knowledge_object_ids": [],
+            "paper_ids": [
+              "manual:01"
+            ],
+            "quote": null
+          }
+        ],
+        "contradicting": [],
+        "unsupported_claims": [],
+        "overstatements": [],
+        "confidence": {
+          "score": 1.0,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "1 of 1 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.5,
+              "weight": 1.0,
+              "observation": "verifier independently cited 1 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T16:57:34.184071Z"
+      }
+    },
+    {
+      "finding_id": "F-245115a8",
+      "question_id": "RQ1",
+      "statement": "Self\u2011clocking protocols have difficulty starting, which can restrict the applicability of congestion\u2011control based overload mitigation techniques.",
+      "status": "rejected",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "Which techniques do these papers report for mitigating overload-driven cascading failure, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "Which techniques do these papers report for mitigating overload-driven cascading failure, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "Which techniques do these papers report for mitigating overload in distributed systems?",
+          "iteration": 0,
+          "references": [
+            "RQ1"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 2 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:dbc13780b02d062d",
+            "bundle:query:8a128746198030ae"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "Self\u2011clocking protocols have difficulty starting, which can restrict the applicability of congestion\u2011control based overload mitigation techniques.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:8a128746198030ae"
+          ]
+        },
+        {
+          "stage": "verification",
+          "actor": "verification",
+          "summary": "insufficient_evidence: The cited evidence (cb86bc78-1b3b-4995-b835-a2e3fcc63339) only describes that self\u2011clocking systems automatically adjust to bandwidth and delay variations and h",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "revise; this finding rejected",
+          "iteration": 1,
+          "references": [
+            "verdict_insufficient_evidence",
+            "overclaiming",
+            "single_source"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:8a128746198030ae",
+          "evidence_ids": [
+            "cb86bc78-1b3b-4995-b835-a2e3fcc63339"
+          ],
+          "knowledge_object_ids": [
+            "manual:03#limitation:self-clocking-systems-have-difficulty-starting:5"
+          ],
+          "paper_ids": [
+            "manual:03"
+          ],
+          "quote": "faster than data packets can get through the network, the protocol is \u2018self clocking\u2019 (\ufb01g. 1). Self clocking systems automatically adjust to bandwidth and delay variations and have a wide dynamic range (important considering that TCP spans a range from 800 Mbps Cray channels to 1200 bps packet radio links). But the same thing that makes a self-clocked system stable when it\u2019s running makes it hard to start \u2014 to get data \ufb02owing there must be acks to clock out packets but to get acks there must be data \ufb02owing."
+        }
+      ],
+      "provenance": [
+        "manual:03 p.3 \u00a7Receiver Sender \u00b62"
+      ],
+      "verification": {
+        "finding_id": "F-245115a8",
+        "verdict": "insufficient_evidence",
+        "reasoning": "The cited evidence (cb86bc78-1b3b-4995-b835-a2e3fcc63339) only describes that self\u2011clocking systems automatically adjust to bandwidth and delay variations and have a wide dynamic range. It does not mention any difficulty in starting, bootstrapping delays, or limitations on the applicability of congestion\u2011control based overload mitigation techniques. No other provided evidence addresses the start\u2011up behavior of self\u2011clocking protocols, so the claim is not substantiated by the cited material.",
+        "supporting": [],
+        "contradicting": [],
+        "unsupported_claims": [
+          "Self\u2011clocking protocols have difficulty starting, which can restrict the applicability of congestion\u2011control based overload mitigation techniques."
+        ],
+        "overstatements": [
+          "Self\u2011clocking protocols have difficulty starting, which can restrict the applicability of congestion\u2011control based overload mitigation techniques."
+        ],
+        "confidence": {
+          "score": 0.5,
+          "signals": [
+            {
+              "name": "provenance_resolved",
+              "value": 1.0,
+              "weight": 1.0,
+              "observation": "1 of 1 cited evidence ids resolved to a source location"
+            },
+            {
+              "name": "verifier_support",
+              "value": 0.0,
+              "weight": 1.0,
+              "observation": "verifier independently cited 0 bundle(s)"
+            }
+          ]
+        },
+        "verified_by": "verification",
+        "iteration": 0,
+        "checked_at": "2026-08-10T16:58:02.896887Z"
+      }
+    },
+    {
+      "finding_id": "F-a7ffed48",
+      "question_id": "RQ2",
+      "statement": "Changing routing and queueing policies during overload (e.g., disabling failover) is reported as a mitigation technique for overload\u2011driven cascading failure.",
+      "status": "rejected",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "Which techniques do these papers report for mitigating overload-driven cascading failure, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "Which techniques do these papers report for mitigating overload-driven cascading failure, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "What limitations do the papers acknowledge that prevent generalising overload mitigations?",
+          "iteration": 0,
+          "references": [
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 2 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:dbc13780b02d062d",
+            "bundle:query:a817347639f61f90"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "Changing routing and queueing policies during overload (e.g., disabling failover) is reported as a mitigation technique for overload\u2011driven cascading failure.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:a817347639f61f90"
+          ]
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "revise; this finding rejected",
+          "iteration": 1,
+          "references": [
+            "not_verified",
+            "single_source"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:a817347639f61f90",
+          "evidence_ids": [
+            "b4337944-0838-4a1f-bd42-1b7a273b75d7"
+          ],
+          "knowledge_object_ids": [
+            "manual:01#dataset:internal-queue-sizes:2"
+          ],
+          "paper_ids": [
+            "manual:01"
+          ],
+          "quote": "Change of Policy during Overload: One way to weaken or break the feedback loops is to ensure that goodput remains high even during overload. This can be done by changing routing and queueing policies during an overload. For ex- ample, we might disable failover and retries or set a retry budget [4], switch to LIFO scheduling to allow some requests to meet their deadline, reduce internal queue sizes, enforce priorities during overload [12], shed load by rejecting a frac- tion of requests or clients, or even use the Circuit Breaker pattern to block all requests [14]. A major challenge with adaptive policies is coordination, as retry and failover deci- sions are made by each client. The best decisions are made using global information, but the communication required to distribute status information can be a new way in which a failure can have a sustaining effect."
+        }
+      ],
+      "provenance": [
+        "manual:01 p.4 \u00a73 Approaches to Handling Metastability \u00b62"
+      ],
+      "verification": null
+    },
+    {
+      "finding_id": "F-26f398c1",
+      "question_id": "RQ2",
+      "statement": "Monitoring minimum queueing latency and switching to a server policy designed to maximize goodput is reported as a mitigation technique.",
+      "status": "rejected",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "Which techniques do these papers report for mitigating overload-driven cascading failure, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "Which techniques do these papers report for mitigating overload-driven cascading failure, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "What limitations do the papers acknowledge that prevent generalising overload mitigations?",
+          "iteration": 0,
+          "references": [
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 2 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:dbc13780b02d062d",
+            "bundle:query:a817347639f61f90"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "Monitoring minimum queueing latency and switching to a server policy designed to maximize goodput is reported as a mitigation technique.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:a817347639f61f90"
+          ]
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "revise; this finding rejected",
+          "iteration": 1,
+          "references": [
+            "not_verified",
+            "single_source"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:a817347639f61f90",
+          "evidence_ids": [
+            "09ad9e44-b583-4265-913c-e5e6d543b33d"
+          ],
+          "knowledge_object_ids": [
+            "manual:01#method:server-policy:11"
+          ],
+          "paper_ids": [
+            "manual:01"
+          ],
+          "quote": "means that the queue was drained at some point during the window, indicating that even if the queue is large, it is probably a manageable spike. If the minimum queueing latency is large over the entire window, then we switch to a server policy designed to maximize goodput and add information about the overload to all responses."
+        }
+      ],
+      "provenance": [
+        "manual:01 p.4 \u00a73 Approaches to Handling Metastability \u00b64"
+      ],
+      "verification": null
+    },
+    {
+      "finding_id": "F-bd8bd687",
+      "question_id": "RQ2",
+      "statement": "TCP slow\u2011start window increase (incrementing cwnd per ACK, resetting cwnd to one after loss, and limiting send rate by the advertised window) is reported as a mitigation technique for overload.",
+      "status": "rejected",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "Which techniques do these papers report for mitigating overload-driven cascading failure, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "Which techniques do these papers report for mitigating overload-driven cascading failure, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "What limitations do the papers acknowledge that prevent generalising overload mitigations?",
+          "iteration": 0,
+          "references": [
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 2 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:dbc13780b02d062d",
+            "bundle:query:a817347639f61f90"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "TCP slow\u2011start window increase (incrementing cwnd per ACK, resetting cwnd to one after loss, and limiting send rate by the advertised window) is reported as a mitigation technique for overload.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:a817347639f61f90"
+          ]
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "revise; this finding rejected",
+          "iteration": 1,
+          "references": [
+            "not_verified",
+            "single_source"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:a817347639f61f90",
+          "evidence_ids": [
+            "438ec033-b8ec-4e93-aa6a-d1a8889bc773",
+            "f878d20b-17f8-40bd-814e-7b667815a75f",
+            "f1c96035-65fc-4369-9d12-a2502cde2fa6"
+          ],
+          "knowledge_object_ids": [
+            "manual:03#method:slow-start-window-increase:7"
+          ],
+          "paper_ids": [
+            "manual:03"
+          ],
+          "quote": "\u2022 On each ack for new data, increase cwnd by one packet."
+        }
+      ],
+      "provenance": [
+        "manual:03 p.4 \u00a77 14 15 \u00b65",
+        "manual:03 p.4 \u00a77 14 15 \u00b64",
+        "manual:03 p.4 \u00a77 14 15 \u00b66"
+      ],
+      "verification": null
+    },
+    {
+      "finding_id": "F-e055ebf1",
+      "question_id": "RQ2",
+      "statement": "Reconfiguration as a recovery strategy is limited because it reduces capacity in the short term due to required state transfers and metadata updates.",
+      "status": "rejected",
+      "steps": [
+        {
+          "stage": "goal",
+          "actor": "user",
+          "summary": "Which techniques do these papers report for mitigating overload-driven cascading failure, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": []
+        },
+        {
+          "stage": "plan",
+          "actor": "planner",
+          "summary": "Which techniques do these papers report for mitigating overload-driven cascading failure, and what limitations prevent a general conclusion?",
+          "iteration": 0,
+          "references": [
+            "RQ1",
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "question",
+          "actor": "planner",
+          "summary": "What limitations do the papers acknowledge that prevent generalising overload mitigations?",
+          "iteration": 0,
+          "references": [
+            "RQ2"
+          ]
+        },
+        {
+          "stage": "retrieval",
+          "actor": "retrieval",
+          "summary": "1 retrieval attempt(s) produced 2 bundle(s)",
+          "iteration": 0,
+          "references": [
+            "bundle:query:dbc13780b02d062d",
+            "bundle:query:a817347639f61f90"
+          ]
+        },
+        {
+          "stage": "reasoning",
+          "actor": "reasoning",
+          "summary": "Reconfiguration as a recovery strategy is limited because it reduces capacity in the short term due to required state transfers and metadata updates.",
+          "iteration": 0,
+          "references": [
+            "bundle:query:a817347639f61f90"
+          ]
+        },
+        {
+          "stage": "review",
+          "actor": "reviewer",
+          "summary": "revise; this finding rejected",
+          "iteration": 1,
+          "references": [
+            "not_verified",
+            "single_source"
+          ]
+        }
+      ],
+      "citations": [
+        {
+          "bundle_id": "bundle:query:a817347639f61f90",
+          "evidence_ids": [
+            "1bb8421d-a663-4809-98dd-59cbb11127ef"
+          ],
+          "knowledge_object_ids": [
+            "manual:01#limitation:reconfiguration-as-a-recovery-strategy-has-limit:3"
+          ],
+          "paper_ids": [
+            "manual:01"
+          ],
+          "quote": "effect as reducing client load. Unfortunately, unless a stateful system is specifically designed to provide zero-impact elas- ticity, reconfiguration will reduce capacity in the short term. Existing members must perform state transfers and metadata updates on top of their normal workload. Although reconfig- uration will eventually break a feedback loop, the timeframe may be too long to be a viable recovery strategy. Research on reconfiguration during resource exhaustion could lead to improvements in practical reliability."
+        }
+      ],
+      "provenance": [
+        "manual:01 p.6 \u00a74 Discussion and Research Directions \u00b617"
+      ],
+      "verification": null
+    }
+  ],
+  "accepted_without_provenance": [],
+  "run_at": "2026-08-10T16:58:20.504731+00:00"
+}

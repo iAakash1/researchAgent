@@ -105,6 +105,11 @@ def _blocked(session: ReasoningSession, stage: WorkflowStage, reason: str) -> St
     }
 
 
+def _remaining_tokens(session: ReasoningSession) -> int:
+    """What the run may still spend, floored at zero."""
+    return max(0, session.budget.max_total_tokens - session.ledger.total_tokens)
+
+
 def _first_unmet(guards: list[Guard], state: ResearchState) -> str | None:
     for guard in guards:
         result = guard.check(state)
@@ -114,7 +119,7 @@ def _first_unmet(guards: list[Guard], state: ResearchState) -> str | None:
 
 
 def retrieval_node(
-    agent_for: Callable[[str, int], BaseAgent[RetrievalInput, RetrievalOutput]],
+    agent_for: Callable[..., BaseAgent[RetrievalInput, RetrievalOutput]],
     *,
     event_bus: EventBus | None = None,
 ) -> Callable[[ResearchState], Awaitable[StateUpdate]]:
@@ -128,7 +133,7 @@ def retrieval_node(
         if blocked is not None:
             return _terminated(session, state, blocked)
 
-        agent = agent_for("retrieval", session.iteration)
+        agent = agent_for("retrieval", session.iteration, _remaining_tokens(session))
         context = AgentContext(run_id=state.run_id)
         questions = {q.id: q for q in (state.plan.research_questions if state.plan else [])}
 
@@ -218,7 +223,7 @@ def retrieval_node(
 
 
 def reasoning_node(
-    agent_for: Callable[[str, int], BaseAgent[ReasoningInput, ReasoningOutput]],
+    agent_for: Callable[..., BaseAgent[ReasoningInput, ReasoningOutput]],
     bundles: JsonBundleRepository,
     *,
     event_bus: EventBus | None = None,
@@ -231,7 +236,7 @@ def reasoning_node(
             return _blocked(session, WorkflowStage.REASONING, blocked)
 
         started = time.perf_counter()
-        agent = agent_for("reasoning", session.iteration)
+        agent = agent_for("reasoning", session.iteration, _remaining_tokens(session))
         context = AgentContext(run_id=state.run_id)
         questions = {q.id: q for q in (state.plan.research_questions if state.plan else [])}
 
@@ -308,7 +313,7 @@ def reasoning_node(
 
 
 def verification_node(
-    agent_for: Callable[[str, int], BaseAgent[Any, Any]],
+    agent_for: Callable[..., BaseAgent[Any, Any]],
     bundles: JsonBundleRepository,
     *,
     event_bus: EventBus | None = None,
@@ -321,7 +326,7 @@ def verification_node(
             return _blocked(session, WorkflowStage.VERIFICATION, blocked)
 
         started = time.perf_counter()
-        agent = agent_for("verification", session.iteration)
+        agent = agent_for("verification", session.iteration, _remaining_tokens(session))
         context = AgentContext(run_id=state.run_id)
         questions = {q.id: q for q in (state.plan.research_questions if state.plan else [])}
 
@@ -396,7 +401,7 @@ def verification_node(
 
 
 def review_node(
-    agent_for: Callable[[str, int], BaseAgent[ReviewerInput, ReviewerOutput]],
+    agent_for: Callable[..., BaseAgent[ReviewerInput, ReviewerOutput]],
     bundles: JsonBundleRepository,
     *,
     event_bus: EventBus | None = None,
@@ -412,7 +417,7 @@ def review_node(
         loaded = await _load_bundles(bundles, session.bundle_ids)
         resolved = frozenset(item.evidence.id for bundle in loaded for item in bundle.evidence)
 
-        reviewer = agent_for("reviewer", session.iteration)
+        reviewer = agent_for("reviewer", session.iteration, _remaining_tokens(session))
         result = await reviewer.run(
             ReviewerInput(
                 goal=state.goal,
@@ -609,7 +614,7 @@ def _charge(session: ReasoningSession, agent: object, name: str) -> BudgetLedger
     if report is None:
         return ledger
 
-    charged = ledger.with_tokens(name, report.usage.total_tokens)
+    charged = ledger.with_tokens(name, report.usage)
     if not report.is_complete:
         logger.info(
             "unmeasured_llm_calls",
