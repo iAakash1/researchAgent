@@ -64,11 +64,10 @@ class ProcessingStatus(BaseModel):
     @property
     def stage_reached(self) -> str:
         """The furthest pipeline stage completed — for dashboards and progress queries."""
-        reached = "pending"
-        for flag in _PIPELINE_FLAGS:
+        for flag in reversed(_PIPELINE_FLAGS):
             if getattr(self, flag):
-                reached = flag
-        return reached
+                return flag
+        return "pending"
 
     def merge(self, other: ProcessingStatus) -> ProcessingStatus:
         """Union of progress from two views of the same paper.
