@@ -19,8 +19,7 @@ import time
 from researchagent.config.schemas import EvidencePipelineSettings
 from researchagent.core.events import BundlePayload, EventBus, EventType, ValidationPayload
 from researchagent.core.exceptions import ResearchAgentError
-from researchagent.core.interfaces.bundle_repository import BundleRepository
-from researchagent.core.interfaces.knowledge_repository import KnowledgeRepository
+from researchagent.core.interfaces.repositories import BundleRepository, KnowledgeRepository
 from researchagent.core.logging import get_logger, log_context
 from researchagent.models.bundle import EvidenceBundle
 from researchagent.models.knowledge import KnowledgeRelation

@@ -21,7 +21,6 @@ from typing import ClassVar
 from pydantic import BaseModel
 
 from researchagent.agents.base import AgentContext, BaseAgent
-from researchagent.agents.registry import AGENTS
 from researchagent.agents.reviewer.prompt import ReviewerPrompt
 from researchagent.agents.reviewer.schemas import CritiqueDraft, ReviewerInput, ReviewerOutput
 from researchagent.core.exceptions import ResearchAgentError
@@ -40,7 +39,6 @@ from researchagent.services.validation.findings import (
 )
 
 
-@AGENTS.register("reviewer")
 class ReviewerAgent(BaseAgent[ReviewerInput, ReviewerOutput]):
     name: ClassVar[str] = "reviewer"
     description: ClassVar[str] = "Final quality gate over a set of research findings"

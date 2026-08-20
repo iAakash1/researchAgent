@@ -18,7 +18,7 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from researchagent.core.exceptions import RepositoryError
-from researchagent.core.interfaces.evidence_repository import EvidenceRepository
+from researchagent.core.interfaces.repositories import EvidenceRepository
 from researchagent.core.logging import get_logger
 from researchagent.models.evidence import EvidenceLink, EvidenceRecord, PaperEvidence
 from researchagent.models.library import storage_key_for

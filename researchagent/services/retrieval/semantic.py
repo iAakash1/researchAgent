@@ -18,7 +18,7 @@ from typing import ClassVar
 
 from researchagent.core.exceptions import EmbeddingError, VectorStoreError
 from researchagent.core.interfaces.embeddings import EmbeddingModel
-from researchagent.core.interfaces.knowledge_repository import KnowledgeRepository
+from researchagent.core.interfaces.repositories import KnowledgeRepository
 from researchagent.core.interfaces.retrieval import (
     KnowledgeRetriever,
     RetrievalHit,

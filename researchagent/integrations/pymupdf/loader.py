@@ -20,7 +20,7 @@ import pymupdf
 
 from researchagent.core.evidence import BoundingBox
 from researchagent.core.exceptions import DocumentParsingError, DocumentUnreadableError
-from researchagent.core.interfaces.document_parser import DocumentLoader
+from researchagent.core.interfaces.document_loader import DocumentLoader
 from researchagent.core.logging import get_logger
 from researchagent.models.layout import (
     PdfMetadata,

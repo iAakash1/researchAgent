@@ -29,7 +29,6 @@ from researchagent.agents.planner.schemas import (
     QuestionDraft,
     StrategyDraft,
 )
-from researchagent.agents.registry import AGENTS
 from researchagent.core.exceptions import ConfigurationError, OutputParsingError
 from researchagent.models.research import (
     ResearchPlan,
@@ -38,7 +37,6 @@ from researchagent.models.research import (
 )
 
 
-@AGENTS.register("planner")
 class PlannerAgent(BaseAgent[PlannerInput, PlannerOutput]):
     name: ClassVar[str] = "planner"
     description: ClassVar[str] = (

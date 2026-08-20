@@ -19,7 +19,6 @@ from typing import ClassVar
 from pydantic import BaseModel, ValidationError
 
 from researchagent.agents.base import AgentContext, BaseAgent
-from researchagent.agents.registry import AGENTS
 from researchagent.agents.retrieval.prompt import RetrievalPrompt
 from researchagent.agents.retrieval.schemas import (
     RetrievalDecision,
@@ -50,7 +49,6 @@ class RetrievalOptions(BaseModel):
     min_coverage: float = 0.34
 
 
-@AGENTS.register("retrieval")
 class RetrievalAgent(BaseAgent[RetrievalInput, RetrievalOutput]):
     name: ClassVar[str] = "retrieval"
     description: ClassVar[str] = (

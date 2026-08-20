@@ -6,7 +6,7 @@ default: reasoning
 models:
   reasoning:
     provider: ollama
-    model: qwen3:8b
+    model: llama3.1:8b
     description: Planning, synthesis, gap discovery, review — long context, slower.
     params:
       temperature: 0.3
@@ -16,7 +16,7 @@ models:
 
   extraction:
     provider: ollama
-    model: qwen3:8b
+    model: llama3.1:8b
     description: Structured field extraction — near-deterministic, schema-constrained.
     params:
       temperature: 0.0
@@ -27,7 +27,7 @@ models:
 
   fast:
     provider: ollama
-    model: llama3.2:3b
+    model: llama3.1:8b
     description: Cheap classification and routing decisions.
     params:
       temperature: 0.1

@@ -20,7 +20,7 @@ from researchagent.config.schemas import IndexSettings
 from researchagent.core.events import EventBus, EventType, IndexPayload
 from researchagent.core.exceptions import EmbeddingError, VectorStoreError
 from researchagent.core.interfaces.embeddings import EmbeddingModel, ModelIdentity
-from researchagent.core.interfaces.knowledge_repository import KnowledgeRepository
+from researchagent.core.interfaces.repositories import KnowledgeRepository
 from researchagent.core.interfaces.vector_store import (
     VectorMetadata,
     VectorRecord,

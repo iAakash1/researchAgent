@@ -11,7 +11,7 @@ from fastapi import Depends, Request
 
 from researchagent.container import Container
 from researchagent.core.interfaces.graph_repository import GraphRepository
-from researchagent.core.interfaces.paper_repository import PaperRepository
+from researchagent.core.interfaces.repositories import PaperRepository
 from researchagent.core.settings import Settings
 from researchagent.services.discovery_service import DiscoveryService
 from researchagent.services.graph.builder import GraphBuilder

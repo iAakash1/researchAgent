@@ -302,3 +302,11 @@ def aggregate(
         evidence=evidence,
         duration_ms=sum(result.duration_ms for result in results),
     )
+
+
+def weighted_score(signals: list[ConfidenceSignal]) -> float:
+    """Weighted mean of signal values, clamped into [0, 1]."""
+    total = sum(signal.weight for signal in signals)
+    if total <= 0:
+        return 0.0
+    return round(min(sum(s.value * s.weight for s in signals) / total, 1.0), 6)

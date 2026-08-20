@@ -43,9 +43,9 @@ from researchagent.services.evidence import (
     ContradictionDetector,
     EvidenceBundleBuilder,
     EvidenceIndexer,
-    LexicalKnowledgeRetriever,
     LinkedEvidenceRetriever,
 )
+from researchagent.services.retrieval.lexical import LexicalKnowledgeRetriever
 
 QUOTE = "Metastable failures are triggered by sustained overload in distributed systems."
 

@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from researchagent.agents.base import BaseAgent
-from researchagent.agents.registry import AGENTS, build_agent
+from researchagent.agents.registry import agent_class, build_agent
 from researchagent.config.loader import ConfigLoader
 from researchagent.config.schemas import (
     AgentConfig,
@@ -64,7 +64,6 @@ from researchagent.services.evidence import (
     EvidenceBundleBuilder,
     EvidenceIndexer,
     EvidenceIntelligenceService,
-    LexicalKnowledgeRetriever,
     LinkedEvidenceRetriever,
     RepositoryDocumentRetriever,
     StoredBundleRetriever,
@@ -78,6 +77,7 @@ from researchagent.services.knowledge.registry import build_extractors
 from researchagent.services.llm_service import LLMService
 from researchagent.services.ranking import HeuristicScorer
 from researchagent.services.retrieval import KnowledgeIndexer
+from researchagent.services.retrieval.lexical import LexicalKnowledgeRetriever
 from researchagent.services.retrieval.registry import (
     build_embedding_model,
     build_retrieval_arms,
@@ -324,7 +324,7 @@ def build_container(settings: Settings | None = None) -> Container:
         ledger records which agent asked for what without the agent knowing it is logged.
         """
         spec = agent_config.spec_for(name)
-        agent_cls = AGENTS.get(name)
+        agent_cls = agent_class(name)
         kwargs: dict[str, Any] = {"event_bus": event_bus}
         if name in _TOOLBOX_AGENTS:
             kwargs["toolbox"] = toolbox.for_agent(name, iteration)

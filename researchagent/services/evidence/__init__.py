@@ -11,7 +11,6 @@ from researchagent.services.evidence.indexer import EvidenceIndexer
 from researchagent.services.evidence.pipeline import EvidenceIntelligenceService
 from researchagent.services.evidence.retrievers import (
     AgreementCrossPaperRetriever,
-    LexicalKnowledgeRetriever,
     LinkedEvidenceRetriever,
     RepositoryDocumentRetriever,
     StoredBundleRetriever,
@@ -23,7 +22,6 @@ __all__ = [
     "EvidenceBundleBuilder",
     "EvidenceIndexer",
     "EvidenceIntelligenceService",
-    "LexicalKnowledgeRetriever",
     "LinkedEvidenceRetriever",
     "RepositoryDocumentRetriever",
     "StoredBundleRetriever",

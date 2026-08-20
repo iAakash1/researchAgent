@@ -23,7 +23,7 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from researchagent.core.exceptions import RepositoryError
-from researchagent.core.interfaces.paper_repository import PaperRepository
+from researchagent.core.interfaces.repositories import PaperRepository
 from researchagent.core.logging import get_logger
 from researchagent.models.library import PaperRecord, storage_key_for
 

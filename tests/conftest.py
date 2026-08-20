@@ -8,7 +8,7 @@ import pytest
 from pydantic import BaseModel
 
 from researchagent.agents.base import BaseAgent
-from researchagent.agents.registry import AGENTS, build_agent
+from researchagent.agents.registry import agent_class, build_agent
 from researchagent.config.loader import ConfigLoader
 from researchagent.config.schemas import (
     AgentConfig,
@@ -66,7 +66,6 @@ from researchagent.services.evidence import (
     EvidenceBundleBuilder,
     EvidenceIndexer,
     EvidenceIntelligenceService,
-    LexicalKnowledgeRetriever,
     LinkedEvidenceRetriever,
     RepositoryDocumentRetriever,
     StoredBundleRetriever,
@@ -80,6 +79,7 @@ from researchagent.services.knowledge.registry import build_extractors
 from researchagent.services.llm_service import BoundLLM, LLMService
 from researchagent.services.ranking import HeuristicScorer
 from researchagent.services.retrieval import KnowledgeIndexer
+from researchagent.services.retrieval.lexical import LexicalKnowledgeRetriever
 from researchagent.services.retrieval.registry import build_retrieval_arms, select_active
 from researchagent.services.retrieval_service import RetrievalService
 from researchagent.services.tools import ServiceToolbox
@@ -370,7 +370,7 @@ def container(
         name: str, iteration: int, tokens_remaining: int | None = None
     ) -> BaseAgent[Any, Any]:
         spec = agent_config.spec_for(name)
-        agent_cls = AGENTS.get(name)
+        agent_cls = agent_class(name)
         kwargs: dict[str, Any] = {"event_bus": event_bus}
         if name in {"retrieval", "verification"}:
             kwargs["toolbox"] = toolbox.for_agent(name, iteration)

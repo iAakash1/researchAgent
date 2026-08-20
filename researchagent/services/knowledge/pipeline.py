@@ -24,7 +24,7 @@ from typing import Any
 from researchagent.config.schemas import KnowledgePipelineSettings, KnowledgeValidationConfig
 from researchagent.core.events import EventBus, EventType, KnowledgePayload, ValidationPayload
 from researchagent.core.exceptions import ResearchAgentError
-from researchagent.core.interfaces.paper_repository import PaperRepository
+from researchagent.core.interfaces.repositories import PaperRepository
 from researchagent.core.logging import get_logger, log_context
 from researchagent.core.validation import Confidence, ValidationResult, aggregate
 from researchagent.models.document import PaperDocument

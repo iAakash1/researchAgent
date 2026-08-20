@@ -25,8 +25,8 @@ from pydantic import BaseModel, Field
 from researchagent.config.schemas import DiscoverySettings
 from researchagent.core.events import DiscoveryPayload, EventBus, EventType, PaperPayload
 from researchagent.core.exceptions import PaperSourceError
-from researchagent.core.interfaces.paper_repository import PaperRepository
 from researchagent.core.interfaces.paper_source import PaperSource, SearchQuery
+from researchagent.core.interfaces.repositories import PaperRepository
 from researchagent.core.logging import get_logger
 from researchagent.models.library import PaperRecord
 from researchagent.models.paper import Paper, SourceName

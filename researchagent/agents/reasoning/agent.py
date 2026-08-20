@@ -25,7 +25,6 @@ from researchagent.agents.reasoning.schemas import (
     ReasoningInput,
     ReasoningOutput,
 )
-from researchagent.agents.registry import AGENTS
 from researchagent.core.validation import Confidence, ConfidenceSignal
 from researchagent.models.bundle import EvidenceBundle
 from researchagent.models.reasoning import Citation, FindingStatus, Hypothesis, ResearchFinding
@@ -86,7 +85,6 @@ class _EvidenceIndex:
         return [item for item in evidence_ids if item.strip() not in self._bundle_of]
 
 
-@AGENTS.register("reasoning")
 class ResearchReasoningAgent(BaseAgent[ReasoningInput, ReasoningOutput]):
     name: ClassVar[str] = "reasoning"
     description: ClassVar[str] = "Synthesises research findings from validated evidence bundles"

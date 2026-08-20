@@ -13,19 +13,19 @@ from researchagent.config.schemas import (
     VectorStoreSettings,
 )
 from researchagent.core.interfaces.embeddings import EmbeddingModel
-from researchagent.core.interfaces.knowledge_repository import KnowledgeRepository
+from researchagent.core.interfaces.repositories import KnowledgeRepository
 from researchagent.core.interfaces.retrieval import KnowledgeRetriever
 from researchagent.core.interfaces.vector_store import VectorStore
 from researchagent.core.logging import get_logger
 from researchagent.integrations.memory_store import InMemoryVectorStore
 from researchagent.integrations.ollama import NullEmbeddingModel, OllamaEmbeddingModel
-from researchagent.services.evidence.retrievers import LexicalKnowledgeRetriever
 from researchagent.services.retrieval.bm25 import BM25KnowledgeRetriever
 from researchagent.services.retrieval.fusion import (
     ComponentRole,
     HybridKnowledgeRetriever,
     RetrieverComponent,
 )
+from researchagent.services.retrieval.lexical import LexicalKnowledgeRetriever
 from researchagent.services.retrieval.semantic import SemanticKnowledgeRetriever
 
 logger = get_logger(__name__)

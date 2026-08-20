@@ -17,7 +17,7 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from researchagent.core.exceptions import RepositoryError
-from researchagent.core.interfaces.document_repository import DocumentRepository
+from researchagent.core.interfaces.repositories import DocumentRepository
 from researchagent.core.logging import get_logger
 from researchagent.models.library import storage_key_for
 from researchagent.schemas.validated import ValidatedDocument

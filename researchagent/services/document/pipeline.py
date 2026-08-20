@@ -31,8 +31,8 @@ from researchagent.core.events import (
 )
 from researchagent.core.evidence import Evidence
 from researchagent.core.exceptions import DocumentError, ResearchAgentError
-from researchagent.core.interfaces.document_parser import DocumentLoader
-from researchagent.core.interfaces.paper_repository import PaperRepository
+from researchagent.core.interfaces.document_loader import DocumentLoader
+from researchagent.core.interfaces.repositories import PaperRepository
 from researchagent.core.logging import get_logger, log_context
 from researchagent.core.validation import ValidationResult, aggregate
 from researchagent.models.document import PaperDocument

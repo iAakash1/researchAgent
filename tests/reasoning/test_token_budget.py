@@ -59,7 +59,7 @@ async def _runner(
     usage: TokenUsage | None,
 ) -> ReasoningRunner:
     """A loop whose every agent reports the same per-call usage."""
-    from researchagent.agents.registry import AGENTS
+    from researchagent.agents.registry import agent_class
     from researchagent.core.prompts import PromptLibrary
 
     await container.bundle_repository.save(bundle)
@@ -103,7 +103,7 @@ async def _runner(
         kwargs: dict[str, object] = {}
         if name in {"retrieval", "verification"}:
             kwargs["toolbox"] = _Toolbox()
-        return AGENTS.get(name)(
+        return agent_class(name)(
             BoundLLM(spec.model, container.model_catalog.spec_for(spec.model), provider),
             spec,
             PromptLibrary(container.settings.prompts_dir),

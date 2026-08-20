@@ -16,8 +16,8 @@ from pydantic import BaseModel, Field
 
 from researchagent.config.schemas import RetrievalSettings
 from researchagent.core.exceptions import PaperNotFoundError, PaperSourceError
-from researchagent.core.interfaces.paper_repository import PaperRepository
 from researchagent.core.interfaces.paper_source import PaperSource
+from researchagent.core.interfaces.repositories import PaperRepository
 from researchagent.core.logging import get_logger
 from researchagent.models.library import PaperRecord, storage_key_for
 from researchagent.models.paper import Paper, SourceName

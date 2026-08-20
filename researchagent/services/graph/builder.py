@@ -14,8 +14,7 @@ from pydantic import BaseModel, Field
 
 from researchagent.core.events import EventBus, EventType, GraphPayload
 from researchagent.core.interfaces.graph_repository import GraphRepository, GraphStats
-from researchagent.core.interfaces.knowledge_repository import KnowledgeRepository
-from researchagent.core.interfaces.paper_repository import PaperRepository
+from researchagent.core.interfaces.repositories import KnowledgeRepository, PaperRepository
 from researchagent.core.logging import get_logger
 from researchagent.models.bundle import Contradiction
 from researchagent.models.graph import KnowledgeGraph

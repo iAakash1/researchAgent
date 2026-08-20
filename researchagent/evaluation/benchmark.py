@@ -15,7 +15,7 @@ from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
 
-from researchagent.core.interfaces.evidence_repository import EvidenceRepository
+from researchagent.core.interfaces.repositories import EvidenceRepository
 from researchagent.core.interfaces.retrieval import KnowledgeRetriever
 from researchagent.core.logging import get_logger
 from researchagent.evaluation.gold import GoldQuery, GoldSet

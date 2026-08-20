@@ -10,7 +10,7 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from researchagent.core.exceptions import RepositoryError
-from researchagent.core.interfaces.bundle_repository import BundleRepository
+from researchagent.core.interfaces.repositories import BundleRepository
 from researchagent.core.logging import get_logger
 from researchagent.models.bundle import EvidenceBundle
 

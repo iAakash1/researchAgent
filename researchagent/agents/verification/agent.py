@@ -21,7 +21,6 @@ from typing import ClassVar
 from pydantic import BaseModel
 
 from researchagent.agents.base import AgentContext, BaseAgent
-from researchagent.agents.registry import AGENTS
 from researchagent.agents.verification.prompt import VerificationPrompt
 from researchagent.agents.verification.schemas import (
     VerificationDraft,
@@ -36,7 +35,6 @@ from researchagent.models.reasoning import Citation, VerificationResult, Verific
 from researchagent.services.llm_service import BoundLLM
 
 
-@AGENTS.register("verification")
 class VerificationAgent(BaseAgent[VerificationInput, VerificationOutput]):
     name: ClassVar[str] = "verification"
     description: ClassVar[str] = "Adversarially checks a research finding against its evidence"

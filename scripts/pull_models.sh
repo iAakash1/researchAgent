@@ -10,12 +10,21 @@ if ! command -v "$OLLAMA_BIN" >/dev/null 2>&1; then
   exit 1
 fi
 
-models=$(grep -E '^\s+model:\s' "$CONFIG" | awk '{print $2}' | tr -d '"'"'" | sort -u)
+# Only aliases whose provider is ollama: a Groq model id is not pullable locally.
+models=$(awk '
+  /^  [a-z_]+:$/            { provider = "" }
+  /^    provider:/          { provider = $2 }
+  /^    model:/ && provider == "ollama" { print $2 }
+' "$CONFIG" | tr -d '"'"'" | sort -u)
 
 if [ -z "$models" ]; then
   echo "error: no models found in $CONFIG" >&2
   exit 1
 fi
+
+# The embedding model lives in retrieval.yaml, not the chat catalogue.
+embedding=$(awk '/^embeddings:/{e=1} e && /^  model:/{print $2; exit}' config/retrieval.yaml | tr -d '"'"'")
+[ -n "$embedding" ] && models=$(printf '%s\n%s' "$models" "$embedding" | sort -u)
 
 echo "Pulling models from $CONFIG:"
 echo "$models" | sed 's/^/  - /'

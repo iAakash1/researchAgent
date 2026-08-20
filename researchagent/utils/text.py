@@ -34,3 +34,30 @@ def normalise(text: str) -> str:
     # "distri- buted" across a line break is one word.
     folded = _HYPHEN_LINEBREAK.sub(r"\1\2", folded)
     return _WHITESPACE.sub(" ", folded).strip().lower()
+
+
+_STOPWORDS = frozenset(
+    {
+        "a", "an", "and", "are", "as", "at", "be", "by", "can", "do", "does", "for",
+        "from", "how", "in", "into", "is", "it", "its", "of", "on", "or", "our", "that",
+        "the", "their", "there", "these", "this", "those", "to", "via", "we", "what",
+        "which", "why", "with",
+    }
+)  # fmt: skip
+
+
+def tokenise(text: str) -> set[str]:
+    return {
+        token for token in normalise(text).split() if len(token) > 2 and token not in _STOPWORDS
+    }
+
+
+def overlap(candidate: set[str], reference: set[str]) -> float:
+    """Fraction of the query vocabulary present in the candidate.
+
+    Asymmetric on purpose: a long description should not be penalised for containing
+    words the query never mentioned.
+    """
+    if not candidate or not reference:
+        return 0.0
+    return len(candidate & reference) / len(reference)

@@ -47,7 +47,7 @@ async def _runner(
     budget: ResearchBudget | None = None,
 ) -> ReasoningRunner:
     """Wire a runner whose agents each read their own script."""
-    from researchagent.agents.registry import AGENTS
+    from researchagent.agents.registry import agent_class
     from researchagent.core.prompts import PromptLibrary
     from researchagent.services.llm_service import BoundLLM
     from tests.conftest import FakeLLMProvider
@@ -77,7 +77,7 @@ async def _runner(
         kwargs: dict[str, object] = {}
         if name in {"retrieval", "verification"}:
             kwargs["toolbox"] = _Toolbox()
-        return AGENTS.get(name)(
+        return agent_class(name)(
             BoundLLM(spec.model, container.model_catalog.spec_for(spec.model), provider),
             spec,
             PromptLibrary(container.settings.prompts_dir),

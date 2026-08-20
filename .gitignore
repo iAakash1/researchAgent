@@ -38,3 +38,4 @@ storage/papers/raw/downloaded/
 # Ad-hoc research runs are scratch output; the reproducible experiment artifacts
 # under evaluation/experiments/ are what gets committed.
 evaluation/results/research_*.json
+evaluation/results/graph_*.json

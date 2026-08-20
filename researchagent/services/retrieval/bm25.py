@@ -17,7 +17,7 @@ from collections import Counter
 from typing import ClassVar
 
 from researchagent.config.schemas import BM25Settings
-from researchagent.core.interfaces.knowledge_repository import KnowledgeRepository
+from researchagent.core.interfaces.repositories import KnowledgeRepository
 from researchagent.core.interfaces.retrieval import (
     KnowledgeRetriever,
     RetrievalHit,

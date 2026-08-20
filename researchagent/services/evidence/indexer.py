@@ -12,7 +12,7 @@ extractors found this".
 from __future__ import annotations
 
 from researchagent.core.events import EventBus, EventType, EvidencePayload
-from researchagent.core.interfaces.evidence_repository import EvidenceRepository
+from researchagent.core.interfaces.repositories import EvidenceRepository
 from researchagent.core.logging import get_logger
 from researchagent.models.evidence import (
     EvidenceLink,
