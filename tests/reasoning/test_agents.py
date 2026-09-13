@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from researchagent.agents.base import AgentContext
 from researchagent.agents.reasoning.agent import ResearchReasoningAgent
-from researchagent.agents.reasoning.prompt import ReasoningPrompt
+from researchagent.agents.reasoning.prompt import MAX_EVIDENCE_CHARS, ReasoningPrompt
 from researchagent.agents.reasoning.schemas import ClaimDraft, ReasoningDraft, ReasoningInput
 from researchagent.agents.retrieval.agent import RetrievalAgent
 from researchagent.agents.retrieval.schemas import (
@@ -108,6 +108,25 @@ def test_long_cited_quote_reaches_reasoner_and_verifier(
 
     assert decisive in reasoning_text
     assert decisive in verification_text
+
+
+def test_accumulated_evidence_stays_within_prompt_limit(
+    bundle: EvidenceBundle, question: ResearchQuestion
+) -> None:
+    item = bundle.evidence[0]
+    long_item = item.model_copy(
+        update={"evidence": item.evidence.model_copy(update={"quote": "evidence " * 200})}
+    )
+    bundles = tuple(
+        bundle.model_copy(update={"id": f"bundle-{index}", "evidence": (long_item,) * 12})
+        for index in range(9)
+    )
+    prompt = ReasoningPrompt(PromptLibrary(_prompts_dir()).load("reasoning"))
+
+    block = prompt._evidence_block(bundles)
+
+    assert len(block) <= MAX_EVIDENCE_CHARS
+    assert long_item.evidence.id in block
 
 
 def _agent(agent_cls: type, provider: FakeLLMProvider, model_catalog, **kwargs: object):

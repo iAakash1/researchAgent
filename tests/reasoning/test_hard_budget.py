@@ -34,6 +34,22 @@ class TestToolCallCeiling:
         assert len(_calls(session, agent)) == 1
         assert _charge(session, agent, "retrieval").tool_calls == 2
 
+    async def test_tool_calls_and_budget_are_scoped_to_each_run(self, container: Container) -> None:
+        first = container.toolbox.for_run()
+        second = container.toolbox.for_run()
+        first.budget.max_tool_calls = second.budget.max_tool_calls = 1
+
+        await first.for_agent("retrieval", 0).search_knowledge("overload")
+
+        assert first.budget.spent == 1
+        assert len(first.calls) == 1
+        assert second.budget.spent == 0
+        assert second.calls == ()
+
+        await second.for_agent("retrieval", 0).search_knowledge("overload")
+        assert len(second.calls) == 1
+        assert container.toolbox.calls == ()
+
     def test_a_budget_of_n_permits_exactly_n_reservations(self) -> None:
         budget = ToolBudget(max_tool_calls=3)
 

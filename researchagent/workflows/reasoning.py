@@ -84,9 +84,11 @@ def route_after_verification(state: ResearchState) -> ReasoningBranch:
 
 
 def route_after_stage(state: ResearchState) -> Literal["continue", "terminate"]:
-    """A blocked retrieval or reasoning node must not start another agent."""
+    """A blocked or newly exhausted stage must not start another agent."""
     session = state.reasoning
-    return "terminate" if session is None or session.terminated else "continue"
+    if session is None or session.terminated or session.ledger.exceeded(session.budget):
+        return "terminate"
+    return "continue"
 
 
 def _latest_verdicts(state: ResearchState) -> list[VerificationVerdict]:
