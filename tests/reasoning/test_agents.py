@@ -89,12 +89,22 @@ def test_long_cited_quote_reaches_reasoner_and_verifier(
     cited_finding = finding.model_copy(update={"citations": (citation,)})
     library = PromptLibrary(_prompts_dir())
 
-    reasoning_text = ReasoningPrompt(library.load("reasoning")).reason_messages(
-        ReasoningInput(question=question, goal="Study MAST failure categories", bundles=(extended,))
-    )[1].content
-    verification_text = VerificationPrompt(library.load("verification")).verify_messages(
-        VerificationInput(finding=cited_finding, question=question), (extended,)
-    )[1].content
+    reasoning_text = (
+        ReasoningPrompt(library.load("reasoning"))
+        .reason_messages(
+            ReasoningInput(
+                question=question, goal="Study MAST failure categories", bundles=(extended,)
+            )
+        )[1]
+        .content
+    )
+    verification_text = (
+        VerificationPrompt(library.load("verification"))
+        .verify_messages(VerificationInput(finding=cited_finding, question=question), (extended,))[
+            1
+        ]
+        .content
+    )
 
     assert decisive in reasoning_text
     assert decisive in verification_text

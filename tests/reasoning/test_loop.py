@@ -78,9 +78,11 @@ async def test_terminated_stage_skips_downstream_agents(blocked_at: str) -> None
 
     await graph.ainvoke(_state(ReasoningSession()))
 
-    assert calls == (["retrieval", "terminate"] if blocked_at == "retrieval" else [
-        "retrieval", "reasoning", "terminate"
-    ])
+    assert calls == (
+        ["retrieval", "terminate"]
+        if blocked_at == "retrieval"
+        else ["retrieval", "reasoning", "terminate"]
+    )
 
 
 def _plan() -> ResearchPlan:

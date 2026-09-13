@@ -134,9 +134,7 @@ def test_blank_env_overrides_preserve_local_catalog(monkeypatch: pytest.MonkeyPa
     monkeypatch.setenv("GROQ_API_KEY", "")
     settings = Settings(_env_file=None)
     configured_catalog = ConfigLoader(settings.config_dir).load("models", ModelCatalog)
-    catalog = configured_catalog.with_provider_override(
-        settings.llm_provider, settings.llm_model
-    )
+    catalog = configured_catalog.with_provider_override(settings.llm_provider, settings.llm_model)
     service = LLMService(catalog, settings)
 
     assert catalog == configured_catalog

@@ -122,6 +122,7 @@ class Settings(BaseSettings):
     @classmethod
     def _blank_override_is_unset(cls, value: str | None) -> str | None:
         return (value.strip() or None) if isinstance(value, str) else value
+
     groq_api_key: SecretStr | None = Field(
         default=None, validation_alias=AliasChoices("GROQ_API_KEY")
     )
@@ -132,6 +133,7 @@ class Settings(BaseSettings):
         if isinstance(value, str) and not value.strip():
             return None
         return value
+
     postgres: PostgresSettings = Field(default_factory=PostgresSettings)
     qdrant: QdrantSettings = Field(default_factory=QdrantSettings)
     neo4j: Neo4jSettings = Field(default_factory=Neo4jSettings)
