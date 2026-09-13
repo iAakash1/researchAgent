@@ -14,6 +14,7 @@ from researchagent.models.bundle import EvidenceBundle
 _NONE = "(none)"
 # Per bundle. Enough context to reason over, small enough that a local model can hold it.
 MAX_EVIDENCE_PER_BUNDLE = 12
+MAX_QUOTE_CHARS = 1200
 
 
 class ReasoningPrompt:
@@ -45,7 +46,7 @@ class ReasoningPrompt:
                 lines.append(
                     f"  evidence_id={item.evidence.id} paper={item.paper_id} "
                     f"object={item.knowledge_object_id or '-'}\n"
-                    f'    "{quote[:260]}"'
+                    f'    "{quote[:MAX_QUOTE_CHARS]}"'
                 )
         return "\n".join(lines) or _NONE
 

@@ -6,6 +6,8 @@ about it stopping.
 
 from __future__ import annotations
 
+import pytest
+
 from researchagent.config.schemas import ResearchBudget
 from researchagent.models.reasoning import (
     Citation,
@@ -30,9 +32,55 @@ from researchagent.workflows.reasoning import (
     RETRIEVE_MORE,
     REVIEW,
     TERMINATE,
+    build_reasoning_graph,
     route_after_verification,
     terminal_reason,
 )
+
+
+@pytest.mark.parametrize("blocked_at", ["retrieval", "reasoning"])
+async def test_terminated_stage_skips_downstream_agents(blocked_at: str) -> None:
+    """A budget guard cannot be followed by another LLM call through a fixed edge."""
+    calls: list[str] = []
+
+    async def retrieval(state: ResearchState) -> dict[str, ReasoningSession]:
+        calls.append("retrieval")
+        if blocked_at == "retrieval":
+            return {"reasoning": stopped}
+        return {}
+
+    async def reasoning(state: ResearchState) -> dict[str, ReasoningSession]:
+        calls.append("reasoning")
+        return {"reasoning": stopped}
+
+    async def verification(state: ResearchState) -> dict[str, ReasoningSession]:
+        calls.append("verification")
+        return {}
+
+    async def review(state: ResearchState) -> dict[str, ReasoningSession]:
+        calls.append("review")
+        return {}
+
+    async def terminate(state: ResearchState) -> dict[str, ReasoningSession]:
+        calls.append("terminate")
+        return {}
+
+    stopped = ReasoningSession(
+        terminated=True, termination_reason=TerminationReason.BUDGET_EXHAUSTED
+    )
+    graph = build_reasoning_graph(
+        retrieval_node=retrieval,
+        reasoning_node=reasoning,
+        verification_node=verification,
+        review_node=review,
+        terminate_node=terminate,
+    )
+
+    await graph.ainvoke(_state(ReasoningSession()))
+
+    assert calls == (["retrieval", "terminate"] if blocked_at == "retrieval" else [
+        "retrieval", "reasoning", "terminate"
+    ])
 
 
 def _plan() -> ResearchPlan:

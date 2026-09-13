@@ -8,6 +8,8 @@ from researchagent.core.prompts import PromptTemplate
 from researchagent.models.bundle import EvidenceBundle
 
 _NONE = "(none)"
+MAX_CITED_QUOTE_CHARS = 1200
+MAX_OTHER_QUOTE_CHARS = 260
 
 
 class VerificationPrompt:
@@ -51,9 +53,10 @@ class VerificationPrompt:
             for item in bundle.evidence:
                 marker = "CITED" if item.evidence.id in cited else "also available"
                 quote = (item.evidence.quote or item.evidence.claim).strip()
+                limit = MAX_CITED_QUOTE_CHARS if marker == "CITED" else MAX_OTHER_QUOTE_CHARS
                 lines.append(
                     f"  [{marker}] evidence_id={item.evidence.id} paper={item.paper_id}\n"
-                    f'    "{quote[:260]}"'
+                    f'    "{quote[:limit]}"'
                 )
         return "\n".join(lines) or _NONE
 

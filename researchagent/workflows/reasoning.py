@@ -83,6 +83,12 @@ def route_after_verification(state: ResearchState) -> ReasoningBranch:
     return REVIEW
 
 
+def route_after_stage(state: ResearchState) -> Literal["continue", "terminate"]:
+    """A blocked retrieval or reasoning node must not start another agent."""
+    session = state.reasoning
+    return "terminate" if session is None or session.terminated else "continue"
+
+
 def _latest_verdicts(state: ResearchState) -> list[VerificationVerdict]:
     """Verdicts from the most recent round that actually produced any.
 
@@ -142,8 +148,16 @@ def build_reasoning_graph(
     graph.add_node(ReasoningStage.TERMINATED.value, terminate_node)
 
     graph.add_edge(START, WorkflowStage.RETRIEVAL.value)
-    graph.add_edge(WorkflowStage.RETRIEVAL.value, WorkflowStage.REASONING.value)
-    graph.add_edge(WorkflowStage.REASONING.value, WorkflowStage.VERIFICATION.value)
+    graph.add_conditional_edges(
+        WorkflowStage.RETRIEVAL.value,
+        route_after_stage,
+        {"continue": WorkflowStage.REASONING.value, TERMINATE: ReasoningStage.TERMINATED.value},
+    )
+    graph.add_conditional_edges(
+        WorkflowStage.REASONING.value,
+        route_after_stage,
+        {"continue": WorkflowStage.VERIFICATION.value, TERMINATE: ReasoningStage.TERMINATED.value},
+    )
 
     graph.add_conditional_edges(
         WorkflowStage.VERIFICATION.value,

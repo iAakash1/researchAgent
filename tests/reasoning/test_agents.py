@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from researchagent.agents.base import AgentContext
 from researchagent.agents.reasoning.agent import ResearchReasoningAgent
+from researchagent.agents.reasoning.prompt import ReasoningPrompt
 from researchagent.agents.reasoning.schemas import ClaimDraft, ReasoningDraft, ReasoningInput
 from researchagent.agents.retrieval.agent import RetrievalAgent
 from researchagent.agents.retrieval.schemas import (
@@ -20,6 +21,7 @@ from researchagent.agents.retrieval.schemas import (
 from researchagent.agents.reviewer.agent import ReviewerAgent
 from researchagent.agents.reviewer.schemas import CritiqueDraft, ReviewerInput
 from researchagent.agents.verification.agent import VerificationAgent
+from researchagent.agents.verification.prompt import VerificationPrompt
 from researchagent.agents.verification.schemas import VerificationDraft, VerificationInput
 from researchagent.config.schemas import AgentSpec
 from researchagent.core.exceptions import RepositoryError
@@ -69,6 +71,33 @@ class StubToolbox:
 
     async def get_provenance(self, evidence_ids: tuple[str, ...]) -> tuple[str, ...]:
         return self._provenance
+
+
+def test_long_cited_quote_reaches_reasoner_and_verifier(
+    bundle: EvidenceBundle, question: ResearchQuestion, finding: ResearchFinding
+) -> None:
+    """A paper's decisive sentence may appear after the first 260 characters."""
+    decisive = "MAST identifies system design, inter-agent misalignment, and task verification."
+    quote = f"{'context ' * 110}{decisive}"
+    original = bundle.evidence[0]
+    evidence = original.evidence.model_copy(update={"quote": quote})
+    cited = original.model_copy(update={"evidence": evidence})
+    extended = bundle.model_copy(update={"evidence": (cited,)})
+    citation = finding.citations[0].model_copy(
+        update={"evidence_ids": (evidence.id,), "bundle_id": extended.id}
+    )
+    cited_finding = finding.model_copy(update={"citations": (citation,)})
+    library = PromptLibrary(_prompts_dir())
+
+    reasoning_text = ReasoningPrompt(library.load("reasoning")).reason_messages(
+        ReasoningInput(question=question, goal="Study MAST failure categories", bundles=(extended,))
+    )[1].content
+    verification_text = VerificationPrompt(library.load("verification")).verify_messages(
+        VerificationInput(finding=cited_finding, question=question), (extended,)
+    )[1].content
+
+    assert decisive in reasoning_text
+    assert decisive in verification_text
 
 
 def _agent(agent_cls: type, provider: FakeLLMProvider, model_catalog, **kwargs: object):

@@ -231,8 +231,20 @@ both sit behind one `LLMProvider` port, and no agent knows which is in use.
 uv sync --extra dev          # install
 make models                  # pull llama3.1:8b + nomic-embed-text via Ollama
 cp .env.example .env         # optional: add GROQ_API_KEY to enable the remote provider
-make check                   # lint + typecheck + 660 tests
+make check                   # lint + typecheck + tests
 ```
+
+Start the Ollama app (or `ollama serve`) before `make models`. For the API, run
+`make dev` and check `http://localhost:8000/health/ready`. To run the full local
+pipeline, including the reviewer loop, use:
+
+```bash
+uv run python scripts/run_full_research.py \
+  --goal "Why do multi-agent LLM systems fail?"
+```
+
+The result is written under `evaluation/results/` and includes stage history,
+candidate metadata, findings, and provenance audits.
 
 Build the corpus and indexes, then ask a question:
 

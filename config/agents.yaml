@@ -40,7 +40,7 @@ agents:
 
   verification:
     model: reasoning
-    prompt_version: v1
+    prompt_version: v2
     timeout_seconds: 600
     retry:
       # Verification is adversarial; a retry that reruns the same prompt is cheap and
