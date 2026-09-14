@@ -7,6 +7,8 @@ import pytest
 from researchagent.config.loader import ConfigLoader
 from researchagent.config.schemas import AgentConfig, ModelCatalog
 from researchagent.core.exceptions import ConfigurationError
+from researchagent.core.settings import Settings
+from researchagent.services.llm_service import LLMService
 
 
 def write(directory: Path, name: str, body: str) -> Path:
@@ -123,3 +125,19 @@ def test_repository_config_is_valid() -> None:
 
     assert catalog.default in catalog.models
     assert agents.defaults.model in catalog.models
+
+
+def test_blank_env_overrides_preserve_local_catalog(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A copied .env must not replace model names with empty strings or activate Groq."""
+    monkeypatch.setenv("LLM_PROVIDER", "")
+    monkeypatch.setenv("LLM_MODEL", "")
+    monkeypatch.setenv("GROQ_API_KEY", "")
+    settings = Settings(_env_file=None)
+    configured_catalog = ConfigLoader(settings.config_dir).load("models", ModelCatalog)
+    catalog = configured_catalog.with_provider_override(settings.llm_provider, settings.llm_model)
+    service = LLMService(catalog, settings)
+
+    assert catalog == configured_catalog
+    assert catalog.spec_for("reasoning_remote").provider == "groq"
+    assert settings.groq_api_key is None
+    assert "groq" in service.configured_providers()[1]

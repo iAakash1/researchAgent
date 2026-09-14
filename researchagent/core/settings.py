@@ -14,7 +14,7 @@ from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import AliasChoices, BaseModel, Field, SecretStr
+from pydantic import AliasChoices, BaseModel, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from researchagent.core.exceptions import ConfigurationError
@@ -117,9 +117,23 @@ class Settings(BaseSettings):
     # is what keeps a fresh checkout local-first.
     llm_provider: str | None = Field(default=None, validation_alias=AliasChoices("LLM_PROVIDER"))
     llm_model: str | None = Field(default=None, validation_alias=AliasChoices("LLM_MODEL"))
+
+    @field_validator("llm_provider", "llm_model", mode="before")
+    @classmethod
+    def _blank_override_is_unset(cls, value: str | None) -> str | None:
+        return (value.strip() or None) if isinstance(value, str) else value
+
     groq_api_key: SecretStr | None = Field(
         default=None, validation_alias=AliasChoices("GROQ_API_KEY")
     )
+
+    @field_validator("groq_api_key", mode="before")
+    @classmethod
+    def _blank_groq_key_is_unset(cls, value: str | SecretStr | None) -> str | SecretStr | None:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
     postgres: PostgresSettings = Field(default_factory=PostgresSettings)
     qdrant: QdrantSettings = Field(default_factory=QdrantSettings)
     neo4j: Neo4jSettings = Field(default_factory=Neo4jSettings)
@@ -130,7 +144,7 @@ class Settings(BaseSettings):
         Never falls back to Ollama: a run that silently used a different provider than the
         one requested is a run whose results cannot be attributed.
         """
-        if self.groq_api_key is None:
+        if self.groq_api_key is None or not self.groq_api_key.get_secret_value().strip():
             raise ConfigurationError(
                 "Groq was requested but GROQ_API_KEY is not set",
                 remedy="Export GROQ_API_KEY, or set the model alias back to an ollama provider",

@@ -28,7 +28,7 @@ from researchagent.core.events import (
     ReasoningPayload,
 )
 from researchagent.core.exceptions import ResearchAgentError
-from researchagent.core.interfaces.tools import ResearchToolbox
+from researchagent.core.interfaces.tools import ResearchToolbox, ToolCall
 from researchagent.core.logging import get_logger
 from researchagent.models.bundle import EvidenceBundle
 from researchagent.models.reasoning import (
@@ -206,7 +206,7 @@ def retrieval_node(
                     "ledger": _charge(session, agent, "retrieval").model_copy(
                         update={"retrieval_attempts": attempts}
                     ),
-                    "tool_calls": session.tool_calls + _calls(agent),
+                    "tool_calls": session.tool_calls + _calls(session, agent),
                 }
             ),
             "history": [
@@ -384,7 +384,7 @@ def verification_node(
                         update={"iterations": session.ledger.iterations + 1}
                     ),
                     "stage": ReasoningStage.REVIEW,
-                    "tool_calls": session.tool_calls + _calls(agent),
+                    "tool_calls": session.tool_calls + _calls(session, agent),
                 }
             ),
             "history": [
@@ -609,7 +609,7 @@ def _charge(session: ReasoningSession, agent: object, name: str) -> BudgetLedger
     llm = getattr(agent, "llm", None)
     report = getattr(llm, "usage", None)
     ledger = session.ledger.model_copy(
-        update={"tool_calls": len(session.tool_calls) + len(_calls(agent))}
+        update={"tool_calls": len(session.tool_calls) + len(_calls(session, agent))}
     )
     if report is None:
         return ledger
@@ -627,11 +627,11 @@ def _charge(session: ReasoningSession, agent: object, name: str) -> BudgetLedger
     )
 
 
-def _calls(agent: object) -> tuple[object, ...]:
-    """Tool calls the agent made, when it owns a toolbox."""
+def _calls(session: ReasoningSession, agent: object) -> tuple[ToolCall, ...]:
+    """New calls only; toolbox views share a cumulative call log across agents."""
     toolbox = getattr(agent, "_toolbox", None)
     if isinstance(toolbox, ResearchToolbox):
-        return toolbox.calls
+        return tuple(call for call in toolbox.calls if call not in session.tool_calls)
     return ()
 
 

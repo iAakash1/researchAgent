@@ -43,18 +43,28 @@ class ReasoningRunner:
         *,
         event_bus: EventBus | None = None,
         checkpointer: BaseCheckpointSaver[Any] | None = None,
+        agent_for_run: Callable[[], AgentFactory] | None = None,
     ) -> None:
         self._agent_for = agent_for
+        self._agent_for_run = agent_for_run
         self._bundles = bundles
         self._config = config
         self._event_bus = event_bus
-        self._graph = build_reasoning_graph(
-            retrieval_node=agentic.retrieval_node(agent_for, event_bus=event_bus),
-            reasoning_node=agentic.reasoning_node(agent_for, bundles, event_bus=event_bus),
-            verification_node=agentic.verification_node(agent_for, bundles, event_bus=event_bus),
-            review_node=agentic.review_node(agent_for, bundles, event_bus=event_bus),
-            terminate_node=agentic.terminate_node(event_bus=event_bus),
-            checkpointer=checkpointer,
+        self._checkpointer = checkpointer
+        self._graph = self._build_graph(agent_for)
+
+    def _build_graph(self, agent_for: AgentFactory) -> Any:
+        return build_reasoning_graph(
+            retrieval_node=agentic.retrieval_node(agent_for, event_bus=self._event_bus),
+            reasoning_node=agentic.reasoning_node(
+                agent_for, self._bundles, event_bus=self._event_bus
+            ),
+            verification_node=agentic.verification_node(
+                agent_for, self._bundles, event_bus=self._event_bus
+            ),
+            review_node=agentic.review_node(agent_for, self._bundles, event_bus=self._event_bus),
+            terminate_node=agentic.terminate_node(event_bus=self._event_bus),
+            checkpointer=self._checkpointer,
         )
 
     async def run(self, state: ResearchState) -> ResearchState:
@@ -67,7 +77,8 @@ class ReasoningRunner:
         # `recursion_limit` is LangGraph's own backstop; the real limit is the budget
         # checked inside the loop. Setting it well above the budget means a hit here
         # signals a routing bug rather than a run that legitimately took many rounds.
-        raw = await self._graph.ainvoke(
+        graph = self._build_graph(self._agent_for_run()) if self._agent_for_run else self._graph
+        raw = await graph.ainvoke(
             seeded, config={"recursion_limit": self._config.budget.max_iterations * 8 + 10}
         )
         final = ResearchState.model_validate(raw)

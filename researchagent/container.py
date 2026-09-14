@@ -87,7 +87,7 @@ from researchagent.services.retrieval.registry import (
 from researchagent.services.retrieval_service import RetrievalService
 from researchagent.services.tools import ServiceToolbox
 from researchagent.services.tools.toolbox import ToolBudget
-from researchagent.workflows.reasoning_runner import ReasoningRunner
+from researchagent.workflows.reasoning_runner import AgentFactory, ReasoningRunner
 from researchagent.workflows.research import build_research_graph
 from researchagent.workflows.runner import WorkflowRunner
 
@@ -317,29 +317,29 @@ def build_container(settings: Settings | None = None) -> Container:
     )
     audit_trail = AuditTrailBuilder(bundle_repository, evidence_repository)
 
-    def agent_for(name: str, iteration: int) -> BaseAgent[Any, Any]:
-        """Build an agent bound to this iteration's toolbox view.
+    def budgeted_agent_for(run_toolbox: ServiceToolbox) -> AgentFactory:
+        """Bind agents to one run's toolbox and token allowance."""
 
-        Agents that take a toolbox receive one attributed to them, so the tool-call
-        ledger records which agent asked for what without the agent knowing it is logged.
-        """
-        spec = agent_config.spec_for(name)
-        agent_cls = agent_class(name)
-        kwargs: dict[str, Any] = {"event_bus": event_bus}
-        if name in _TOOLBOX_AGENTS:
-            kwargs["toolbox"] = toolbox.for_agent(name, iteration)
-        return agent_cls(llm_service.get(spec.model), spec, prompt_library, **kwargs)
+        def agent_for(
+            name: str, iteration: int, tokens_remaining: int | None = None
+        ) -> BaseAgent[Any, Any]:
+            spec = agent_config.spec_for(name)
+            agent_cls = agent_class(name)
+            kwargs: dict[str, Any] = {"event_bus": event_bus}
+            if name in _TOOLBOX_AGENTS:
+                kwargs["toolbox"] = run_toolbox.for_agent(name, iteration)
+            agent = agent_cls(llm_service.get(spec.model), spec, prompt_library, **kwargs)
+            agent.llm.with_token_ceiling(tokens_remaining)
+            return agent
 
-    def budgeted_agent_for(
-        name: str, iteration: int, tokens_remaining: int | None = None
-    ) -> BaseAgent[Any, Any]:
-        """An agent whose LLM refuses to start once the run's tokens are spent."""
-        agent = agent_for(name, iteration)
-        agent.llm.with_token_ceiling(tokens_remaining)
-        return agent
+        return agent_for
 
     reasoning_runner = ReasoningRunner(
-        budgeted_agent_for, bundle_repository, reasoning_config, event_bus=event_bus
+        budgeted_agent_for(toolbox),
+        bundle_repository,
+        reasoning_config,
+        event_bus=event_bus,
+        agent_for_run=lambda: budgeted_agent_for(toolbox.for_run()),
     )
 
     planner = build_agent(

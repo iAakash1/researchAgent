@@ -7,18 +7,49 @@ that would cross the line does not execute.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from researchagent.container import Container
 from researchagent.core.exceptions import BudgetExhaustedError
 from researchagent.core.interfaces.llm import Message, TokenUsage
 from researchagent.core.interfaces.tools import ToolName
+from researchagent.schemas.reasoning import ReasoningSession
 from researchagent.services.llm_service import BoundLLM
 from researchagent.services.tools.toolbox import ToolBudget
 from tests.conftest import FakeLLMProvider
 
 
 class TestToolCallCeiling:
+    async def test_shared_tool_log_is_charged_once(self, container: Container) -> None:
+        from researchagent.workflows.agentic import _calls, _charge
+
+        toolbox = container.toolbox.for_agent("retrieval", 0)
+        await toolbox.search_knowledge("overload")
+        session = ReasoningSession(tool_calls=toolbox.calls)
+        await toolbox.get_provenance(("missing",))
+        agent = SimpleNamespace(_toolbox=toolbox, llm=None)
+
+        assert len(_calls(session, agent)) == 1
+        assert _charge(session, agent, "retrieval").tool_calls == 2
+
+    async def test_tool_calls_and_budget_are_scoped_to_each_run(self, container: Container) -> None:
+        first = container.toolbox.for_run()
+        second = container.toolbox.for_run()
+        first.budget.max_tool_calls = second.budget.max_tool_calls = 1
+
+        await first.for_agent("retrieval", 0).search_knowledge("overload")
+
+        assert first.budget.spent == 1
+        assert len(first.calls) == 1
+        assert second.budget.spent == 0
+        assert second.calls == ()
+
+        await second.for_agent("retrieval", 0).search_knowledge("overload")
+        assert len(second.calls) == 1
+        assert container.toolbox.calls == ()
+
     def test_a_budget_of_n_permits_exactly_n_reservations(self) -> None:
         budget = ToolBudget(max_tool_calls=3)
 

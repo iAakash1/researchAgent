@@ -123,6 +123,21 @@ class ServiceToolbox(ResearchToolbox):
     def budget(self) -> ToolBudget:
         return self._budget
 
+    def for_run(self) -> ServiceToolbox:
+        """A run gets its own call log and hard ceiling, including concurrent runs."""
+        return ServiceToolbox(
+            self._retriever,
+            self._evidence_service,
+            self._knowledge,
+            self._evidence,
+            self._papers,
+            self._bundles,
+            self._graph_repository,
+            self._graph_queries,
+            budget=ToolBudget(max_tool_calls=self._budget.max_tool_calls),
+            event_bus=self._event_bus,
+        )
+
     def for_agent(self, agent: str, iteration: int) -> ServiceToolbox:
         """A view that attributes its calls to one agent, sharing the same call log."""
         clone = ServiceToolbox(

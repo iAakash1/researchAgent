@@ -14,6 +14,8 @@ from researchagent.models.bundle import EvidenceBundle
 _NONE = "(none)"
 # Per bundle. Enough context to reason over, small enough that a local model can hold it.
 MAX_EVIDENCE_PER_BUNDLE = 12
+MAX_QUOTE_CHARS = 1200
+MAX_EVIDENCE_CHARS = 12000
 
 
 class ReasoningPrompt:
@@ -38,15 +40,25 @@ class ReasoningPrompt:
 
     def _evidence_block(self, bundles: tuple[EvidenceBundle, ...]) -> str:
         lines: list[str] = []
+        used = 0
         for bundle in bundles:
-            lines.append(f"\n[bundle {bundle.id}]")
+            header = f"\n[bundle {bundle.id}]"
+            if used + len(header) + bool(lines) > MAX_EVIDENCE_CHARS:
+                break
+            lines.append(header)
+            used += len(header) + (len(lines) > 1)
             for item in bundle.evidence[:MAX_EVIDENCE_PER_BUNDLE]:
                 quote = (item.evidence.quote or item.evidence.claim).strip()
-                lines.append(
+                prefix = (
                     f"  evidence_id={item.evidence.id} paper={item.paper_id} "
-                    f"object={item.knowledge_object_id or '-'}\n"
-                    f'    "{quote[:260]}"'
+                    f'object={item.knowledge_object_id or "-"}\n    "'
                 )
+                available = MAX_EVIDENCE_CHARS - used - len(prefix) - 2
+                if available <= 0:
+                    return "\n".join(lines)
+                line = f'{prefix}{quote[: min(MAX_QUOTE_CHARS, available)]}"'
+                lines.append(line)
+                used += len(line) + 1
         return "\n".join(lines) or _NONE
 
     def _contradiction_block(self, bundles: tuple[EvidenceBundle, ...]) -> str:
