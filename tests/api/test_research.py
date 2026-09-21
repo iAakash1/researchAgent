@@ -7,8 +7,11 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from researchagent.api.app import create_app
+from researchagent.api.dependencies import get_research_service
 from researchagent.container import Container
 from researchagent.core.exceptions import ProviderUnavailableError
+from researchagent.schemas.result import ResearchResult
+from researchagent.schemas.workflow import RunStatus
 from tests.agents.test_planner import framing, strategy
 from tests.conftest import FakeLLMProvider
 
@@ -127,3 +130,51 @@ async def test_stream_emits_stage_then_done(client: AsyncClient) -> None:
     assert events[0].startswith("event: stage")
     assert json.loads(events[0].split("data: ", 1)[1])["node"] == "planning"
     assert events[-1].startswith("event: done")
+
+
+async def test_frontend_is_served_by_the_api(client: AsyncClient) -> None:
+    response = await client.get("/app/")
+
+    assert response.status_code == 200
+    assert "ResearchAgent" in response.text
+    assert "/research/run/stream" in (await client.get("/app/app.js")).text
+
+
+async def test_full_run_endpoint_returns_the_structured_result(container: Container) -> None:
+    expected = ResearchResult(
+        run_id="run-1",
+        research_goal=GOAL,
+        status=RunStatus.COMPLETED,
+        discovered_papers=4,
+        processed_papers=3,
+        final_summary="A verified synthesis.",
+    )
+
+    class StubResearchService:
+        result = expected
+
+        async def run(self, goal: str, **_: object) -> ResearchResult:
+            assert goal == GOAL
+            return self.result
+
+        def get(self, run_id: str) -> ResearchResult:
+            assert run_id == "run-1"
+            return self.result
+
+    app = create_app(container=container)
+    app.dependency_overrides[get_research_service] = lambda: StubResearchService()
+    transport = ASGITransport(app=app)
+    async with (
+        AsyncClient(transport=transport, base_url="http://test") as http_client,
+        app.router.lifespan_context(app),
+    ):
+        response = await http_client.post("/research/run", json={"goal": GOAL})
+        fetched = await http_client.get("/research/results/run-1")
+        stream = await http_client.post("/research/run/stream", json={"goal": GOAL})
+
+    assert response.status_code == 200
+    assert response.json()["processed_papers"] == 3
+    assert fetched.json() == response.json()
+    assert response.json()["final_summary"] == "A verified synthesis."
+    assert "event: result" in stream.text
+    assert json.loads(stream.text.split("data: ", 1)[1])["run_id"] == "run-1"

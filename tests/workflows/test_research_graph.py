@@ -22,18 +22,67 @@ from researchagent.models.research import (
     ResearchQuestion,
     SearchStrategy,
 )
-from researchagent.schemas.workflow import RunStatus, StageStatus, WorkflowStage
+from researchagent.schemas.workflow import ResearchState, RunStatus, StageStatus, WorkflowStage
 from researchagent.services.deduplication import PaperDeduplicator
 from researchagent.services.discovery_service import DiscoveryService
 from researchagent.services.document import DocumentIntelligenceService
 from researchagent.services.evidence import EvidenceIntelligenceService
 from researchagent.services.knowledge import KnowledgeIntelligenceService
 from researchagent.services.llm_service import BoundLLM
-from researchagent.services.ranking import HeuristicScorer
-from researchagent.workflows.research import build_research_graph
+from researchagent.services.ranking import HeuristicScorer, ScoredPaper
+from researchagent.services.retrieval_service import RetrievalOutcome, RetrievalResult
+from researchagent.workflows.research import build_research_graph, paper_acquisition_node
 from researchagent.workflows.runner import WorkflowRunner
 
 CONFIG = WorkflowConfig(checkpointer=CheckpointerKind.MEMORY, recursion_limit=10)
+
+
+async def test_acquisition_selects_a_bounded_corpus_and_preserves_failures(
+    tmp_path: Path,
+) -> None:
+    papers = [
+        Paper(id=f"arxiv:{index}", title=f"Paper {index}", provider=SourceName.ARXIV)
+        for index in range(3)
+    ]
+    local = tmp_path / "paper.pdf"
+    local.write_bytes(b"%PDF-local")
+
+    class StubRetrieval:
+        max_papers_per_run = 2
+
+        async def retrieve(
+            self, selected: list[Paper], *, run_id: str | None = None
+        ) -> RetrievalResult:
+            assert run_id == "run-1"
+            paper_id = selected[0].id
+            if paper_id == "arxiv:1":
+                return RetrievalResult(
+                    outcomes=[
+                        RetrievalOutcome(paper_id=paper_id, downloaded=False, reason="no_pdf_url")
+                    ]
+                )
+            return RetrievalResult(
+                outcomes=[RetrievalOutcome(paper_id=paper_id, downloaded=True, path=local)]
+            )
+
+    state = ResearchState(
+        run_id="run-1",
+        goal="Study several real research papers",
+        candidates=[
+            ScoredPaper(paper=paper, score=1 - index / 10) for index, paper in enumerate(papers)
+        ],
+    )
+
+    update = await paper_acquisition_node(StubRetrieval())(state)  # type: ignore[arg-type]
+
+    assert [candidate.paper.id for candidate in update["candidates"]] == [
+        "arxiv:0",
+        "arxiv:1",
+        "arxiv:2",
+    ]
+    assert update["candidates"][0].paper.local_path == local
+    assert update["acquisition"].available == 2
+    assert update["acquisition"].failures[0].reason == "no_pdf_url"
 
 
 def a_plan(topic: str = "Agentic AI in healthcare") -> ResearchPlan:

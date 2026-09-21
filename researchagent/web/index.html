@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ResearchAgent</title>
+    <link rel="stylesheet" href="/app/styles.css" />
+  </head>
+  <body>
+    <header><a href="/app/">ResearchAgent</a><span>Evidence-backed research</span></header>
+    <main>
+      <section id="new-research" class="hero">
+        <p class="eyebrow">LOCAL RESEARCH WORKSPACE</p>
+        <h1>Ask the literature,<br />then inspect the evidence.</h1>
+        <p class="lede">Discover open papers, extract traceable evidence, and verify every finding.</p>
+        <form id="research-form">
+          <label for="goal">Research topic</label>
+          <textarea id="goal" required minlength="8" maxlength="2000" placeholder="How do multi-agent LLM systems fail, and what mitigations are supported by evidence?"></textarea>
+          <div class="form-row">
+            <label>Maximum questions <input id="max-questions" type="number" min="1" max="5" value="3" /></label>
+            <label>From year <input id="year-from" type="number" min="1900" max="2100" placeholder="Optional" /></label>
+            <button type="submit">Start research</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="run" class="hidden">
+        <div class="run-heading"><div><p class="eyebrow">RESEARCH RUN</p><h1 id="run-title"></h1></div><span id="run-status" class="status">Running</span></div>
+        <ol id="progress" class="progress"></ol>
+        <div id="error" class="error hidden"></div>
+        <div id="results" class="hidden">
+          <nav class="tabs"></nav>
+          <section id="overview" class="panel"></section>
+          <section id="papers" class="panel"></section>
+          <section id="evidence" class="panel"></section>
+          <section id="findings" class="panel"></section>
+          <section id="contradictions" class="panel"></section>
+          <section id="gaps" class="panel"></section>
+        </div>
+      </section>
+    </main>
+    <script src="/app/app.js"></script>
+  </body>
+</html>

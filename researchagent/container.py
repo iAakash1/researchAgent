@@ -76,6 +76,8 @@ from researchagent.services.knowledge import KnowledgeIntelligenceService, Relat
 from researchagent.services.knowledge.registry import build_extractors
 from researchagent.services.llm_service import LLMService
 from researchagent.services.ranking import HeuristicScorer
+from researchagent.services.research_run import ResearchRunService
+from researchagent.services.result import ResearchResultBuilder
 from researchagent.services.retrieval import KnowledgeIndexer
 from researchagent.services.retrieval.lexical import LexicalKnowledgeRetriever
 from researchagent.services.retrieval.registry import (
@@ -152,6 +154,8 @@ class Container:
     toolbox: ServiceToolbox
     audit_trail: AuditTrailBuilder
     reasoning_runner: ReasoningRunner
+    result_builder: ResearchResultBuilder
+    research_service: ResearchRunService
     workflow_runner: WorkflowRunner
 
     async def aclose(self) -> None:
@@ -201,6 +205,7 @@ def build_container(settings: Settings | None = None) -> Container:
         paper_repository,
         _resolve(sources_config.download_dir, settings.project_root),
         sources_config.retrieval,
+        event_bus=event_bus,
     )
 
     document_repository = JsonDocumentRepository(
@@ -352,6 +357,7 @@ def build_container(settings: Settings | None = None) -> Container:
     graph = build_research_graph(
         planner=planner,
         discovery=discovery_service,
+        retrieval=retrieval_service,
         documents=document_service,
         knowledge=knowledge_service,
         evidence=evidence_service,
@@ -366,6 +372,10 @@ def build_container(settings: Settings | None = None) -> Container:
         default_model=model_catalog.default,
         paper_sources=[source.name.value for source in paper_sources],
     )
+
+    workflow_runner = WorkflowRunner(graph, workflow_config)
+    result_builder = ResearchResultBuilder(bundle_repository, audit_trail)
+    research_service = ResearchRunService(workflow_runner, reasoning_runner, result_builder)
 
     return Container(
         settings=settings,
@@ -410,7 +420,9 @@ def build_container(settings: Settings | None = None) -> Container:
         toolbox=toolbox,
         audit_trail=audit_trail,
         reasoning_runner=reasoning_runner,
-        workflow_runner=WorkflowRunner(graph, workflow_config),
+        result_builder=result_builder,
+        research_service=research_service,
+        workflow_runner=workflow_runner,
     )
 
 

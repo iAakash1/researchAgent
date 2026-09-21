@@ -8,9 +8,12 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from researchagent.api.errors import register_exception_handlers
 from researchagent.api.routes import api_router
@@ -56,6 +59,13 @@ def create_app(settings: Settings | None = None, *, container: Container | None 
 
     register_exception_handlers(app)
     app.include_router(api_router)
+    web_dir = Path(__file__).resolve().parents[1] / "web"
+    app.mount("/app", StaticFiles(directory=web_dir, html=True), name="app")
+
+    @app.get("/", include_in_schema=False)
+    async def frontend() -> RedirectResponse:
+        return RedirectResponse(url="/app/")
+
     return app
 
 

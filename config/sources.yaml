@@ -30,6 +30,7 @@ ranking:
 
 retrieval:
   max_concurrent_downloads: 4
+  max_papers_per_run: 5
   skip_existing: true
 
 sources:

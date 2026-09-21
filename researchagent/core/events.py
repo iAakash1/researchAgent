@@ -42,6 +42,7 @@ class EventType(StrEnum):
 
     PAPER_DISCOVERED = "paper.discovered"
     PAPER_MERGED = "paper.merged"
+    PAPER_ACQUIRED = "paper.acquired"
     DISCOVERY_COMPLETED = "discovery.completed"
 
     DOCUMENT_LOADED = "document.loaded"
@@ -146,6 +147,13 @@ class PaperPayload(EventPayload):
     provider: str
     title: str | None = None
     merged_from: tuple[str, ...] = ()
+
+
+class AcquisitionPayload(EventPayload):
+    paper_id: str
+    available: bool
+    downloaded: bool = False
+    reason: str | None = None
 
 
 class DiscoveryPayload(EventPayload):

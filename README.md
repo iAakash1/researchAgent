@@ -235,8 +235,14 @@ make check                   # lint + typecheck + tests
 ```
 
 Start the Ollama app (or `ollama serve`) before `make models`. For the API, run
-`make dev` and check `http://localhost:8000/health/ready`. To run the full local
-pipeline, including the reviewer loop, use:
+`make dev`, check `http://localhost:8000/health/ready`, then open
+`http://localhost:8000/app/`. The browser starts a real run, streams workflow events,
+and displays acquired papers, evidence, disagreements, verified findings, and source
+locations. Discovered open-access PDFs are cached under
+`storage/papers/raw/downloaded/`; inaccessible papers are recorded and skipped.
+
+To run the same full local pipeline from the command line, including the reviewer loop,
+use:
 
 ```bash
 uv run python scripts/run_full_research.py \

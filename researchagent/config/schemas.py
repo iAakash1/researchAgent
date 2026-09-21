@@ -173,6 +173,7 @@ class DiscoverySettings(BaseModel):
 
 class RetrievalSettings(BaseModel):
     max_concurrent_downloads: int = Field(default=4, ge=1, le=16)
+    max_papers_per_run: int = Field(default=5, ge=1, le=25)
     skip_existing: bool = True
 
 
