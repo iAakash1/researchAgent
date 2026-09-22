@@ -159,6 +159,7 @@ class Container:
     workflow_runner: WorkflowRunner
 
     async def aclose(self) -> None:
+        await self.research_service.aclose()
         await self.llm_service.aclose()
         await self.embedding_model.aclose()
         await self.vector_store.aclose()
@@ -375,7 +376,9 @@ def build_container(settings: Settings | None = None) -> Container:
 
     workflow_runner = WorkflowRunner(graph, workflow_config)
     result_builder = ResearchResultBuilder(bundle_repository, audit_trail)
-    research_service = ResearchRunService(workflow_runner, reasoning_runner, result_builder)
+    research_service = ResearchRunService(
+        workflow_runner, reasoning_runner, result_builder, event_bus
+    )
 
     return Container(
         settings=settings,

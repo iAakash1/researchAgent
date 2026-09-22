@@ -178,8 +178,52 @@ async def test_results_are_ranked() -> None:
 
     result = await service([source]).discover(a_plan(queries=["metastable failures"]))
 
-    assert result.candidates[0].paper.title == "Metastable failures and overload"
-    assert result.candidates[0].score > result.candidates[-1].score
+    assert [candidate.paper.title for candidate in result.candidates] == [
+        "Metastable failures and overload"
+    ]
+
+
+async def test_irrelevant_detection_results_are_filtered_before_downloadability() -> None:
+    plan = ResearchPlan(
+        topic="Detecting deceptive online consumer reviews",
+        framing="A review of methods for identifying deceptive opinions and review manipulation.",
+        research_questions=[
+            ResearchQuestion(
+                id="RQ1",
+                question="Which methods detect deceptive online consumer reviews?",
+                rationale="The corpus must focus on opinion spam rather than generic detection.",
+                priority=QuestionPriority.HIGH,
+                keywords=["deceptive reviews", "opinion spam"],
+            )
+        ],
+        strategy=SearchStrategy(queries=["fake online reviews", "opinion spam detection"]),
+    )
+    source = FakeSource(
+        SourceName.OPENALEX,
+        [
+            paper(
+                "Opinion spam classification",
+                SourceName.OPENALEX,
+                pdf_url="https://example.test/reviews.pdf",
+            ),
+            paper(
+                "Alzheimer's disease detection using deep learning",
+                SourceName.OPENALEX,
+                pdf_url="https://example.test/alzheimers.pdf",
+            ),
+            paper(
+                "Medical image segmentation with diffusion models",
+                SourceName.OPENALEX,
+                pdf_url="https://example.test/images.pdf",
+            ),
+        ],
+    )
+
+    result = await service([source]).discover(plan, research_goal="Fake online review detection")
+
+    assert [candidate.paper.title for candidate in result.candidates] == [
+        "Opinion spam classification"
+    ]
 
 
 async def test_candidate_cap_is_applied() -> None:
@@ -227,8 +271,8 @@ async def test_require_retrievable_filters_metadata_only_papers() -> None:
     source = FakeSource(
         SourceName.ARXIV,
         [
-            paper("Metastable with pdf", SourceName.ARXIV, pdf_url="https://x/1.pdf"),
-            paper("Metastable without pdf", SourceName.ARXIV),
+            paper("Metastable failures with pdf", SourceName.ARXIV, pdf_url="https://x/1.pdf"),
+            paper("Metastable failures without pdf", SourceName.ARXIV),
         ],
     )
 
@@ -236,7 +280,7 @@ async def test_require_retrievable_filters_metadata_only_papers() -> None:
         a_plan(queries=["metastable"])
     )
 
-    assert [c.paper.title for c in result.candidates] == ["Metastable with pdf"]
+    assert [c.paper.title for c in result.candidates] == ["Metastable failures with pdf"]
 
 
 async def test_sources_are_queried_concurrently() -> None:

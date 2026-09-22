@@ -95,6 +95,8 @@ class ResearchResultBuilder:
                     year=candidate.paper.year,
                     url=candidate.paper.url,
                     score=candidate.score,
+                    relevance_score=candidate.relevance_score,
+                    relevance_decision=candidate.relevance_decision,
                     selected=candidate.paper.id in selected,
                     accessible=candidate.paper.local_path is not None,
                     processed=candidate.paper.id in processed,

@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from researchagent.models.reasoning import Citation, FindingStatus, ReviewDecision
 from researchagent.schemas.workflow import RunStatus
+from researchagent.services.ranking import RelevanceDecision
 
 
 class PaperResult(BaseModel):
@@ -15,6 +16,8 @@ class PaperResult(BaseModel):
     year: int | None = None
     url: str | None = None
     score: float
+    relevance_score: float
+    relevance_decision: RelevanceDecision
     selected: bool
     accessible: bool
     processed: bool
@@ -76,3 +79,15 @@ class ResearchResult(BaseModel):
     final_summary: str = ""
     failure: str | None = None
     history: tuple[str, ...] = Field(default_factory=tuple)
+
+
+class ResearchRunCreated(BaseModel):
+    run_id: str
+    status: RunStatus = RunStatus.RUNNING
+
+
+class ResearchRunSnapshot(BaseModel):
+    run_id: str
+    status: RunStatus
+    result: ResearchResult | None = None
+    error: str | None = None

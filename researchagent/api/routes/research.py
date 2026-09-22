@@ -2,22 +2,17 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 from collections.abc import AsyncIterator
-from contextlib import suppress
-from uuid import uuid4
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, Request, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from researchagent.api.dependencies import ContainerDep, ResearchRunServiceDep, WorkflowRunnerDep
-from researchagent.core.events import Event
+from researchagent.api.dependencies import ResearchRunServiceDep, WorkflowRunnerDep
 from researchagent.core.exceptions import RunNotFoundError, WorkflowExecutionError
-from researchagent.core.logging import get_logger
 from researchagent.models.research import ResearchPlan
-from researchagent.schemas.result import ResearchResult
+from researchagent.schemas.result import ResearchRunCreated, ResearchRunSnapshot
 from researchagent.schemas.workflow import (
     AcquisitionReport,
     DiscoveryReport,
@@ -33,7 +28,6 @@ from researchagent.schemas.workflow import (
 from researchagent.services.ranking import ScoredPaper
 
 router = APIRouter(prefix="/research", tags=["research"])
-logger = get_logger(__name__)
 
 
 class PlanRequest(BaseModel):
@@ -98,77 +92,51 @@ async def create_plan(request: PlanRequest, runner: WorkflowRunnerDep) -> PlanRe
     return PlanResponse.from_state(state)
 
 
-@router.post("/run", response_model=ResearchResult)
+@router.post("/run", response_model=ResearchRunCreated, status_code=status.HTTP_202_ACCEPTED)
 async def create_research_run(
     request: PlanRequest, service: ResearchRunServiceDep
-) -> ResearchResult:
-    """Run acquisition through reviewer checks and return the frontend result."""
-    return await service.run(
+) -> ResearchRunCreated:
+    """Create one background research run and return its stable identifier."""
+    run_id = service.start(
         request.goal,
         constraints=request.constraints,
         feedback=request.feedback,
         session_id=request.session_id,
     )
+    return ResearchRunCreated(run_id=run_id)
 
 
-@router.get("/results/{run_id}", response_model=ResearchResult)
-async def get_research_result(run_id: str, service: ResearchRunServiceDep) -> ResearchResult:
-    """Fetch a completed structured result while this API process is running."""
+@router.get("/results/{run_id}", response_model=ResearchRunSnapshot)
+async def get_research_result(run_id: str, service: ResearchRunServiceDep) -> ResearchRunSnapshot:
+    """Fetch the current status and optional final result for a run."""
     return service.get(run_id)
 
 
-@router.post("/run/stream")
+@router.get("/runs/{run_id}/stream")
 async def stream_research_run(
-    request: PlanRequest,
+    run_id: str,
+    request: Request,
     service: ResearchRunServiceDep,
-    container: ContainerDep,
+    after: int = Query(default=0, ge=0),
 ) -> StreamingResponse:
-    """Stream genuine workflow events, followed by the structured final result."""
-    run_id = str(uuid4())
+    """Attach to an existing run without creating or owning its task."""
+    service.get(run_id)
+    last_event_id = request.headers.get("last-event-id")
+    if last_event_id is not None and last_event_id.isdigit():
+        after = max(after, int(last_event_id))
 
     async def events() -> AsyncIterator[str]:
-        queue: asyncio.Queue[Event] = asyncio.Queue()
-
-        async def capture(event: Event) -> None:
-            if event.run_id == run_id:
-                await queue.put(event)
-
-        unsubscribe = container.event_bus.subscribe(None, capture)
-        task = asyncio.create_task(
-            service.run(
-                request.goal,
-                constraints=request.constraints,
-                feedback=request.feedback,
-                run_id=run_id,
-                session_id=request.session_id,
+        async for item in service.stream(run_id, after=after):
+            yield (
+                f"id: {item.sequence}\nevent: progress\ndata: {item.event.model_dump_json()}\n\n"
             )
-        )
-        try:
-            while not task.done():
-                try:
-                    event = await asyncio.wait_for(queue.get(), timeout=0.25)
-                except TimeoutError:
-                    continue
-                yield f"event: progress\ndata: {event.model_dump_json()}\n\n"
 
-            while not queue.empty():
-                event = queue.get_nowait()
-                yield f"event: progress\ndata: {event.model_dump_json()}\n\n"
-
-            try:
-                result = task.result()
-            except Exception as exc:
-                logger.exception("research_stream_failed", run_id=run_id)
-                payload = json.dumps({"run_id": run_id, "message": str(exc)})
-                yield f"event: error\ndata: {payload}\n\n"
-                return
-            yield f"event: result\ndata: {result.model_dump_json()}\n\n"
-        finally:
-            unsubscribe()
-            if not task.done():
-                task.cancel()
-                with suppress(asyncio.CancelledError):
-                    await task
+        finished = service.get(run_id)
+        if finished.result is not None:
+            yield f"event: result\ndata: {finished.result.model_dump_json()}\n\n"
+        elif finished.error is not None:
+            payload = json.dumps({"run_id": run_id, "message": finished.error})
+            yield f"event: failed\ndata: {payload}\n\n"
 
     return StreamingResponse(
         events(),

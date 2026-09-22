@@ -66,7 +66,7 @@ def make_agent(
 ) -> PlannerAgent:
     from researchagent.config.schemas import ModelSpec
 
-    spec = AgentSpec(retry=NO_RETRY, options=options or {})
+    spec = AgentSpec(prompt_version="v2", retry=NO_RETRY, options=options or {})
     llm = BoundLLM("reasoning", ModelSpec(model="fake-model"), provider)
     return PlannerAgent(llm, spec, prompt_library)
 
@@ -103,6 +103,8 @@ async def test_framing_and_strategy_are_separate_prompted_phases(
     # Phase 2 must see the questions phase 1 produced, or the strategy is unanchored.
     assert "RQ1" in strategy_prompt
     assert "Which agent architectures are used for clinical triage?" in strategy_prompt
+    assert "Agentic AI in healthcare" in strategy_prompt
+    assert "Generic words" in strategy_prompt
 
 
 async def test_questions_are_ordered_by_priority_and_capped(
@@ -260,4 +262,4 @@ def test_planner_is_registered_and_buildable(
     assert isinstance(agent, PlannerAgent)
     # Options in config/agents.yaml must satisfy the agent's own schema.
     assert PlannerOptions.model_validate(agent.spec.options).max_research_questions == 5
-    assert agent.prompt.version == "v1"
+    assert agent.prompt.version == "v2"

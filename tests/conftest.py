@@ -457,7 +457,9 @@ def container(
         audit_trail=audit_trail,
         reasoning_runner=reasoning_runner,
         result_builder=result_builder,
-        research_service=ResearchRunService(workflow_runner, reasoning_runner, result_builder),
+        research_service=ResearchRunService(
+            workflow_runner, reasoning_runner, result_builder, event_bus
+        ),
         workflow_runner=workflow_runner,
     )
 

@@ -160,6 +160,10 @@ class RankingConfig(BaseModel):
     recency_half_life_years: float = Field(default=4.0, gt=0.0)
     # Citation counts are power-law distributed; log-compress before normalising.
     citation_saturation: int = Field(default=500, ge=1)
+    # Topical relevance is a gate, separate from recency and citation quality.
+    direct_relevance_threshold: float = Field(default=0.6, ge=0.0, le=1.0)
+    related_relevance_threshold: float = Field(default=0.25, ge=0.0, le=1.0)
+    min_distinctive_matches: int = Field(default=2, ge=1, le=10)
 
 
 class DiscoverySettings(BaseModel):

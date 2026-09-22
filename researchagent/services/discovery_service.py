@@ -32,7 +32,7 @@ from researchagent.models.library import PaperRecord
 from researchagent.models.paper import Paper, SourceName
 from researchagent.models.research import ResearchPlan
 from researchagent.services.deduplication import PaperDeduplicator
-from researchagent.services.ranking import PaperScorer, ScoredPaper
+from researchagent.services.ranking import PaperScorer, RelevanceDecision, ScoredPaper
 
 logger = get_logger(__name__)
 
@@ -88,7 +88,13 @@ class DiscoveryService:
     def source_names(self) -> list[SourceName]:
         return [source.name for source in self._sources]
 
-    async def discover(self, plan: ResearchPlan, *, run_id: str | None = None) -> DiscoveryResult:
+    async def discover(
+        self,
+        plan: ResearchPlan,
+        *,
+        research_goal: str | None = None,
+        run_id: str | None = None,
+    ) -> DiscoveryResult:
         if not self._sources:
             logger.warning("discovery_no_sources_enabled")
             return DiscoveryResult()
@@ -107,15 +113,18 @@ class DiscoveryService:
         papers = [paper for _, source_papers in outcomes for paper in source_papers]
         reports = [report for report, _ in outcomes]
 
-        if self._settings.require_retrievable:
-            papers = [paper for paper in papers if paper.is_retrievable]
-
         deduplicated = self._deduplicator.deduplicate(papers)
-        candidates = self._scorer.rank(
-            deduplicated.papers, plan, limit=self._settings.max_candidates
+        ranked = self._scorer.rank(
+            deduplicated.papers, plan, research_goal=research_goal or plan.topic
         )
-        if self._settings.require_retrievable is False:
-            candidates = [c for c in candidates if c.score >= 0.0]
+        candidates = [
+            candidate
+            for candidate in ranked
+            if candidate.relevance_decision is RelevanceDecision.DIRECT
+        ]
+        if self._settings.require_retrievable:
+            candidates = [candidate for candidate in candidates if candidate.paper.is_retrievable]
+        candidates = candidates[: self._settings.max_candidates]
 
         if self._repository is not None:
             await self._persist(candidates, run_id)

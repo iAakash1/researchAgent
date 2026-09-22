@@ -43,6 +43,7 @@ from researchagent.services.discovery_service import DiscoveryService
 from researchagent.services.document.pipeline import DocumentIntelligenceService
 from researchagent.services.evidence.pipeline import EvidenceIntelligenceService
 from researchagent.services.knowledge.pipeline import KnowledgeIntelligenceService
+from researchagent.services.ranking import RelevanceDecision
 from researchagent.services.retrieval_service import RetrievalResult, RetrievalService
 from researchagent.workflows.edges import CONTINUE, HALT, halt_on_failure
 from researchagent.workflows.guards import (
@@ -83,7 +84,7 @@ def discovery_node(discovery: DiscoveryService) -> ServiceNode:
     async def handler(state: ResearchState) -> StateUpdate:
         # `requires_plan` has already run; this narrows the type for the checker.
         assert state.plan is not None  # noqa: S101
-        result = await discovery.discover(state.plan, run_id=state.run_id)
+        result = await discovery.discover(state.plan, research_goal=state.goal, run_id=state.run_id)
         return {
             "candidates": result.candidates,
             "discovery": DiscoveryReport(
@@ -105,19 +106,27 @@ def discovery_node(discovery: DiscoveryService) -> ServiceNode:
 
 def paper_acquisition_node(service: RetrievalService) -> ServiceNode:
     async def handler(state: ResearchState) -> StateUpdate:
+        attempted = []
         selected = []
         outcomes = []
         available = 0
         # Keep walking the ranking when a paper is inaccessible, while bounding network
         # work. The configured limit is the usable corpus target, not an assumption that
         # every publisher link will work.
-        for candidate in state.candidates[: service.max_papers_per_run * 3]:
+        directly_relevant = [
+            candidate
+            for candidate in state.candidates
+            if candidate.relevance_decision is RelevanceDecision.DIRECT
+        ]
+        for candidate in directly_relevant[: service.max_papers_per_run * 3]:
             if available >= service.max_papers_per_run:
                 break
-            selected.append(candidate)
+            attempted.append(candidate)
             result = await service.retrieve([candidate.paper], run_id=state.run_id)
             outcomes.extend(result.outcomes)
-            available += sum(1 for outcome in result.outcomes if outcome.path)
+            if any(outcome.path for outcome in result.outcomes):
+                selected.append(candidate)
+                available += 1
 
         result = RetrievalResult(outcomes=outcomes)
         paths = {outcome.paper_id: outcome.path for outcome in result.outcomes if outcome.path}
@@ -131,7 +140,7 @@ def paper_acquisition_node(service: RetrievalService) -> ServiceNode:
             )
             if candidate.paper.id in paths
             else candidate
-            for candidate in selected
+            for candidate in attempted
         ]
         acquired_by_id = {candidate.paper.id: candidate for candidate in acquired}
         candidates = [
