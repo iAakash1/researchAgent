@@ -27,9 +27,13 @@ ranking:
     citations: 0.10
   recency_half_life_years: 4.0
   citation_saturation: 500
+  direct_relevance_threshold: 0.6
+  related_relevance_threshold: 0.25
+  min_distinctive_matches: 2
 
 retrieval:
   max_concurrent_downloads: 4
+  max_papers_per_run: 5
   skip_existing: true
 
 sources:

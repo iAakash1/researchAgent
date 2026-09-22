@@ -16,7 +16,7 @@ defaults:
 agents:
   planner:
     model: reasoning
-    prompt_version: v1
+    prompt_version: v2
     options:
       min_research_questions: 3
       max_research_questions: 5

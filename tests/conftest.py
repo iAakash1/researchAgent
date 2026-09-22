@@ -78,6 +78,8 @@ from researchagent.services.knowledge import KnowledgeIntelligenceService, Relat
 from researchagent.services.knowledge.registry import build_extractors
 from researchagent.services.llm_service import BoundLLM, LLMService
 from researchagent.services.ranking import HeuristicScorer
+from researchagent.services.research_run import ResearchRunService
+from researchagent.services.result import ResearchResultBuilder
 from researchagent.services.retrieval import KnowledgeIndexer
 from researchagent.services.retrieval.lexical import LexicalKnowledgeRetriever
 from researchagent.services.retrieval.registry import build_retrieval_arms, select_active
@@ -390,6 +392,13 @@ def container(
         checkpointer=build_checkpointer(workflow_config.checkpointer),
     )
 
+    workflow_runner = WorkflowRunner(graph, workflow_config)
+    reasoning_runner = ReasoningRunner(
+        agent_for, bundle_repository, reasoning_config, event_bus=event_bus
+    )
+    audit_trail = AuditTrailBuilder(bundle_repository, evidence_repository)
+    result_builder = ResearchResultBuilder(bundle_repository, audit_trail)
+
     return Container(
         settings=settings,
         config_loader=config_loader,
@@ -445,11 +454,13 @@ def container(
         # every agent is faked, so the loop runs offline and deterministically.
         reasoning_config=reasoning_config,
         toolbox=toolbox,
-        audit_trail=AuditTrailBuilder(bundle_repository, evidence_repository),
-        reasoning_runner=ReasoningRunner(
-            agent_for, bundle_repository, reasoning_config, event_bus=event_bus
+        audit_trail=audit_trail,
+        reasoning_runner=reasoning_runner,
+        result_builder=result_builder,
+        research_service=ResearchRunService(
+            workflow_runner, reasoning_runner, result_builder, event_bus
         ),
-        workflow_runner=WorkflowRunner(graph, workflow_config),
+        workflow_runner=workflow_runner,
     )
 
 

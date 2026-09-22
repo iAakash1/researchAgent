@@ -10,7 +10,7 @@ from researchagent.models.research import (
     ResearchQuestion,
     SearchStrategy,
 )
-from researchagent.services.ranking import HeuristicScorer
+from researchagent.services.ranking import HeuristicScorer, RelevanceDecision
 
 THIS_YEAR = datetime.now(UTC).year
 
@@ -29,6 +29,25 @@ def a_plan() -> ResearchPlan:
             )
         ],
         strategy=SearchStrategy(queries=["metastable failure distributed systems"]),
+    )
+
+
+def fake_review_plan() -> ResearchPlan:
+    return ResearchPlan(
+        topic="Detecting deceptive online consumer reviews",
+        framing="A review of methods for identifying deceptive opinions and review manipulation.",
+        research_questions=[
+            ResearchQuestion(
+                id="RQ1",
+                question="Which methods detect deceptive online consumer reviews?",
+                rationale="The corpus must focus on opinion spam rather than generic detection.",
+                priority=QuestionPriority.HIGH,
+                keywords=["deceptive reviews", "opinion spam", "review manipulation"],
+            )
+        ],
+        strategy=SearchStrategy(
+            queries=["fake online reviews", "deceptive opinion spam detection"]
+        ),
     )
 
 
@@ -123,8 +142,12 @@ def test_citation_influence_saturates() -> None:
 
 def test_weights_change_the_outcome() -> None:
     plan = a_plan()
-    recent_irrelevant = paper("Pottery glazing techniques", year=THIS_YEAR)
-    old_relevant = paper("Metastable failures in distributed systems", year=THIS_YEAR - 15)
+    recent_relevant = paper(
+        "Metastable failures in distributed systems recent study", year=THIS_YEAR
+    )
+    old_relevant = paper(
+        "Metastable failures in distributed systems legacy study", year=THIS_YEAR - 15
+    )
 
     recency_only = HeuristicScorer(
         RankingConfig(
@@ -133,9 +156,9 @@ def test_weights_change_the_outcome() -> None:
             )
         )
     )
-    ranked = recency_only.rank([old_relevant, recent_irrelevant], plan)
+    ranked = recency_only.rank([old_relevant, recent_relevant], plan)
 
-    assert ranked[0].paper.title == "Pottery glazing techniques"
+    assert ranked[0].paper.title == "Metastable failures in distributed systems recent study"
 
 
 def test_rank_orders_and_limits() -> None:
@@ -177,3 +200,79 @@ def test_score_stays_within_bounds() -> None:
     )
 
     assert 0.0 <= scored.score <= 1.0
+
+
+def test_fake_review_relevance_rejects_unrelated_detection_papers() -> None:
+    scorer = HeuristicScorer()
+    plan = fake_review_plan()
+    goal = "Fake online review detection"
+
+    relevant = scorer.score(
+        paper(
+            "Fake online review detection using textual and behavioral signals",
+            abstract="We identify deceptive consumer reviews on commerce platforms.",
+        ),
+        plan,
+        research_goal=goal,
+    )
+    alzheimers = scorer.score(
+        paper("Alzheimer's disease detection using deep learning"),
+        plan,
+        research_goal=goal,
+    )
+    medical_images = scorer.score(
+        paper("Medical image segmentation with diffusion models"),
+        plan,
+        research_goal=goal,
+    )
+    personality = scorer.score(
+        paper("Personality traits detection using neural networks"),
+        plan,
+        research_goal=goal,
+    )
+
+    assert relevant.relevance_decision is RelevanceDecision.DIRECT
+    assert relevant.relevance_score >= 0.6
+    assert alzheimers.relevance_decision is RelevanceDecision.IRRELEVANT
+    assert medical_images.relevance_decision is RelevanceDecision.IRRELEVANT
+    assert personality.relevance_decision is RelevanceDecision.IRRELEVANT
+    assert relevant.relevance_score > alzheimers.relevance_score
+    assert relevant.relevance_score > medical_images.relevance_score
+
+
+def test_generic_method_overlap_is_not_topic_relevance() -> None:
+    scored = HeuristicScorer().score(
+        paper(
+            "Detection and classification using deep machine learning",
+            keywords=["detection", "machine learning", "deep learning"],
+        ),
+        fake_review_plan(),
+        research_goal="Fake online review detection",
+    )
+
+    assert scored.relevance_score == 0
+    assert scored.relevance_decision is RelevanceDecision.IRRELEVANT
+
+
+def test_plan_concepts_allow_semantically_relevant_alternate_terminology() -> None:
+    scored = HeuristicScorer().score(
+        paper(
+            "Opinion spam classification with behavioral signals",
+            abstract="We identify deceptive user-generated product feedback.",
+        ),
+        fake_review_plan(),
+        research_goal="Fake online review detection",
+    )
+
+    assert scored.relevance_decision is RelevanceDecision.DIRECT
+    assert scored.relevance_signals["concept_alignment"] == 1
+
+
+def test_broad_fake_news_detection_is_related_but_not_direct() -> None:
+    scored = HeuristicScorer().score(
+        paper("Fake news detection using transformer models"),
+        fake_review_plan(),
+        research_goal="Fake online review detection",
+    )
+
+    assert scored.relevance_decision is RelevanceDecision.RELATED

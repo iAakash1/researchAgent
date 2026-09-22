@@ -15,6 +15,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 from researchagent.config.schemas import RetrievalSettings
+from researchagent.core.events import AcquisitionPayload, EventBus, EventType
 from researchagent.core.exceptions import PaperNotFoundError, PaperSourceError
 from researchagent.core.interfaces.paper_source import PaperSource
 from researchagent.core.interfaces.repositories import PaperRepository
@@ -51,13 +52,20 @@ class RetrievalService:
         repository: PaperRepository,
         download_dir: Path,
         settings: RetrievalSettings | None = None,
+        *,
+        event_bus: EventBus | None = None,
     ) -> None:
         self._sources = sources
         self._repository = repository
         self._download_dir = download_dir
         self._settings = settings or RetrievalSettings()
+        self._event_bus = event_bus
 
-    async def retrieve(self, papers: list[Paper]) -> RetrievalResult:
+    @property
+    def max_papers_per_run(self) -> int:
+        return self._settings.max_papers_per_run
+
+    async def retrieve(self, papers: list[Paper], *, run_id: str | None = None) -> RetrievalResult:
         semaphore = asyncio.Semaphore(self._settings.max_concurrent_downloads)
 
         async def guarded(paper: Paper) -> RetrievalOutcome:
@@ -65,6 +73,19 @@ class RetrievalService:
                 return await self._retrieve_one(paper)
 
         outcomes = await asyncio.gather(*(guarded(paper) for paper in papers))
+        if self._event_bus is not None:
+            for outcome in outcomes:
+                await self._event_bus.emit(
+                    EventType.PAPER_ACQUIRED,
+                    AcquisitionPayload(
+                        paper_id=outcome.paper_id,
+                        available=outcome.path is not None,
+                        downloaded=outcome.downloaded,
+                        reason=outcome.reason,
+                    ),
+                    run_id=run_id,
+                    source=self.__class__.__name__,
+                )
         result = RetrievalResult(outcomes=list(outcomes))
         logger.info(
             "retrieval_complete",

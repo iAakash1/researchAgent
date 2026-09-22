@@ -25,6 +25,7 @@ class WorkflowStage(StrEnum):
 
     PLANNING = "planning"
     DISCOVERY = "discovery"
+    ACQUISITION = "acquisition"
     DOCUMENT_INTELLIGENCE = "document_intelligence"
     KNOWLEDGE_EXTRACTION = "knowledge_extraction"
     EVIDENCE_INTELLIGENCE = "evidence_intelligence"
@@ -92,6 +93,23 @@ class DiscoveryReport(BaseModel):
     papers_returned: int = 0
     duplicates_removed: int = 0
     candidates: int = 0
+
+
+class PaperAcquisitionFailure(BaseModel):
+    paper_id: str
+    reason: str
+
+
+class AcquisitionReport(BaseModel):
+    """Which ranked papers became local documents and why the others did not."""
+
+    selected: int = 0
+    available: int = 0
+    downloaded: int = 0
+    reused: int = 0
+    failed: int = 0
+    selected_ids: tuple[str, ...] = ()
+    failures: tuple[PaperAcquisitionFailure, ...] = ()
 
 
 class DocumentReport(BaseModel):
@@ -168,6 +186,7 @@ class ResearchState(BaseModel):
     # the run's shortlist so later stages need no second lookup.
     candidates: list[ScoredPaper] = Field(default_factory=list)
     discovery: DiscoveryReport | None = None
+    acquisition: AcquisitionReport | None = None
     # Canonical documents are large; state carries the per-paper verdicts and the
     # documents themselves live in the document repository.
     documents: DocumentReport | None = None

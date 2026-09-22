@@ -51,6 +51,7 @@ class PlannerPrompt:
             Message.user(
                 self._template.render(
                     "strategy",
+                    goal=payload.goal.strip(),
                     topic=framing.topic.strip(),
                     framing=framing.framing.strip(),
                     questions_block=self._questions_block(questions),

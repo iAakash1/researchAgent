@@ -17,6 +17,7 @@ from researchagent.services.discovery_service import DiscoveryService
 from researchagent.services.graph.builder import GraphBuilder
 from researchagent.services.graph.queries import GraphQueries
 from researchagent.services.llm_service import LLMService
+from researchagent.services.research_run import ResearchRunService
 from researchagent.services.retrieval_service import RetrievalService
 from researchagent.workflows.runner import WorkflowRunner
 
@@ -57,6 +58,12 @@ def get_retrieval_service(
     return container.retrieval_service
 
 
+def get_research_service(
+    container: Annotated[Container, Depends(get_container)],
+) -> ResearchRunService:
+    return container.research_service
+
+
 ContainerDep = Annotated[Container, Depends(get_container)]
 SettingsDep = Annotated[Settings, Depends(get_settings_dep)]
 LLMServiceDep = Annotated[LLMService, Depends(get_llm_service)]
@@ -64,6 +71,7 @@ WorkflowRunnerDep = Annotated[WorkflowRunner, Depends(get_workflow_runner)]
 PaperRepositoryDep = Annotated[PaperRepository, Depends(get_paper_repository)]
 DiscoveryServiceDep = Annotated[DiscoveryService, Depends(get_discovery_service)]
 RetrievalServiceDep = Annotated[RetrievalService, Depends(get_retrieval_service)]
+ResearchRunServiceDep = Annotated[ResearchRunService, Depends(get_research_service)]
 
 
 def get_graph_repository(

@@ -5,15 +5,16 @@ from __future__ import annotations
 import json
 from collections.abc import AsyncIterator
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, Request, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from researchagent.api.dependencies import WorkflowRunnerDep
+from researchagent.api.dependencies import ResearchRunServiceDep, WorkflowRunnerDep
 from researchagent.core.exceptions import RunNotFoundError, WorkflowExecutionError
-from researchagent.core.logging import get_logger
 from researchagent.models.research import ResearchPlan
+from researchagent.schemas.result import ResearchRunCreated, ResearchRunSnapshot
 from researchagent.schemas.workflow import (
+    AcquisitionReport,
     DiscoveryReport,
     DocumentReport,
     EvidenceReport,
@@ -27,7 +28,6 @@ from researchagent.schemas.workflow import (
 from researchagent.services.ranking import ScoredPaper
 
 router = APIRouter(prefix="/research", tags=["research"])
-logger = get_logger(__name__)
 
 
 class PlanRequest(BaseModel):
@@ -47,6 +47,7 @@ class PlanResponse(BaseModel):
     documents: DocumentReport | None = None
     knowledge: KnowledgeReport | None = None
     evidence: EvidenceReport | None = None
+    acquisition: AcquisitionReport | None = None
     history: list[StageRecord]
     failure: StageFailure | None = None
 
@@ -61,6 +62,7 @@ class PlanResponse(BaseModel):
             documents=state.documents,
             knowledge=state.knowledge,
             evidence=state.evidence,
+            acquisition=state.acquisition,
             history=state.history,
             failure=state.failure,
         )
@@ -88,6 +90,59 @@ async def create_plan(request: PlanRequest, runner: WorkflowRunnerDep) -> PlanRe
         )
 
     return PlanResponse.from_state(state)
+
+
+@router.post("/run", response_model=ResearchRunCreated, status_code=status.HTTP_202_ACCEPTED)
+async def create_research_run(
+    request: PlanRequest, service: ResearchRunServiceDep
+) -> ResearchRunCreated:
+    """Create one background research run and return its stable identifier."""
+    run_id = service.start(
+        request.goal,
+        constraints=request.constraints,
+        feedback=request.feedback,
+        session_id=request.session_id,
+    )
+    return ResearchRunCreated(run_id=run_id)
+
+
+@router.get("/results/{run_id}", response_model=ResearchRunSnapshot)
+async def get_research_result(run_id: str, service: ResearchRunServiceDep) -> ResearchRunSnapshot:
+    """Fetch the current status and optional final result for a run."""
+    return service.get(run_id)
+
+
+@router.get("/runs/{run_id}/stream")
+async def stream_research_run(
+    run_id: str,
+    request: Request,
+    service: ResearchRunServiceDep,
+    after: int = Query(default=0, ge=0),
+) -> StreamingResponse:
+    """Attach to an existing run without creating or owning its task."""
+    service.get(run_id)
+    last_event_id = request.headers.get("last-event-id")
+    if last_event_id is not None and last_event_id.isdigit():
+        after = max(after, int(last_event_id))
+
+    async def events() -> AsyncIterator[str]:
+        async for item in service.stream(run_id, after=after):
+            yield (
+                f"id: {item.sequence}\nevent: progress\ndata: {item.event.model_dump_json()}\n\n"
+            )
+
+        finished = service.get(run_id)
+        if finished.result is not None:
+            yield f"event: result\ndata: {finished.result.model_dump_json()}\n\n"
+        elif finished.error is not None:
+            payload = json.dumps({"run_id": run_id, "message": finished.error})
+            yield f"event: failed\ndata: {payload}\n\n"
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.post("/plan/stream")

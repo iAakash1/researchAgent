@@ -29,11 +29,13 @@ from researchagent.agents.planner.schemas import PlannerInput, PlannerOutput
 from researchagent.core.logging import get_logger
 from researchagent.schemas.validated import DocumentBatchResult
 from researchagent.schemas.workflow import (
+    AcquisitionReport,
     DiscoveryReport,
     DocumentFailure,
     DocumentReport,
     EvidenceReport,
     KnowledgeReport,
+    PaperAcquisitionFailure,
     ResearchState,
     WorkflowStage,
 )
@@ -41,6 +43,8 @@ from researchagent.services.discovery_service import DiscoveryService
 from researchagent.services.document.pipeline import DocumentIntelligenceService
 from researchagent.services.evidence.pipeline import EvidenceIntelligenceService
 from researchagent.services.knowledge.pipeline import KnowledgeIntelligenceService
+from researchagent.services.ranking import RelevanceDecision
+from researchagent.services.retrieval_service import RetrievalResult, RetrievalService
 from researchagent.workflows.edges import CONTINUE, HALT, halt_on_failure
 from researchagent.workflows.guards import (
     requires_candidates,
@@ -80,7 +84,7 @@ def discovery_node(discovery: DiscoveryService) -> ServiceNode:
     async def handler(state: ResearchState) -> StateUpdate:
         # `requires_plan` has already run; this narrows the type for the checker.
         assert state.plan is not None  # noqa: S101
-        result = await discovery.discover(state.plan, run_id=state.run_id)
+        result = await discovery.discover(state.plan, research_goal=state.goal, run_id=state.run_id)
         return {
             "candidates": result.candidates,
             "discovery": DiscoveryReport(
@@ -100,9 +104,86 @@ def discovery_node(discovery: DiscoveryService) -> ServiceNode:
     )
 
 
+def paper_acquisition_node(service: RetrievalService) -> ServiceNode:
+    async def handler(state: ResearchState) -> StateUpdate:
+        attempted = []
+        selected = []
+        outcomes = []
+        available = 0
+        # Keep walking the ranking when a paper is inaccessible, while bounding network
+        # work. The configured limit is the usable corpus target, not an assumption that
+        # every publisher link will work.
+        directly_relevant = [
+            candidate
+            for candidate in state.candidates
+            if candidate.relevance_decision is RelevanceDecision.DIRECT
+        ]
+        for candidate in directly_relevant[: service.max_papers_per_run * 3]:
+            if available >= service.max_papers_per_run:
+                break
+            attempted.append(candidate)
+            result = await service.retrieve([candidate.paper], run_id=state.run_id)
+            outcomes.extend(result.outcomes)
+            if any(outcome.path for outcome in result.outcomes):
+                selected.append(candidate)
+                available += 1
+
+        result = RetrievalResult(outcomes=outcomes)
+        paths = {outcome.paper_id: outcome.path for outcome in result.outcomes if outcome.path}
+        acquired = [
+            candidate.model_copy(
+                update={
+                    "paper": candidate.paper.model_copy(
+                        update={"local_path": paths[candidate.paper.id]}
+                    )
+                }
+            )
+            if candidate.paper.id in paths
+            else candidate
+            for candidate in attempted
+        ]
+        acquired_by_id = {candidate.paper.id: candidate for candidate in acquired}
+        candidates = [
+            acquired_by_id.get(candidate.paper.id, candidate) for candidate in state.candidates
+        ]
+        failures = tuple(
+            PaperAcquisitionFailure(
+                paper_id=outcome.paper_id, reason=outcome.reason or "unavailable"
+            )
+            for outcome in result.outcomes
+            if outcome.path is None
+        )
+        return {
+            "candidates": candidates,
+            "acquisition": AcquisitionReport(
+                selected=len(selected),
+                available=len(paths),
+                downloaded=result.downloaded,
+                reused=sum(
+                    1 for outcome in result.outcomes if outcome.path and not outcome.downloaded
+                ),
+                failed=len(failures),
+                selected_ids=tuple(candidate.paper.id for candidate in selected),
+                failures=failures,
+            ),
+        }
+
+    return ServiceNode(
+        WorkflowStage.ACQUISITION,
+        "retrieval_service",
+        handler,
+        guards=[run_not_failed(), requires_candidates()],
+    )
+
+
 def document_intelligence_node(service: DocumentIntelligenceService) -> ServiceNode:
     async def handler(state: ResearchState) -> StateUpdate:
-        papers = [candidate.paper for candidate in state.candidates]
+        selected = set(state.acquisition.selected_ids if state.acquisition else ())
+        papers = [
+            candidate.paper
+            for candidate in state.candidates
+            if not selected or candidate.paper.id in selected
+        ]
         result: DocumentBatchResult = await service.process(papers, run_id=state.run_id)
 
         return {
@@ -205,6 +286,7 @@ def build_research_graph(
     *,
     planner: BaseAgent[Any, Any],
     discovery: DiscoveryService,
+    retrieval: RetrievalService | None = None,
     documents: DocumentIntelligenceService,
     knowledge: KnowledgeIntelligenceService,
     evidence: EvidenceIntelligenceService,
@@ -215,6 +297,8 @@ def build_research_graph(
 
     graph.add_node(WorkflowStage.PLANNING.value, planning_node(planner))
     graph.add_node(WorkflowStage.DISCOVERY.value, discovery_node(discovery))
+    if retrieval is not None:
+        graph.add_node(WorkflowStage.ACQUISITION.value, paper_acquisition_node(retrieval))
     graph.add_node(WorkflowStage.DOCUMENT_INTELLIGENCE.value, document_intelligence_node(documents))
     graph.add_node(WorkflowStage.KNOWLEDGE_EXTRACTION.value, knowledge_extraction_node(knowledge))
     graph.add_node(WorkflowStage.EVIDENCE_INTELLIGENCE.value, evidence_intelligence_node(evidence))
@@ -225,11 +309,22 @@ def build_research_graph(
         halt_on_failure,
         {CONTINUE: WorkflowStage.DISCOVERY.value, HALT: END},
     )
+    after_discovery = (
+        WorkflowStage.ACQUISITION.value
+        if retrieval is not None
+        else WorkflowStage.DOCUMENT_INTELLIGENCE.value
+    )
     graph.add_conditional_edges(
         WorkflowStage.DISCOVERY.value,
         halt_on_failure,
-        {CONTINUE: WorkflowStage.DOCUMENT_INTELLIGENCE.value, HALT: END},
+        {CONTINUE: after_discovery, HALT: END},
     )
+    if retrieval is not None:
+        graph.add_conditional_edges(
+            WorkflowStage.ACQUISITION.value,
+            halt_on_failure,
+            {CONTINUE: WorkflowStage.DOCUMENT_INTELLIGENCE.value, HALT: END},
+        )
     graph.add_conditional_edges(
         WorkflowStage.DOCUMENT_INTELLIGENCE.value,
         halt_on_failure,
