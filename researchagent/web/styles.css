@@ -17,13 +17,14 @@ button:disabled { opacity:.55; cursor:wait; }
 .hidden { display:none!important; } .run-heading { display:flex; gap:20px; justify-content:space-between; align-items:flex-start; }
 .run-heading h1 { font-size:38px; max-width:800px; } .status { padding:7px 13px; border-radius:99px; background:var(--pale); color:var(--green); font-weight:750; }
 .progress { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; padding:0; margin:30px 0 42px; list-style:none; }
-.progress li { border-top:3px solid var(--line); color:var(--muted); padding-top:8px; font-size:13px; } .progress li.active,.progress li.done { border-color:var(--green); color:var(--ink); } .progress li.active { font-weight:800; }
+.progress li { border-top:3px solid var(--line); color:var(--muted); padding-top:8px; font-size:13px; } .progress li.active,.progress li.done { border-color:var(--green); color:var(--ink); } .progress li.active,.progress li.failed { font-weight:800; }.progress li.failed { border-color:#b33b2e; color:#8d2e24; }
 .tabs { display:flex; flex-wrap:wrap; gap:8px; border-bottom:1px solid var(--line); padding-bottom:12px; }
 .tabs a { color:var(--green); text-decoration:none; padding:5px 9px; }
 .panel { padding:32px 0; border-bottom:1px solid var(--line); }
 .metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; } .metric,.card { background:var(--card); border:1px solid var(--line); border-radius:9px; padding:18px; }
 .metric strong { display:block; font:600 30px Georgia,serif; }.grid { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
-.card h3 { margin:0 0 8px; font-size:19px; }.meta,.citation { color:var(--muted); font-size:13px; }.quote { border-left:3px solid var(--green); padding-left:14px; }
+.model-summary { display:flex; flex-wrap:wrap; gap:8px 18px; margin:16px 0 26px; color:var(--muted); font-size:13px; }.model-summary strong { color:var(--ink); }
+.card h3 { margin:0 0 8px; font-size:19px; }.card h3 a,.paper-link { color:var(--green); }.paper-link { margin-left:9px; font-size:13px; font-weight:750; }.meta,.citation { color:var(--muted); font-size:13px; }.quote { border-left:3px solid var(--green); padding-left:14px; }
 .badge { display:inline-block; border-radius:99px; background:var(--pale); color:var(--green); padding:3px 8px; font-size:12px; font-weight:800; }.badge.warn { background:#f5e8ce; color:var(--amber); }
 .error { background:#f9e2df; border:1px solid #d49c94; border-radius:8px; padding:18px; }
 @media(max-width:760px){ main{padding-top:40px}.form-row,.metrics,.grid,.progress{grid-template-columns:1fr}.run-heading{display:block}header span{display:none} }

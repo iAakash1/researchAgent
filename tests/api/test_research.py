@@ -147,6 +147,9 @@ async def test_frontend_is_served_by_the_api(client: AsyncClient) -> None:
     assert response.status_code == 200
     assert "ResearchAgent" in response.text
     javascript = (await client.get("/app/app.js")).text
+    progress_module = await client.get("/app/progress.js")
+    assert progress_module.status_code == 200
+    assert "classesAt" in progress_module.text
     assert 'fetch("/research/run"' in javascript
     assert "/research/runs/${encodeURIComponent(run.runId)}/stream" in javascript
     assert "researchagent.activeRun" in javascript
@@ -154,6 +157,12 @@ async def test_frontend_is_served_by_the_api(client: AsyncClient) -> None:
     assert "if(index<highestStageIndex||index<0)return" in javascript
     assert 'phaseByEvent[item.type]||"Planning"' not in javascript
     assert "stageIndex" in javascript
+    assert "paper.source_url" in javascript
+    assert 'target="_blank" rel="noopener noreferrer"' in javascript
+    assert '["http:","https:"].includes(url.protocol)' in javascript
+    assert "paper.pdf_url" in javascript
+    assert "phaseForStage(result.progress_stage)" in javascript
+    assert 'result.status==="failed"' in javascript
 
 
 async def test_reconnecting_to_stream_does_not_create_another_run(container: Container) -> None:
@@ -215,4 +224,58 @@ async def test_reconnecting_to_stream_does_not_create_another_run(container: Con
     assert "event: result" in first_stream.text
     assert "event: progress" not in reconnected.text
     assert "event: result" in reconnected.text
+    assert service.start_calls == 1
+
+
+async def test_failed_result_replays_its_actual_stage_without_starting_again(
+    container: Container,
+) -> None:
+    expected = ResearchResult(
+        run_id="failed-run",
+        research_goal=GOAL,
+        status=RunStatus.FAILED,
+        progress_stage="verification",
+        failure="Verification exhausted its retry policy.",
+    )
+
+    class StubResearchService:
+        start_calls = 0
+
+        def start(self, goal: str, **_: object) -> str:
+            assert goal == GOAL
+            self.start_calls += 1
+            return expected.run_id
+
+        def get(self, run_id: str) -> ResearchRunSnapshot:
+            assert run_id == expected.run_id
+            return ResearchRunSnapshot(
+                run_id=run_id,
+                status=RunStatus.FAILED,
+                result=expected,
+            )
+
+        async def stream(self, run_id: str, *, after: int = 0) -> AsyncIterator[SequencedRunEvent]:
+            assert run_id == expected.run_id
+            assert after >= 0
+            if False:
+                yield
+
+    service = StubResearchService()
+    app = create_app(container=container)
+    app.dependency_overrides[get_research_service] = lambda: service
+    transport = ASGITransport(app=app)
+    async with (
+        AsyncClient(transport=transport, base_url="http://test") as http_client,
+        app.router.lifespan_context(app),
+    ):
+        created = await http_client.post("/research/run", json={"goal": GOAL})
+        refreshed = await http_client.get("/research/results/failed-run")
+        replayed = await http_client.get("/research/runs/failed-run/stream?after=99")
+
+    assert created.status_code == 202
+    assert refreshed.json()["result"]["status"] == "failed"
+    assert refreshed.json()["result"]["progress_stage"] == "verification"
+    assert '"status":"failed"' in replayed.text
+    assert '"progress_stage":"verification"' in replayed.text
+    assert "event: result" in replayed.text
     assert service.start_calls == 1

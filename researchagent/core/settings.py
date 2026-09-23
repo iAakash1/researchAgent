@@ -52,6 +52,13 @@ class GroqSettings(BaseModel):
     request_timeout_seconds: float = Field(default=120.0, gt=0)
 
 
+class DeepSeekSettings(BaseModel):
+    """DeepSeek's OpenAI-compatible endpoint; credentials stay in the environment."""
+
+    base_url: str = "https://api.deepseek.com"
+    request_timeout_seconds: float = Field(default=120.0, gt=0)
+
+
 class PostgresSettings(BaseModel):
     host: str = "localhost"
     port: int = 5432
@@ -111,6 +118,7 @@ class Settings(BaseSettings):
 
     ollama: OllamaSettings = Field(default_factory=OllamaSettings)
     groq: GroqSettings = Field(default_factory=GroqSettings)
+    deepseek: DeepSeekSettings = Field(default_factory=DeepSeekSettings)
     # Read from GROQ_API_KEY directly, bypassing the RESEARCHAGENT_ prefix, so it matches
     # the conventional variable name. SecretStr keeps it out of reprs and logs.
     # Coarse, optional overrides for every model alias at once. Unset by default, which
@@ -126,10 +134,20 @@ class Settings(BaseSettings):
     groq_api_key: SecretStr | None = Field(
         default=None, validation_alias=AliasChoices("GROQ_API_KEY")
     )
+    deepseek_api_key: SecretStr | None = Field(
+        default=None, validation_alias=AliasChoices("DEEPSEEK_API_KEY")
+    )
 
     @field_validator("groq_api_key", mode="before")
     @classmethod
     def _blank_groq_key_is_unset(cls, value: str | SecretStr | None) -> str | SecretStr | None:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
+    @field_validator("deepseek_api_key", mode="before")
+    @classmethod
+    def _blank_deepseek_key_is_unset(cls, value: str | SecretStr | None) -> str | SecretStr | None:
         if isinstance(value, str) and not value.strip():
             return None
         return value
@@ -150,6 +168,14 @@ class Settings(BaseSettings):
                 remedy="Export GROQ_API_KEY, or set the model alias back to an ollama provider",
             )
         return self.groq_api_key.get_secret_value()
+
+    def require_deepseek_key(self) -> str:
+        if self.deepseek_api_key is None or not self.deepseek_api_key.get_secret_value().strip():
+            raise ConfigurationError(
+                "DeepSeek was requested but DEEPSEEK_API_KEY is not set",
+                remedy="Export DEEPSEEK_API_KEY or use an Ollama model alias",
+            )
+        return self.deepseek_api_key.get_secret_value()
 
     @property
     def is_local(self) -> bool:

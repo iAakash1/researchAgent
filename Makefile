@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 UV := uv
 
-.PHONY: help install dev test lint format typecheck check up down logs models index graph benchmark clean
+.PHONY: help install dev test test-js lint format typecheck check up down logs models index graph benchmark clean
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -16,6 +16,9 @@ dev: ## Run the API with reload
 test: ## Run the test suite
 	$(UV) run pytest
 
+test-js: ## Run dependency-free frontend state tests
+	node --test tests/web/test_progress.js
+
 lint: ## Lint
 	$(UV) run ruff check .
 
@@ -25,7 +28,7 @@ format: ## Format
 typecheck: ## Static type check
 	$(UV) run mypy researchagent --strict
 
-check: lint typecheck test ## Everything CI runs
+check: lint typecheck test test-js ## Everything CI runs
 
 up: ## Start the local stack
 	docker compose up -d

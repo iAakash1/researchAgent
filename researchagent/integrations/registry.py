@@ -11,6 +11,7 @@ from collections.abc import Callable
 from researchagent.core.interfaces.llm import LLMProvider
 from researchagent.core.registry import Registry
 from researchagent.core.settings import Settings
+from researchagent.integrations.deepseek import DeepSeekProvider
 from researchagent.integrations.groq import GroqProvider
 from researchagent.integrations.ollama import OllamaProvider
 
@@ -37,8 +38,17 @@ def _build_groq(settings: Settings) -> LLMProvider:
     )
 
 
+def _build_deepseek(settings: Settings) -> LLMProvider:
+    return DeepSeekProvider(
+        api_key=settings.require_deepseek_key(),
+        base_url=settings.deepseek.base_url,
+        request_timeout_seconds=settings.deepseek.request_timeout_seconds,
+    )
+
+
 LLM_PROVIDERS.add("ollama", _build_ollama)
 LLM_PROVIDERS.add("groq", _build_groq)
+LLM_PROVIDERS.add("deepseek", _build_deepseek)
 
 
 def build_llm_provider(name: str, settings: Settings) -> LLMProvider:

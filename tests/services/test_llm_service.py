@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
 
-from researchagent.config.schemas import ModelCatalog
+from researchagent.config.schemas import ModelCatalog, ModelPricing
 from researchagent.core.events import Event, EventBus, EventType, LLMCallPayload
+from researchagent.core.exceptions import ConfigurationError
 from researchagent.core.interfaces.llm import GenerationParams, Message
 from researchagent.core.registry import RegistryError
 from researchagent.core.settings import Settings
@@ -108,3 +111,75 @@ def test_unknown_provider_name_is_a_registry_error(settings: Settings) -> None:
 
     with pytest.raises(RegistryError):
         LLMService(catalog, settings).get("a")
+
+
+async def test_missing_primary_configuration_uses_catalog_fallback(
+    settings: Settings, fake_provider: FakeLLMProvider, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    catalog = ModelCatalog.model_validate(
+        {
+            "default": "a",
+            "fallback": {"provider": "ollama", "model": "llama3.1:8b"},
+            "models": {"a": {"provider": "deepseek", "model": "deepseek-flash"}},
+        }
+    )
+    service = LLMService(catalog, settings)
+
+    def provider(name: str) -> FakeLLMProvider:
+        if name == "deepseek":
+            raise ConfigurationError("DEEPSEEK_API_KEY is not set")
+        return fake_provider
+
+    monkeypatch.setattr(service, "_provider", provider)
+    response = await service.get("a").complete([Message.user("go")])
+
+    assert response.model == "llama3.1:8b"
+    assert response.metadata["fallback_used"] is True
+
+
+async def test_bound_call_emits_run_attribution_and_estimated_cost(
+    fake_provider: FakeLLMProvider,
+) -> None:
+    bus = EventBus()
+    received: list[Event] = []
+
+    async def handler(event: Event) -> None:
+        received.append(event)
+
+    bus.subscribe(EventType.LLM_CALL_COMPLETED, handler)
+    catalog = ModelCatalog.model_validate(
+        {
+            "default": "a",
+            "models": {
+                "a": {
+                    "provider": "fake",
+                    "model": "fake-model",
+                    "pricing": {
+                        "input_cache_hit": 0.006,
+                        "input_cache_miss": 0.3,
+                        "output": 1.2,
+                    },
+                }
+            },
+        }
+    )
+    spec = catalog.spec_for("a")
+    handle = BoundLLM(
+        "a",
+        spec,
+        fake_provider,
+        event_bus=bus,
+        pricing={("fake", "fake-model"): cast(ModelPricing, spec.pricing)},
+    )
+    tokens = handle.bind_context(agent="planner", run_id="run-1")
+    await handle.complete([Message.user("go")])
+    handle.reset_context(tokens)
+
+    event = received[0]
+    payload = event.payload
+    assert isinstance(payload, LLMCallPayload)
+    assert event.run_id == "run-1"
+    assert payload.agent == "planner"
+    assert payload.provider == "fake"
+    assert payload.model == "fake-model"
+    assert payload.estimated_cost_usd == 0.000009

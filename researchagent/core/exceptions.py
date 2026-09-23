@@ -141,7 +141,7 @@ class ProviderAuthenticationError(ProviderError):
     code = "provider_authentication_error"
     http_status = 401
     recoverability = Recoverability.FATAL
-    remedy = "Set a valid GROQ_API_KEY in the environment (never in YAML or code)"
+    remedy = "Set valid provider credentials in the environment (never in YAML or code)"
 
 
 class ProviderRateLimitedError(ProviderError):

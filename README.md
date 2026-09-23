@@ -219,18 +219,18 @@ expansion over direct retrieval, so that path is tested but unexercised in pract
 
 ## Tech stack
 
-Python 3.12 · LangGraph · Pydantic v2 · FastAPI · PyMuPDF · Ollama · Groq · Qdrant ·
+Python 3.12 · LangGraph · Pydantic v2 · FastAPI · PyMuPDF · DeepSeek · Ollama · Groq · Qdrant ·
 Neo4j · uv · ruff · mypy `--strict` · pytest
 
-Ollama is the default and everything runs offline without an API key. Groq is optional:
-both sit behind one `LLMProvider` port, and no agent knows which is in use.
+DeepSeek V4.1 Flash is the configured primary LLM and Ollama is the local provider-failure
+fallback. Both sit behind one `LLMProvider` port, and agents bind only to model aliases.
 
 ## Running locally
 
 ```bash
 uv sync --extra dev          # install
-make models                  # pull llama3.1:8b + nomic-embed-text via Ollama
-cp .env.example .env         # optional: add GROQ_API_KEY to enable the remote provider
+make models                  # pull the Ollama fallback + embedding model
+cp .env.example .env         # add DEEPSEEK_API_KEY; blank uses Ollama fallback
 make check                   # lint + typecheck + tests
 ```
 

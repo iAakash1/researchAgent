@@ -75,6 +75,7 @@ from researchagent.services.graph.validator import GraphValidator
 from researchagent.services.knowledge import KnowledgeIntelligenceService, RelationBuilder
 from researchagent.services.knowledge.registry import build_extractors
 from researchagent.services.llm_service import LLMService
+from researchagent.services.model_usage import ModelUsageTracker
 from researchagent.services.ranking import HeuristicScorer
 from researchagent.services.research_run import ResearchRunService
 from researchagent.services.result import ResearchResultBuilder
@@ -187,6 +188,7 @@ def build_container(settings: Settings | None = None) -> Container:
 
     prompt_library = PromptLibrary(settings.prompts_dir)
     event_bus = EventBus()
+    model_usage = ModelUsageTracker(event_bus)
     llm_service = LLMService(model_catalog, settings, event_bus=event_bus)
 
     paper_sources = build_enabled_sources(sources_config, settings.project_root)
@@ -375,7 +377,7 @@ def build_container(settings: Settings | None = None) -> Container:
     )
 
     workflow_runner = WorkflowRunner(graph, workflow_config)
-    result_builder = ResearchResultBuilder(bundle_repository, audit_trail)
+    result_builder = ResearchResultBuilder(bundle_repository, audit_trail, model_usage)
     research_service = ResearchRunService(
         workflow_runner, reasoning_runner, result_builder, event_bus
     )

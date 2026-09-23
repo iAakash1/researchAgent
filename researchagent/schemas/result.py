@@ -14,6 +14,9 @@ class PaperResult(BaseModel):
     title: str
     provider: str
     year: int | None = None
+    doi: str | None = None
+    source_url: str | None = None
+    pdf_url: str | None = None
     url: str | None = None
     score: float
     relevance_score: float
@@ -60,6 +63,30 @@ class FailedPaperResult(BaseModel):
     reason: str
 
 
+class ModelCallResult(BaseModel):
+    agent: str | None = None
+    provider: str
+    model: str
+    latency_ms: float
+    attempts: int = 1
+    fallback_used: bool = False
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+    estimated_cost_usd: float | None = None
+
+
+class ModelUsageResult(BaseModel):
+    calls: tuple[ModelCallResult, ...] = ()
+    providers: tuple[str, ...] = ()
+    models: tuple[str, ...] = ()
+    fallback_used: bool = False
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+    estimated_cost_usd: float | None = None
+
+
 class ResearchResult(BaseModel):
     run_id: str
     research_goal: str
@@ -77,6 +104,7 @@ class ResearchResult(BaseModel):
     limitations: tuple[str, ...] = ()
     research_gaps: tuple[str, ...] = ()
     final_summary: str = ""
+    model_usage: ModelUsageResult = Field(default_factory=ModelUsageResult)
     failure: str | None = None
     history: tuple[str, ...] = Field(default_factory=tuple)
 
