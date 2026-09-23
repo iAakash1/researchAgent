@@ -125,6 +125,13 @@ def test_repository_config_is_valid() -> None:
 
     assert catalog.default in catalog.models
     assert agents.defaults.model in catalog.models
+    assert catalog.fallback is not None
+    assert catalog.fallback.provider == "ollama"
+    for name in ("planner", "reasoning", "verification", "reviewer"):
+        alias = agents.spec_for(name).model
+        assert alias is not None
+        assert catalog.spec_for(alias).provider == "deepseek"
+        assert catalog.spec_for(alias).model_name == "deepseek-flash"
 
 
 def test_blank_env_overrides_preserve_local_catalog(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import re
+from urllib.parse import quote, urlsplit
+
 from researchagent.models.bundle import Contradiction, EvidenceBundle
+from researchagent.models.paper import Paper
 from researchagent.models.reasoning import Citation
 from researchagent.repositories.bundle_repository import JsonBundleRepository
 from researchagent.schemas.result import (
@@ -10,17 +14,25 @@ from researchagent.schemas.result import (
     EvidenceResult,
     FailedPaperResult,
     FindingResult,
+    ModelUsageResult,
     PaperResult,
     ResearchResult,
 )
 from researchagent.schemas.workflow import ResearchState
 from researchagent.services.audit import AuditTrailBuilder
+from researchagent.services.model_usage import ModelUsageTracker
 
 
 class ResearchResultBuilder:
-    def __init__(self, bundles: JsonBundleRepository, audits: AuditTrailBuilder) -> None:
+    def __init__(
+        self,
+        bundles: JsonBundleRepository,
+        audits: AuditTrailBuilder,
+        model_usage: ModelUsageTracker | None = None,
+    ) -> None:
         self._bundles = bundles
         self._audits = audits
+        self._model_usage = model_usage
 
     async def build(self, state: ResearchState) -> ResearchResult:
         bundles = await self._load_bundles(state)
@@ -93,6 +105,9 @@ class ResearchResultBuilder:
                     title=candidate.paper.title,
                     provider=candidate.paper.provider.value,
                     year=candidate.paper.year,
+                    doi=_valid_doi(candidate.paper.doi),
+                    source_url=_source_url(candidate.paper),
+                    pdf_url=_external_url(candidate.paper.pdf_url),
                     url=candidate.paper.url,
                     score=candidate.score,
                     relevance_score=candidate.relevance_score,
@@ -121,6 +136,11 @@ class ResearchResultBuilder:
                 if verified
                 else "No finding survived verification and reviewer checks for this corpus."
             ),
+            model_usage=(
+                self._model_usage.summary(state.run_id)
+                if self._model_usage is not None
+                else ModelUsageResult()
+            ),
             failure=state.failure.message if state.failure else None,
             history=tuple(record.stage.value for record in state.history),
         )
@@ -137,6 +157,37 @@ def _paper_ids(citations: tuple[Citation, ...]) -> tuple[str, ...]:
             paper_id for citation in citations for paper_id in getattr(citation, "paper_ids", ())
         )
     )
+
+
+_DOI_PATTERN = re.compile(r"^10\.\d{4,9}/\S+$", re.IGNORECASE)
+
+
+def _valid_doi(value: str | None) -> str | None:
+    if value is None:
+        return None
+    doi = value.strip()
+    return doi if _DOI_PATTERN.fullmatch(doi) else None
+
+
+def _external_url(value: str | None) -> str | None:
+    if value is None:
+        return None
+    url = value.strip()
+    if not url or any(ord(character) < 32 for character in url):
+        return None
+    parsed = urlsplit(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return None
+    if parsed.username is not None or parsed.password is not None:
+        return None
+    return url
+
+
+def _source_url(paper: Paper) -> str | None:
+    doi = _valid_doi(paper.doi)
+    if doi is not None:
+        return f"https://doi.org/{quote(doi, safe='/')}"
+    return _external_url(paper.url) or _external_url(paper.pdf_url)
 
 
 def _evidence(bundles: tuple[EvidenceBundle, ...]) -> tuple[EvidenceResult, ...]:

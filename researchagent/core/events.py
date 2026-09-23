@@ -130,10 +130,16 @@ class ToolCallPayload(EventPayload):
 
 class LLMCallPayload(EventPayload):
     alias: str
+    agent: str | None = None
+    provider: str
     model: str
     latency_ms: float
+    attempts: int = 1
+    fallback_used: bool = False
     prompt_tokens: int = 0
     completion_tokens: int = 0
+    total_tokens: int = 0
+    estimated_cost_usd: float | None = None
 
 
 class StagePayload(EventPayload):

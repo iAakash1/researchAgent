@@ -12,7 +12,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from enum import StrEnum
-from typing import Any, TypeVar
+from typing import Any, Literal, TypeVar
 
 from pydantic import BaseModel, Field
 
@@ -56,6 +56,8 @@ class GenerationParams(BaseModel):
     context_window: int | None = Field(default=None, ge=512)
     max_output_tokens: int | None = Field(default=None, ge=1)
     stop: list[str] = Field(default_factory=list)
+    thinking: bool | None = None
+    reasoning_effort: Literal["low", "high", "max"] | None = None
 
     def merged_with(self, override: GenerationParams | None) -> GenerationParams:
         if override is None:
@@ -67,6 +69,9 @@ class GenerationParams(BaseModel):
 class TokenUsage(BaseModel):
     prompt_tokens: int = 0
     completion_tokens: int = 0
+    cached_prompt_tokens: int = 0
+    uncached_prompt_tokens: int = 0
+    reasoning_tokens: int = 0
 
     @property
     def total_tokens(self) -> int:
@@ -76,6 +81,9 @@ class TokenUsage(BaseModel):
         return TokenUsage(
             prompt_tokens=self.prompt_tokens + other.prompt_tokens,
             completion_tokens=self.completion_tokens + other.completion_tokens,
+            cached_prompt_tokens=self.cached_prompt_tokens + other.cached_prompt_tokens,
+            uncached_prompt_tokens=self.uncached_prompt_tokens + other.uncached_prompt_tokens,
+            reasoning_tokens=self.reasoning_tokens + other.reasoning_tokens,
         )
 
 
@@ -100,6 +108,10 @@ class StructuredResult[TResult: BaseModel](BaseModel):
 
     value: TResult
     usage: TokenUsage | None = None
+    provider: str | None = None
+    model: str | None = None
+    latency_ms: float = 0.0
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ProviderHealth(BaseModel):

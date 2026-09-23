@@ -18,6 +18,14 @@ from researchagent.models.knowledge import KnowledgeKind
 from researchagent.models.paper import SourceName
 
 
+class ModelPricing(BaseModel):
+    """USD per million tokens; absent fields mean cost cannot be estimated."""
+
+    input_cache_hit: float | None = Field(default=None, ge=0.0)
+    input_cache_miss: float | None = Field(default=None, ge=0.0)
+    output: float | None = Field(default=None, ge=0.0)
+
+
 class ModelSpec(BaseModel):
     """One entry in ``config/models.yaml``: an alias bound to a provider + model."""
 
@@ -29,6 +37,7 @@ class ModelSpec(BaseModel):
     model_name: str = Field(alias="model", description="Provider-side id, e.g. 'qwen3:8b'")
     params: GenerationParams = Field(default_factory=GenerationParams)
     description: str | None = None
+    pricing: ModelPricing | None = None
 
 
 class ModelCatalog(BaseModel):
@@ -36,6 +45,7 @@ class ModelCatalog(BaseModel):
 
     default: str
     models: dict[str, ModelSpec]
+    fallback: ModelSpec | None = None
 
     @model_validator(mode="after")
     def _validate_default(self) -> ModelCatalog:

@@ -26,6 +26,7 @@ from researchagent.evaluation.metrics import (
     recall_at_k,
     reciprocal_rank,
 )
+from researchagent.evaluation.model_benchmark import ModelBenchmarkRecord
 
 __all__ = [
     "ArmResult",
@@ -33,6 +34,7 @@ __all__ = [
     "GoldJudgement",
     "GoldQuery",
     "GoldSet",
+    "ModelBenchmarkRecord",
     "Relevance",
     "RetrievalBenchmark",
     "RetrievalMetrics",

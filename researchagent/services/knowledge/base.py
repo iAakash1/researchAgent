@@ -116,7 +116,7 @@ class KnowledgeExtractor[TDraft: ExtractionDraft, TBatch: BaseModel](ABC):
         """
 
     async def extract(
-        self, document: PaperDocument, grounder: EvidenceGrounder
+        self, document: PaperDocument, grounder: EvidenceGrounder, *, run_id: str | None = None
     ) -> ExtractionOutcome:
         started = time.perf_counter()
         text = self._source_text(document)
@@ -130,6 +130,9 @@ class KnowledgeExtractor[TDraft: ExtractionDraft, TBatch: BaseModel](ABC):
             )
             return ExtractionOutcome(extractor=self.name, kind=self.kind)
 
+        llm_context = (
+            self._llm.bind_context(agent=self.name, run_id=run_id) if run_id is not None else None
+        )
         try:
             batch = await self._llm.complete_structured(
                 self._messages(document, text), self.batch_schema
@@ -149,6 +152,9 @@ class KnowledgeExtractor[TDraft: ExtractionDraft, TBatch: BaseModel](ABC):
                 latency_ms=_elapsed_ms(started),
                 error=f"{exc.code}: {exc.message}",
             )
+        finally:
+            if llm_context is not None:
+                self._llm.reset_context(llm_context)
 
         drafts = self.drafts_of(batch)  # type: ignore[arg-type]
         objects, ungrounded = self._ground(drafts, document, grounder)

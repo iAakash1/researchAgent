@@ -188,7 +188,10 @@ class KnowledgeIntelligenceService:
         # returns its own outcome rather than raising.
         extraction_outcomes = list(
             await asyncio.gather(
-                *(extractor.extract(document, grounder) for extractor in self._extractors)
+                *(
+                    extractor.extract(document, grounder, run_id=run_id)
+                    for extractor in self._extractors
+                )
             )
         )
 

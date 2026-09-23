@@ -95,6 +95,7 @@ class BaseAgent[TInput: BaseModel, TOutput: BaseModel](ABC):
         started = time.perf_counter()
 
         with log_context(**{AGENT_KEY: self.name, RUN_ID_KEY: context.run_id}):
+            llm_context = self.llm.bind_context(agent=self.name, run_id=context.run_id)
             await self._emit(EventType.AGENT_STARTED, context, AgentPayload(agent=self.name))
             try:
                 output, attempts = await retry_async(
@@ -124,6 +125,8 @@ class BaseAgent[TInput: BaseModel, TOutput: BaseModel](ABC):
                 raise AgentExecutionError(
                     f"Agent {self.name!r} failed", agent=self.name, cause=exc.code
                 ) from exc
+            finally:
+                self.llm.reset_context(llm_context)
 
             latency_ms = self._elapsed_ms(started)
             self.logger.info("agent_completed", latency_ms=round(latency_ms, 1), attempts=attempts)
