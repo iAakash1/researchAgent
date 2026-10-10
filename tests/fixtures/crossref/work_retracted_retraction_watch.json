@@ -1,0 +1,31 @@
+{
+  "status": "ok",
+  "message-type": "work",
+  "message": {
+    "DOI": "10.1021/am300292v",
+    "type": "journal-article",
+    "title": [
+      "Flexible and Microporous Chitosan Hydrogel/Nano ZnO Composite Bandages for Wound Dressing: In Vitro and In Vivo Evaluation"
+    ],
+    "updated-by": [
+      {
+        "DOI": "10.1021/acsami.9b11759",
+        "type": "retraction",
+        "label": "Retraction",
+        "source": "retraction-watch",
+        "updated": {
+          "date-parts": [
+            [
+              2019,
+              7,
+              26
+            ]
+          ],
+          "date-time": "2019-07-26T00:00:00Z",
+          "timestamp": 1564099200000
+        },
+        "record-id": "20946"
+      }
+    ]
+  }
+}
