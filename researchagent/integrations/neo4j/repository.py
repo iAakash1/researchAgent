@@ -305,6 +305,8 @@ def _to_node(raw: dict[str, Any]) -> GraphNode:
             dataset_name=raw.get("dataset_name"),
             numeric_value=raw.get("numeric_value"),
             unit=raw.get("unit"),
+            version=raw.get("version"),
+            status=raw.get("status"),
         ),
     )
 

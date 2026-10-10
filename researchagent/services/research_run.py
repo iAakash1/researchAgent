@@ -8,10 +8,11 @@ from dataclasses import dataclass
 from uuid import uuid4
 
 from researchagent.core.events import Event, EventBus
-from researchagent.core.exceptions import RunNotFoundError
+from researchagent.core.exceptions import ResearchAgentError, RunNotFoundError
 from researchagent.core.logging import get_logger
 from researchagent.schemas.result import ResearchResult, ResearchRunSnapshot
-from researchagent.schemas.workflow import ResearchConstraints, RunStatus
+from researchagent.schemas.workflow import ResearchConstraints, ResearchState, RunStatus
+from researchagent.services.maintenance.recorder import ConclusionRecorder
 from researchagent.services.result import ResearchResultBuilder
 from researchagent.workflows.reasoning_runner import ReasoningRunner
 from researchagent.workflows.runner import WorkflowRunner
@@ -32,10 +33,13 @@ class ResearchRunService:
         reasoning: ReasoningRunner,
         results: ResearchResultBuilder,
         event_bus: EventBus,
+        *,
+        conclusions: ConclusionRecorder | None = None,
     ) -> None:
         self._workflow = workflow
         self._reasoning = reasoning
         self._results = results
+        self._conclusions = conclusions
         self._completed: dict[str, ResearchResult] = {}
         self._failures: dict[str, str] = {}
         self._tasks: dict[str, asyncio.Task[None]] = {}
@@ -108,10 +112,24 @@ class ResearchRunService:
         if state.succeeded:
             state = await self._reasoning.run(state)
         result = await self._results.build(state)
+        await self._record_conclusions(state)
         self._completed[result.run_id] = result
         self._events.setdefault(result.run_id, [])
         self._subscribers.setdefault(result.run_id, set())
         return result
+
+    async def _record_conclusions(self, state: ResearchState) -> None:
+        """Persist accepted findings as maintainable conclusions.
+
+        A failure here is logged and the run's result still stands: maintenance is an
+        add-on to a finished run, never a reason to fail it.
+        """
+        if self._conclusions is None or state.reasoning is None:
+            return
+        try:
+            await self._conclusions.record_run(state)
+        except ResearchAgentError as exc:
+            logger.warning("conclusion_recording_failed", run_id=state.run_id, error=exc.code)
 
     def get(self, run_id: str) -> ResearchRunSnapshot:
         if run_id not in self._tasks and run_id not in self._completed:

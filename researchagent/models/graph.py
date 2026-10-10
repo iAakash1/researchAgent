@@ -37,6 +37,13 @@ class NodeKind(StrEnum):
     RESULT = "Result"
     LIMITATION = "Limitation"
     FUTURE_WORK = "FutureWork"
+    # Conclusion-dependency vocabulary (RACM). These nodes appear only in the dependency
+    # projection, never in the knowledge graph built from the repositories.
+    CONCLUSION = "Conclusion"
+    KNOWLEDGE_OBJECT = "KnowledgeObject"
+    SOURCE_LOCATION = "SourceLocation"
+    CONTRADICTION = "Contradiction"
+    INTEGRITY_OBSERVATION = "IntegrityObservation"
 
     @classmethod
     def for_knowledge(cls, kind: KnowledgeKind) -> NodeKind:
@@ -67,6 +74,12 @@ class EdgeKind(StrEnum):
     LIMITS = "LIMITS"  # Limitation -> Method
     EXTENDS = "EXTENDS"  # FutureWork -> Limitation
     CONTRADICTS = "CONTRADICTS"  # knowledge node <-> knowledge node
+    # Conclusion-dependency projection (RACM).
+    SUPPORTED_BY = "SUPPORTED_BY"  # Conclusion -> KnowledgeObject
+    GROUNDED_IN = "GROUNDED_IN"  # KnowledgeObject -> SourceLocation
+    IN = "IN"  # SourceLocation -> Paper
+    INVOLVES = "INVOLVES"  # Contradiction -> KnowledgeObject
+    HAS_STATUS = "HAS_STATUS"  # Paper -> IntegrityObservation
 
     @classmethod
     def for_predicate(cls, predicate: RelationPredicate) -> EdgeKind:
@@ -110,7 +123,7 @@ class GraphNode(BaseModel):
 
     @property
     def is_knowledge_node(self) -> bool:
-        return self.kind is not NodeKind.PAPER
+        return self.kind in _KNOWLEDGE_NODE_KINDS
 
 
 class GraphNodeProperties(BaseModel):
@@ -126,6 +139,9 @@ class GraphNodeProperties(BaseModel):
     dataset_name: str | None = None
     numeric_value: float | None = None
     unit: str | None = None
+    # Dependency projection only: a conclusion's version and state, an observation's status.
+    version: int | None = None
+    status: str | None = None
 
 
 class GraphEdge(BaseModel):
@@ -201,6 +217,9 @@ class KnowledgeGraph(BaseModel):
     def provenance_coverage(self) -> float:
         """Share of edges that can be traced to a quoted sentence."""
         return len(self.trusted_edges) / len(self.edges) if self.edges else 0.0
+
+
+_KNOWLEDGE_NODE_KINDS = frozenset(NodeKind.for_knowledge(kind) for kind in KnowledgeKind)
 
 
 def node_id_for_paper(paper_id: str) -> str:
