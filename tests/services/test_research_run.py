@@ -77,3 +77,48 @@ async def test_stream_disconnect_does_not_cancel_run_and_reconnect_replays_progr
     assert snapshot.result is not None
     assert workflow.calls == 1
     await service.aclose()
+
+
+async def test_completed_run_records_conclusions_and_survives_a_recording_failure() -> None:
+    from researchagent.core.exceptions import RepositoryError
+    from researchagent.schemas.reasoning import ReasoningSession
+
+    class Workflow:
+        async def run(self, goal: str, *, run_id: str | None = None, **_: object) -> ResearchState:
+            return ResearchState(run_id=run_id or "R", goal=goal, status=RunStatus.COMPLETED)
+
+    class Reasoning:
+        async def run(self, state: ResearchState) -> ResearchState:
+            return state.model_copy(update={"reasoning": ReasoningSession()})
+
+    class ResultBuilder:
+        async def build(self, state: ResearchState) -> ResearchResult:
+            return ResearchResult(
+                run_id=state.run_id, research_goal=state.goal, status=state.status
+            )
+
+    class Recorder:
+        def __init__(self, fail: bool) -> None:
+            self.fail = fail
+            self.recorded: list[str] = []
+
+        async def record_run(self, state: ResearchState) -> tuple[()]:
+            self.recorded.append(state.run_id)
+            if self.fail:
+                raise RepositoryError("disk full")
+            return ()
+
+    for fail in (False, True):
+        recorder = Recorder(fail)
+        service = ResearchRunService(
+            cast(Any, Workflow()),
+            cast(Any, Reasoning()),
+            cast(Any, ResultBuilder()),
+            EventBus(),
+            conclusions=cast(Any, recorder),
+        )
+        result = await service.run(GOAL, run_id=f"R-{fail}")
+
+        assert recorder.recorded == [f"R-{fail}"]
+        assert result.status is RunStatus.COMPLETED
+        await service.aclose()

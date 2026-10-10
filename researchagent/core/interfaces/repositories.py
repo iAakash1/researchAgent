@@ -18,6 +18,7 @@ from researchagent.models.bundle import EvidenceBundle
 from researchagent.models.evidence import EvidenceLink, EvidenceRecord, PaperEvidence
 from researchagent.models.integrity import IntegrityObservation
 from researchagent.models.library import PaperRecord
+from researchagent.models.maintenance import ConclusionDiff, ConclusionRecord, MaintainedTopic
 from researchagent.schemas.knowledge import ValidatedKnowledge
 from researchagent.schemas.validated import ValidatedDocument
 
@@ -178,3 +179,52 @@ class IntegrityObservationRepository(ABC):
             (item for item in reversed(await self.history(paper_id)) if item.is_informative),
             None,
         )
+
+
+class ConclusionRepository(ABC):
+    """Saved topics and their conclusions, every version kept.
+
+    ``append`` is the only write for conclusions and refuses anything but the next version
+    of a conclusion: history cannot be rewritten through this port.
+    """
+
+    @abstractmethod
+    async def save_topic(self, topic: MaintainedTopic) -> MaintainedTopic: ...
+
+    @abstractmethod
+    async def get_topic(self, topic_id: str) -> MaintainedTopic | None: ...
+
+    @abstractmethod
+    async def list_topics(self) -> tuple[MaintainedTopic, ...]: ...
+
+    @abstractmethod
+    async def append(self, record: ConclusionRecord) -> ConclusionRecord:
+        """Persist the next version. Raises ``RepositoryError`` if it is not the next one."""
+
+    @abstractmethod
+    async def history(self, conclusion_id: str) -> tuple[ConclusionRecord, ...]:
+        """Every version, oldest first. Empty when the conclusion is unknown."""
+
+    @abstractmethod
+    async def for_topic(self, topic_id: str) -> tuple[ConclusionRecord, ...]:
+        """The latest version of every conclusion in a topic."""
+
+    async def latest(self, conclusion_id: str) -> ConclusionRecord | None:
+        history = await self.history(conclusion_id)
+        return history[-1] if history else None
+
+
+class MaintenanceDiffRepository(ABC):
+    @abstractmethod
+    async def save(self, diff: ConclusionDiff) -> ConclusionDiff: ...
+
+    @abstractmethod
+    async def get(self, diff_id: str) -> ConclusionDiff | None: ...
+
+    @abstractmethod
+    async def for_topic(self, topic_id: str) -> tuple[ConclusionDiff, ...]:
+        """Every diff for a topic, oldest first."""
+
+    async def latest(self, topic_id: str) -> ConclusionDiff | None:
+        diffs = await self.for_topic(topic_id)
+        return diffs[-1] if diffs else None
