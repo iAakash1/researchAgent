@@ -23,9 +23,21 @@ class ReviewerPrompt:
                     questions_block=self._questions_block(payload),
                     findings_block=self._findings_block(payload),
                     checks_block=checks_block or _NONE,
+                    integrity_block=self._integrity_block(payload),
                 )
             ),
         ]
+
+    def _integrity_block(self, payload: ReviewerInput) -> str:
+        """Registry integrity status of cited papers. Read by prompt v3 onwards."""
+        cited = {pid for finding in payload.findings for pid in finding.paper_ids}
+        lines = [
+            f"- {item.paper_id}: {item.status.value} ({item.registry}"
+            f"{f', notice {item.notice_doi}' if item.notice_doi else ''})"
+            for item in payload.integrity
+            if item.paper_id in cited
+        ]
+        return "\n".join(lines) or _NONE
 
     def _questions_block(self, payload: ReviewerInput) -> str:
         return "\n".join(f"- {q.id}: {q.question}" for q in payload.questions) or _NONE
