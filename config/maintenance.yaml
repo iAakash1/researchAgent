@@ -1,0 +1,48 @@
+# Retraction- and update-aware conclusion maintenance (RACM).
+#
+# Accepted conclusions are persisted with their evidence chain. A maintenance run refreshes
+# the integrity of every supporting paper, propagates what changed through the
+# conclusion-dependency graph, re-verifies only the conclusions that were hit, and records
+# a typed diff naming the observation behind every change.
+
+# incremental — RACM. full_rerun — regenerate every conclusion (the cost baseline).
+# Overridable per request.
+mode: incremental
+
+storage:
+  root: data/maintenance
+
+dependency_graph:
+  # Same GraphRepository adapters as the knowledge graph, separate store.
+  backend: json
+  json_dir: data/maintenance/graphs
+  neo4j_database: racm
+  schema_version: racm1
+
+propagation:
+  enabled: true
+  # Evidence from these papers stops counting as support.
+  excluded_statuses: [retracted, withdrawn]
+  # These flag a conclusion for review; they never invalidate it.
+  review_statuses: [expression_of_concern, corrected]
+  reverify: true
+  weakened:
+    min_support_retained: 0.5
+    min_supporting_papers: 2
+    max_confidence_drop: 0.2
+  agreement:
+    enabled: true
+    kinds: [method, dataset, metric]
+  precedence: [invalidated, weakened, newly_contradicted, needs_review, kept, new]
+
+new_papers:
+  detect: true
+  generate_conclusions: true
+
+review:
+  enabled: true
+
+full_rerun:
+  # [] regenerates over the whole corpus (baseline B1);
+  # [retracted, withdrawn] drops those papers at retrieval time (baseline B2).
+  exclude_statuses: []

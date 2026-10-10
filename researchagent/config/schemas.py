@@ -14,7 +14,9 @@ from pydantic import BaseModel, Field, model_validator
 
 from researchagent.core.interfaces.llm import GenerationParams
 from researchagent.core.retry import RetryPolicy
+from researchagent.models.integrity import IntegrityStatus
 from researchagent.models.knowledge import KnowledgeKind
+from researchagent.models.maintenance import ChangeType, MaintenanceMode
 from researchagent.models.paper import SourceName
 
 
@@ -502,3 +504,222 @@ class ReasoningConfig(BaseModel):
     budget: ResearchBudget = Field(default_factory=ResearchBudget)
     loop: ReasoningLoopSettings = Field(default_factory=ReasoningLoopSettings)
     review: ReasoningReviewSettings = Field(default_factory=ReasoningReviewSettings)
+
+
+class CrossrefIntegritySettings(BaseModel):
+    """Where and how politely to ask Crossref about editorial updates."""
+
+    works_url: str = Field(min_length=1)
+    requests_per_second: float = Field(default=3.0, gt=0.0, le=50.0)
+    timeout_seconds: float = Field(default=30.0, gt=0.0)
+    # Second query (`filter=updates:{doi}`) cross-checking `updated-by`. Doubles requests.
+    query_update_notices: bool = False
+    notice_rows: int = Field(default=20, ge=1, le=1000)
+
+
+class IntegrityCacheSettings(BaseModel):
+    observations_dir: Path = Path("data/maintenance/integrity")
+    # An informative observation is trusted this long before the registry is asked again.
+    recheck_after_hours: float = Field(default=168.0, ge=0.0)
+    # A failed or unresolvable lookup is retried sooner: it says nothing about the paper.
+    recheck_unknown_after_hours: float = Field(default=24.0, ge=0.0)
+
+
+class PdfNoticeSettings(BaseModel):
+    """Secondary signal: retraction/concern wording in the parsed PDF text."""
+
+    enabled: bool = True
+    patterns: tuple[str, ...] = ()
+    # How much of the document text is scanned; notices sit on the first pages.
+    max_chars: int = Field(default=20_000, ge=100)
+
+
+class IntegrityConfig(BaseModel):
+    """``config/integrity.yaml`` root."""
+
+    registry: Literal["crossref"] = "crossref"
+    crossref: CrossrefIntegritySettings
+    # Registry update type (normalised: lower case, underscores) -> status.
+    update_types: dict[str, IntegrityStatus]
+    # Updates that do not bear on integrity (a new version is not a correction).
+    ignored_update_types: tuple[str, ...] = ()
+    # Most severe first. Decides the status when a work carries several updates.
+    severity: tuple[IntegrityStatus, ...]
+    cache: IntegrityCacheSettings = Field(default_factory=IntegrityCacheSettings)
+    pdf_notice: PdfNoticeSettings = Field(default_factory=PdfNoticeSettings)
+
+    @model_validator(mode="after")
+    def _mapping_is_coherent(self) -> IntegrityConfig:
+        if IntegrityStatus.CURRENT in self.update_types.values():
+            raise ValueError("an update type cannot mean CURRENT; list it as ignored instead")
+        if IntegrityStatus.CURRENT in self.severity:
+            raise ValueError("CURRENT has no severity")
+        missing = {status for status in IntegrityStatus if status is not IntegrityStatus.CURRENT}
+        missing -= set(self.severity)
+        if missing:
+            raise ValueError(f"severity must rank every status; missing {sorted(missing)}")
+        overlap = set(self.update_types) & set(self.ignored_update_types)
+        if overlap:
+            raise ValueError(f"update types both mapped and ignored: {sorted(overlap)}")
+        return self
+
+
+class MaintenanceStorageSettings(BaseModel):
+    root: Path = Path("data/maintenance")
+
+
+class DependencyGraphSettings(BaseModel):
+    """Where the conclusion-dependency projection is written.
+
+    A separate store from the knowledge graph on purpose: graph stores treat the newest
+    generation as "current", and a dependency generation must never displace the
+    knowledge graph that ``/graph`` and the agents query.
+    """
+
+    backend: Literal["memory", "json", "neo4j"] = "json"
+    json_dir: Path = Path("data/maintenance/graphs")
+    # Needs its own database; Neo4j Community has one, so prefer json there.
+    neo4j_database: str = "racm"
+    schema_version: str = Field(default="racm1", pattern=r"^[A-Za-z0-9]+$")
+
+
+class WeakeningThresholds(BaseModel):
+    """When surviving support is too thin to call a re-verified conclusion KEPT."""
+
+    # Share of the conclusion's evidence items that must survive exclusion.
+    min_support_retained: float = Field(default=0.5, ge=0.0, le=1.0)
+    # Distinct supporting papers below which a loss of papers counts as weakening.
+    min_supporting_papers: int = Field(default=2, ge=1)
+    # Largest tolerated drop in the verifier's confidence score.
+    max_confidence_drop: float = Field(default=0.2, ge=0.0, le=1.0)
+
+
+class AgreementSettings(BaseModel):
+    """A new paper corroborates a conclusion when it names the same entity, of a kind
+    listed here, without the contradiction detector firing — the cross-paper agreement
+    rule the retrieval layer already uses."""
+
+    enabled: bool = True
+    kinds: tuple[KnowledgeKind, ...] = (
+        KnowledgeKind.METHOD,
+        KnowledgeKind.DATASET,
+        KnowledgeKind.METRIC,
+    )
+
+
+class PropagationSettings(BaseModel):
+    excluded_statuses: tuple[IntegrityStatus, ...] = (
+        IntegrityStatus.RETRACTED,
+        IntegrityStatus.WITHDRAWN,
+    )
+    review_statuses: tuple[IntegrityStatus, ...] = (
+        IntegrityStatus.EXPRESSION_OF_CONCERN,
+        IntegrityStatus.CORRECTED,
+    )
+    # Off = propagate without re-verifying (support thresholds only). Used as an ablation.
+    reverify: bool = True
+    # Off = baseline B4: detect changes, change nothing.
+    enabled: bool = True
+    weakened: WeakeningThresholds = Field(default_factory=WeakeningThresholds)
+    agreement: AgreementSettings = Field(default_factory=AgreementSettings)
+    # When several rules fire for one conclusion, the first listed type wins.
+    precedence: tuple[ChangeType, ...] = (
+        ChangeType.INVALIDATED,
+        ChangeType.WEAKENED,
+        ChangeType.NEWLY_CONTRADICTED,
+        ChangeType.NEEDS_REVIEW,
+        ChangeType.KEPT,
+        ChangeType.NEW,
+    )
+
+    @model_validator(mode="after")
+    def _statuses_are_disjoint(self) -> PropagationSettings:
+        overlap = set(self.excluded_statuses) & set(self.review_statuses)
+        if overlap:
+            raise ValueError(f"a status cannot both exclude and flag: {sorted(overlap)}")
+        if IntegrityStatus.CURRENT in (*self.excluded_statuses, *self.review_statuses):
+            raise ValueError("CURRENT neither excludes nor flags")
+        if sorted(self.precedence) != sorted(ChangeType):
+            raise ValueError(
+                f"precedence must rank every change type exactly once: {list(ChangeType)}"
+            )
+        return self
+
+
+class NewPaperSettings(BaseModel):
+    # Papers with trusted knowledge that the topic has not seen are treated as new.
+    detect: bool = True
+    # Run the normal reasoning -> verification -> reviewer loop for conclusions that
+    # cite new papers. Costs a full loop's tokens.
+    generate_conclusions: bool = True
+
+
+class MaintenanceReviewSettings(BaseModel):
+    # Re-run the reviewer over re-verified KEPT conclusions.
+    enabled: bool = True
+
+
+class FullRerunSettings(BaseModel):
+    # Statuses whose papers are hidden from retrieval during a full rerun. Empty is
+    # baseline B1 (regenerate with no maintenance); [retracted, withdrawn] is B2.
+    exclude_statuses: tuple[IntegrityStatus, ...] = ()
+
+
+class MaintenanceConfig(BaseModel):
+    """``config/maintenance.yaml`` root."""
+
+    mode: MaintenanceMode = MaintenanceMode.INCREMENTAL
+    storage: MaintenanceStorageSettings = Field(default_factory=MaintenanceStorageSettings)
+    dependency_graph: DependencyGraphSettings = Field(default_factory=DependencyGraphSettings)
+    propagation: PropagationSettings = Field(default_factory=PropagationSettings)
+    new_papers: NewPaperSettings = Field(default_factory=NewPaperSettings)
+    review: MaintenanceReviewSettings = Field(default_factory=MaintenanceReviewSettings)
+    full_rerun: FullRerunSettings = Field(default_factory=FullRerunSettings)
+
+
+class LLMJudgeSettings(BaseModel):
+    """Baseline B3 only: ask a model whether a source is retracted. Never used by RACM."""
+
+    alias: str = "fast"
+    prompt_version: str = "v1"
+
+
+class RetractionBenchmarkSettings(BaseModel):
+    k: int = Field(default=3, ge=1)
+    seed: int = 13
+    # Statuses assigned to the K flipped papers, drawn with the seeded generator.
+    statuses: tuple[IntegrityStatus, ...] = (
+        IntegrityStatus.RETRACTED,
+        IntegrityStatus.WITHDRAWN,
+        IntegrityStatus.CORRECTED,
+        IntegrityStatus.EXPRESSION_OF_CONCERN,
+    )
+    strategies: tuple[str, ...] = (
+        "racm",
+        "b1_full_regeneration",
+        "b2_retrieval_filter",
+        "b3_llm_judge",
+        "b4_no_propagation",
+    )
+    results_dir: Path = Path("evaluation/results")
+    llm_judge: LLMJudgeSettings = Field(default_factory=LLMJudgeSettings)
+
+    @model_validator(mode="after")
+    def _flips_are_changes(self) -> RetractionBenchmarkSettings:
+        if not self.statuses or IntegrityStatus.CURRENT in self.statuses:
+            raise ValueError("flip statuses must be non-empty and never CURRENT")
+        return self
+
+
+class SensitivitySettings(BaseModel):
+    # Grounding similarity floors to sweep (knowledge.pipeline.grounding_similarity_threshold).
+    grounding_similarity_floors: tuple[float, ...] = (0.75, 0.85, 0.95)
+
+
+class EvaluationConfig(BaseModel):
+    """``config/evaluation.yaml`` root."""
+
+    retraction_benchmark: RetractionBenchmarkSettings = Field(
+        default_factory=RetractionBenchmarkSettings
+    )
+    sensitivity: SensitivitySettings = Field(default_factory=SensitivitySettings)

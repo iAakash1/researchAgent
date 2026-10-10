@@ -16,10 +16,13 @@ from researchagent.agents.registry import agent_class, build_agent
 from researchagent.config.loader import ConfigLoader
 from researchagent.config.schemas import (
     AgentConfig,
+    DependencyGraphSettings,
     DocumentsConfig,
     EvidenceConfig,
     GraphConfig,
+    IntegrityConfig,
     KnowledgeConfig,
+    MaintenanceConfig,
     ModelCatalog,
     ReasoningConfig,
     RetrievalConfig,
@@ -29,12 +32,15 @@ from researchagent.config.schemas import (
 from researchagent.core.events import EventBus
 from researchagent.core.interfaces.embeddings import EmbeddingModel
 from researchagent.core.interfaces.graph_repository import GraphRepository
+from researchagent.core.interfaces.integrity import IntegrityRegistry
 from researchagent.core.interfaces.paper_source import PaperSource
 from researchagent.core.interfaces.retrieval import KnowledgeRetriever
 from researchagent.core.interfaces.vector_store import VectorStore
 from researchagent.core.logging import configure_logging, get_logger
 from researchagent.core.prompts import PromptLibrary
 from researchagent.core.settings import Settings, get_settings
+from researchagent.integrations.crossref import CrossrefIntegrityRegistry
+from researchagent.integrations.http import HttpClient
 from researchagent.integrations.memory_graph import InMemoryGraphRepository
 from researchagent.integrations.neo4j import Neo4jGraphRepository
 from researchagent.integrations.pymupdf import PyMuPDFLoader
@@ -44,7 +50,12 @@ from researchagent.repositories.bundle_repository import JsonBundleRepository
 from researchagent.repositories.document_repository import JsonDocumentRepository
 from researchagent.repositories.evidence_repository import JsonEvidenceRepository
 from researchagent.repositories.graph_repository import JsonGraphRepository
+from researchagent.repositories.integrity_repository import JsonIntegrityRepository
 from researchagent.repositories.knowledge_repository import JsonKnowledgeRepository
+from researchagent.repositories.maintenance_repository import (
+    JsonConclusionRepository,
+    JsonMaintenanceDiffRepository,
+)
 from researchagent.repositories.paper_repository import JsonPaperRepository
 from researchagent.services.audit import AuditTrailBuilder
 from researchagent.services.deduplication import PaperDeduplicator
@@ -72,9 +83,22 @@ from researchagent.services.graph.builder import GraphBuilder
 from researchagent.services.graph.mapper import GraphMapper
 from researchagent.services.graph.queries import GraphQueries
 from researchagent.services.graph.validator import GraphValidator
+from researchagent.services.integrity import (
+    IntegrityService,
+    RetractionNoticeScanner,
+    UpdateClassifier,
+)
 from researchagent.services.knowledge import KnowledgeIntelligenceService, RelationBuilder
 from researchagent.services.knowledge.registry import build_extractors
 from researchagent.services.llm_service import LLMService
+from researchagent.services.maintenance.dependency_graph import (
+    DependencyGraphMapper,
+    DependencyGraphStore,
+)
+from researchagent.services.maintenance.propagation import PropagationEngine
+from researchagent.services.maintenance.recorder import ConclusionRecorder
+from researchagent.services.maintenance.reverification import ReverificationContextBuilder
+from researchagent.services.maintenance.service import ConclusionMaintenanceService
 from researchagent.services.model_usage import ModelUsageTracker
 from researchagent.services.ranking import HeuristicScorer
 from researchagent.services.research_run import ResearchRunService
@@ -90,6 +114,8 @@ from researchagent.services.retrieval.registry import (
 from researchagent.services.retrieval_service import RetrievalService
 from researchagent.services.tools import ServiceToolbox
 from researchagent.services.tools.toolbox import ToolBudget
+from researchagent.workflows.maintenance import MaintenanceAgentFactory
+from researchagent.workflows.maintenance_runner import MaintenanceRunner, reasoning_generator
 from researchagent.workflows.reasoning_runner import AgentFactory, ReasoningRunner
 from researchagent.workflows.research import build_research_graph
 from researchagent.workflows.runner import WorkflowRunner
@@ -99,6 +125,28 @@ logger = get_logger(__name__)
 # Agents permitted an I/O surface. Reasoning and review reason over what they are handed;
 # only retrieval and verification need to go and look.
 _TOOLBOX_AGENTS = frozenset({"retrieval", "verification"})
+
+
+@dataclass(slots=True)
+class MaintenanceComponents:
+    """Retraction- and update-aware conclusion maintenance (RACM), wired."""
+
+    config: MaintenanceConfig
+    integrity_config: IntegrityConfig
+    registry: IntegrityRegistry
+    integrity: IntegrityService
+    conclusions: JsonConclusionRepository
+    diffs: JsonMaintenanceDiffRepository
+    dependency_graph: GraphRepository
+    recorder: ConclusionRecorder
+    service: ConclusionMaintenanceService
+    runner: MaintenanceRunner
+    # Verification/reviewer agents whose tools cannot see excluded papers.
+    agent_for: MaintenanceAgentFactory
+
+    async def aclose(self) -> None:
+        await self.registry.aclose()
+        await self.dependency_graph.aclose()
 
 
 @dataclass(slots=True)
@@ -158,9 +206,11 @@ class Container:
     result_builder: ResearchResultBuilder
     research_service: ResearchRunService
     workflow_runner: WorkflowRunner
+    maintenance: MaintenanceComponents
 
     async def aclose(self) -> None:
         await self.research_service.aclose()
+        await self.maintenance.aclose()
         await self.llm_service.aclose()
         await self.embedding_model.aclose()
         await self.vector_store.aclose()
@@ -348,6 +398,34 @@ def build_container(settings: Settings | None = None) -> Container:
         reasoning_config,
         event_bus=event_bus,
         agent_for_run=lambda: budgeted_agent_for(toolbox.for_run()),
+        agent_for_excluding=lambda excluded: budgeted_agent_for(
+            toolbox.for_run(excluded_paper_ids=excluded)
+        ),
+    )
+
+    def maintenance_agent_for(name: str, excluded: frozenset[str]) -> BaseAgent[Any, Any]:
+        return budgeted_agent_for(toolbox.for_run(excluded_paper_ids=excluded))(name, 0, None)
+
+    maintenance_config = loader.load("maintenance", MaintenanceConfig)
+    integrity_config = loader.load("integrity", IntegrityConfig)
+    maintenance = build_maintenance(
+        maintenance_config,
+        integrity_config,
+        registry=_build_integrity_registry(integrity_config, sources_config.contact_email),
+        storage_root=_resolve(maintenance_config.storage.root, settings.project_root),
+        integrity_dir=_resolve(integrity_config.cache.observations_dir, settings.project_root),
+        dependency_graph=_build_dependency_graph(maintenance_config.dependency_graph, settings),
+        papers=paper_repository,
+        documents=document_repository,
+        knowledge=knowledge_repository,
+        evidence=evidence_repository,
+        bundles=bundle_repository,
+        evidence_service=evidence_service,
+        contradictions=ContradictionDetector(evidence_config.contradictions),
+        reasoning_runner=reasoning_runner,
+        agent_for=maintenance_agent_for,
+        model_usage=model_usage,
+        event_bus=event_bus,
     )
 
     planner = build_agent(
@@ -379,7 +457,11 @@ def build_container(settings: Settings | None = None) -> Container:
     workflow_runner = WorkflowRunner(graph, workflow_config)
     result_builder = ResearchResultBuilder(bundle_repository, audit_trail, model_usage)
     research_service = ResearchRunService(
-        workflow_runner, reasoning_runner, result_builder, event_bus
+        workflow_runner,
+        reasoning_runner,
+        result_builder,
+        event_bus,
+        conclusions=maintenance.recorder,
     )
 
     return Container(
@@ -428,7 +510,109 @@ def build_container(settings: Settings | None = None) -> Container:
         result_builder=result_builder,
         research_service=research_service,
         workflow_runner=workflow_runner,
+        maintenance=maintenance,
     )
+
+
+def build_maintenance(
+    config: MaintenanceConfig,
+    integrity_config: IntegrityConfig,
+    *,
+    registry: IntegrityRegistry,
+    storage_root: Path,
+    integrity_dir: Path,
+    dependency_graph: GraphRepository,
+    papers: JsonPaperRepository,
+    documents: JsonDocumentRepository,
+    knowledge: JsonKnowledgeRepository,
+    evidence: JsonEvidenceRepository,
+    bundles: JsonBundleRepository,
+    evidence_service: EvidenceIntelligenceService,
+    contradictions: ContradictionDetector,
+    reasoning_runner: ReasoningRunner,
+    agent_for: MaintenanceAgentFactory,
+    model_usage: ModelUsageTracker | None,
+    event_bus: EventBus,
+) -> MaintenanceComponents:
+    """Wire RACM over the existing repositories, agents and reasoning loop.
+
+    Shared by ``build_container`` and the test container, so both run the same graph of
+    collaborators; only the registry and the storage locations differ.
+    """
+    integrity = IntegrityService(
+        registry,
+        JsonIntegrityRepository(integrity_dir),
+        UpdateClassifier(integrity_config),
+        integrity_config.cache,
+        papers=papers,
+        documents=documents,
+        scanner=RetractionNoticeScanner(integrity_config.pdf_notice),
+        event_bus=event_bus,
+    )
+    conclusions = JsonConclusionRepository(storage_root)
+    diffs = JsonMaintenanceDiffRepository(storage_root)
+    recorder = ConclusionRecorder(conclusions, bundles, evidence, knowledge, papers)
+    service = ConclusionMaintenanceService(
+        conclusions,
+        diffs,
+        integrity,
+        recorder,
+        PropagationEngine(config.propagation, contradictions),
+        DependencyGraphMapper(schema_version=config.dependency_graph.schema_version),
+        DependencyGraphStore(dependency_graph),
+        knowledge,
+        ReverificationContextBuilder(
+            knowledge, evidence, bundles, evidence_service.builder, contradictions
+        ),
+        config,
+        usage=model_usage,
+        event_bus=event_bus,
+    )
+    return MaintenanceComponents(
+        config=config,
+        integrity_config=integrity_config,
+        registry=registry,
+        integrity=integrity,
+        conclusions=conclusions,
+        diffs=diffs,
+        dependency_graph=dependency_graph,
+        recorder=recorder,
+        service=service,
+        runner=MaintenanceRunner(service, agent_for, reasoning_generator(reasoning_runner)),
+        agent_for=agent_for,
+    )
+
+
+def _build_integrity_registry(
+    config: IntegrityConfig, contact_email: str | None
+) -> IntegrityRegistry:
+    """Crossref is the only registry today; ``registry:`` in the YAML names it."""
+    crossref = config.crossref
+    return CrossrefIntegrityRegistry(
+        HttpClient(
+            "crossref-integrity",
+            timeout_seconds=crossref.timeout_seconds,
+            requests_per_second=crossref.requests_per_second,
+            contact_email=contact_email,
+        ),
+        works_url=crossref.works_url,
+        query_update_notices=crossref.query_update_notices,
+        notice_rows=crossref.notice_rows,
+    )
+
+
+def _build_dependency_graph(config: DependencyGraphSettings, settings: Settings) -> GraphRepository:
+    """Same adapters as the knowledge graph, separate store (see DependencyGraphSettings)."""
+    if config.backend == "json":
+        return JsonGraphRepository(_resolve(config.json_dir, settings.project_root))
+    if config.backend == "neo4j":
+        return Neo4jGraphRepository(
+            uri=settings.neo4j.uri,
+            user=settings.neo4j.user,
+            password=settings.neo4j.password.get_secret_value(),
+            database=config.neo4j_database,
+        )
+    return InMemoryGraphRepository()
 
 
 def _resolve(path: Path, project_root: Path) -> Path:

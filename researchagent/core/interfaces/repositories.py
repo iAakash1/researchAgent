@@ -1,7 +1,8 @@
 """Persistence ports.
 
 One abstract repository per artefact the pipeline produces, in the order the pipeline
-produces them: papers, documents, knowledge, evidence, bundles.
+produces them: papers, documents, knowledge, evidence, bundles — then the artefacts of
+conclusion maintenance: integrity observations, conclusions and their diffs.
 
 Services depend on these, never on a concrete store, which is what lets the JSON adapters
 in ``researchagent/repositories/`` be swapped for a database without touching a service —
@@ -15,7 +16,9 @@ from collections.abc import Sequence
 
 from researchagent.models.bundle import EvidenceBundle
 from researchagent.models.evidence import EvidenceLink, EvidenceRecord, PaperEvidence
+from researchagent.models.integrity import IntegrityObservation
 from researchagent.models.library import PaperRecord
+from researchagent.models.maintenance import ConclusionDiff, ConclusionRecord, MaintainedTopic
 from researchagent.schemas.knowledge import ValidatedKnowledge
 from researchagent.schemas.validated import ValidatedDocument
 
@@ -147,3 +150,81 @@ class BundleRepository(ABC):
 
     @abstractmethod
     async def delete(self, bundle_id: str) -> bool: ...
+
+
+class IntegrityObservationRepository(ABC):
+    """Append-only cache of integrity observations, newest last, per paper.
+
+    Append-only because an observation is a timestamped fact about what a registry said;
+    a later lookup adds to the record rather than rewriting what was seen before.
+    """
+
+    @abstractmethod
+    async def append(self, observation: IntegrityObservation) -> IntegrityObservation: ...
+
+    @abstractmethod
+    async def history(self, paper_id: str) -> tuple[IntegrityObservation, ...]:
+        """Every observation for a paper, oldest first."""
+
+    async def latest(self, paper_id: str) -> IntegrityObservation | None:
+        history = await self.history(paper_id)
+        return history[-1] if history else None
+
+    async def latest_informative(self, paper_id: str) -> IntegrityObservation | None:
+        """The newest observation that says something about the paper itself.
+
+        A failed lookup never stands in for an earlier real answer.
+        """
+        return next(
+            (item for item in reversed(await self.history(paper_id)) if item.is_informative),
+            None,
+        )
+
+
+class ConclusionRepository(ABC):
+    """Saved topics and their conclusions, every version kept.
+
+    ``append`` is the only write for conclusions and refuses anything but the next version
+    of a conclusion: history cannot be rewritten through this port.
+    """
+
+    @abstractmethod
+    async def save_topic(self, topic: MaintainedTopic) -> MaintainedTopic: ...
+
+    @abstractmethod
+    async def get_topic(self, topic_id: str) -> MaintainedTopic | None: ...
+
+    @abstractmethod
+    async def list_topics(self) -> tuple[MaintainedTopic, ...]: ...
+
+    @abstractmethod
+    async def append(self, record: ConclusionRecord) -> ConclusionRecord:
+        """Persist the next version. Raises ``RepositoryError`` if it is not the next one."""
+
+    @abstractmethod
+    async def history(self, conclusion_id: str) -> tuple[ConclusionRecord, ...]:
+        """Every version, oldest first. Empty when the conclusion is unknown."""
+
+    @abstractmethod
+    async def for_topic(self, topic_id: str) -> tuple[ConclusionRecord, ...]:
+        """The latest version of every conclusion in a topic."""
+
+    async def latest(self, conclusion_id: str) -> ConclusionRecord | None:
+        history = await self.history(conclusion_id)
+        return history[-1] if history else None
+
+
+class MaintenanceDiffRepository(ABC):
+    @abstractmethod
+    async def save(self, diff: ConclusionDiff) -> ConclusionDiff: ...
+
+    @abstractmethod
+    async def get(self, diff_id: str) -> ConclusionDiff | None: ...
+
+    @abstractmethod
+    async def for_topic(self, topic_id: str) -> tuple[ConclusionDiff, ...]:
+        """Every diff for a topic, oldest first."""
+
+    async def latest(self, topic_id: str) -> ConclusionDiff | None:
+        diffs = await self.for_topic(topic_id)
+        return diffs[-1] if diffs else None

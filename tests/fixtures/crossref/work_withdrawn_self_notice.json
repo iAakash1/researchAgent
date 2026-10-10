@@ -1,0 +1,49 @@
+{
+  "status": "ok",
+  "message-type": "work",
+  "message": {
+    "DOI": "10.1016/j.adengl.2021.11.027",
+    "type": "journal-article",
+    "title": [
+      "WITHDRAWN: RF - Should Striae be Considered a Predisposing Factor for Koebner Phenomenon in Psoriasis?"
+    ],
+    "updated-by": [
+      {
+        "DOI": "10.1016/j.adengl.2021.11.027",
+        "type": "withdrawal",
+        "label": "Withdrawal",
+        "source": "publisher",
+        "updated": {
+          "date-parts": [
+            [
+              2021,
+              11,
+              29
+            ]
+          ],
+          "date-time": "2021-11-29T00:00:00Z",
+          "timestamp": 1638144000000
+        }
+      }
+    ],
+    "update-to": [
+      {
+        "DOI": "10.1016/j.adengl.2021.11.027",
+        "type": "withdrawal",
+        "label": "Withdrawal",
+        "source": "publisher",
+        "updated": {
+          "date-parts": [
+            [
+              2021,
+              11,
+              29
+            ]
+          ],
+          "date-time": "2021-11-29T00:00:00Z",
+          "timestamp": 1638144000000
+        }
+      }
+    ]
+  }
+}

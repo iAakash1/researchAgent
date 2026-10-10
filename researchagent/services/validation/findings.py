@@ -11,12 +11,15 @@ an unsupported finding is a finding to reject, not an exception to handle.
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
+
 from researchagent.core.validation import (
     Confidence,
     ConfidenceSignal,
     ValidationIssue,
     ValidationResult,
 )
+from researchagent.models.integrity import IntegrityObservation, IntegrityStatus
 from researchagent.models.reasoning import (
     FindingStatus,
     ResearchFinding,
@@ -220,6 +223,115 @@ class ContradictionValidator:
                 ),
             ),
         )
+
+
+class RetractedSupportValidator:
+    """A retracted or withdrawn source may not support a finding, disclosed or not.
+
+    Status comes from integrity observations (registry records), never from a model. A
+    finding may still *mention* such a source — among its contradicting citations — but
+    only with an explicit :class:`IntegrityDisclosure` for that paper. With no
+    observations supplied the check passes: an unchecked source is not a retracted one,
+    and the maintenance workflow is what supplies the checks.
+    """
+
+    name = "retracted_support_validator"
+
+    def __init__(
+        self,
+        observations: Mapping[str, IntegrityObservation],
+        excluded_statuses: Iterable[IntegrityStatus] = (
+            IntegrityStatus.RETRACTED,
+            IntegrityStatus.WITHDRAWN,
+        ),
+    ) -> None:
+        self._observations = observations
+        self._excluded = frozenset(excluded_statuses)
+
+    def validate(self, finding: ResearchFinding) -> ValidationResult:
+        issues: list[ValidationIssue] = []
+        supporting = finding.paper_ids
+        mentioned = tuple(
+            dict.fromkeys(
+                pid
+                for citation in finding.contradicting
+                for pid in citation.paper_ids
+                if pid not in supporting
+            )
+        )
+        disclosed = {item.paper_id for item in finding.integrity_disclosures}
+
+        for paper_id in supporting:
+            observation = self._flagged(paper_id)
+            if observation is not None:
+                issues.append(
+                    ValidationIssue.error(
+                        "retracted_support",
+                        f"{paper_id} is {observation.status.value} "
+                        f"({_notice(observation)}) and cannot support a finding",
+                        field="citations",
+                        remedy="Drop the evidence from this source and re-verify the finding",
+                    )
+                )
+        for paper_id in mentioned:
+            observation = self._flagged(paper_id)
+            if observation is None:
+                continue
+            if paper_id in disclosed:
+                issues.append(
+                    ValidationIssue.info(
+                        "disclosed_retracted_mention",
+                        f"{paper_id} is {observation.status.value}; the finding discloses it",
+                        field="integrity_disclosures",
+                    )
+                )
+            else:
+                issues.append(
+                    ValidationIssue.error(
+                        "undisclosed_retracted_mention",
+                        f"{paper_id} is {observation.status.value} ({_notice(observation)}) "
+                        "and is mentioned without a disclosure",
+                        field="integrity_disclosures",
+                        remedy="Add an integrity disclosure for this source or remove it",
+                    )
+                )
+
+        checked = sum(1 for pid in (*supporting, *mentioned) if pid in self._observations)
+        return ValidationResult.decide(
+            validator=self.name,
+            subject_id=finding.id,
+            subject_type="ResearchFinding",
+            issues=issues,
+            confidence=Confidence.from_signals(
+                [
+                    ConfidenceSignal(
+                        name="integrity_checked",
+                        value=checked / len(supporting + mentioned)
+                        if supporting or mentioned
+                        else 0.0,
+                        observation=(
+                            f"{checked} of {len(supporting) + len(mentioned)} cited paper(s) "
+                            "have a registry integrity observation"
+                        ),
+                    )
+                ]
+            ),
+        )
+
+    def _flagged(self, paper_id: str) -> IntegrityObservation | None:
+        observation = self._observations.get(paper_id)
+        if observation is None or observation.status not in self._excluded:
+            return None
+        return observation
+
+
+def _notice(observation: IntegrityObservation) -> str:
+    parts = [observation.registry]
+    if observation.notice_doi:
+        parts.append(f"notice {observation.notice_doi}")
+    if observation.notice_date:
+        parts.append(observation.notice_date)
+    return ", ".join(parts)
 
 
 def status_after_review(
