@@ -19,6 +19,7 @@ from researchagent.services.graph.queries import GraphQueries
 from researchagent.services.llm_service import LLMService
 from researchagent.services.research_run import ResearchRunService
 from researchagent.services.retrieval_service import RetrievalService
+from researchagent.workflows.maintenance_runner import MaintenanceRunner
 from researchagent.workflows.runner import WorkflowRunner
 
 
@@ -91,3 +92,12 @@ def get_graph_queries(container: Annotated[Container, Depends(get_container)]) -
 GraphRepositoryDep = Annotated[GraphRepository, Depends(get_graph_repository)]
 GraphBuilderDep = Annotated[GraphBuilder, Depends(get_graph_builder)]
 GraphQueriesDep = Annotated[GraphQueries, Depends(get_graph_queries)]
+
+
+def get_maintenance_runner(
+    container: Annotated[Container, Depends(get_container)],
+) -> MaintenanceRunner:
+    return container.maintenance.runner
+
+
+MaintenanceRunnerDep = Annotated[MaintenanceRunner, Depends(get_maintenance_runner)]

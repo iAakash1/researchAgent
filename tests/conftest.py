@@ -13,18 +13,26 @@ from researchagent.config.loader import ConfigLoader
 from researchagent.config.schemas import (
     AgentConfig,
     AgentSpec,
+    DependencyGraphSettings,
     DocumentsConfig,
     EvidenceConfig,
     GraphConfig,
+    IntegrityConfig,
     KnowledgeConfig,
+    MaintenanceConfig,
     ModelCatalog,
     ReasoningConfig,
     RetrievalConfig,
     SourcesConfig,
     WorkflowConfig,
 )
-from researchagent.container import Container
+from researchagent.container import Container, build_maintenance
 from researchagent.core.events import EventBus
+from researchagent.core.interfaces.integrity import (
+    IntegrityRegistry,
+    LookupOutcome,
+    RegistryLookup,
+)
 from researchagent.core.interfaces.llm import (
     CompletionResponse,
     GenerationParams,
@@ -77,6 +85,7 @@ from researchagent.services.graph.validator import GraphValidator
 from researchagent.services.knowledge import KnowledgeIntelligenceService, RelationBuilder
 from researchagent.services.knowledge.registry import build_extractors
 from researchagent.services.llm_service import BoundLLM, LLMService
+from researchagent.services.model_usage import ModelUsageTracker
 from researchagent.services.ranking import HeuristicScorer
 from researchagent.services.research_run import ResearchRunService
 from researchagent.services.result import ResearchResultBuilder
@@ -392,12 +401,66 @@ def container(
         checkpointer=build_checkpointer(workflow_config.checkpointer),
     )
 
+    def agent_excluding(excluded: frozenset[str]) -> Any:
+        def factory(
+            name: str, iteration: int, tokens_remaining: int | None = None
+        ) -> BaseAgent[Any, Any]:
+            spec = agent_config.spec_for(name)
+            kwargs: dict[str, Any] = {"event_bus": event_bus}
+            if name in {"retrieval", "verification"}:
+                kwargs["toolbox"] = toolbox.for_run(excluded_paper_ids=excluded).for_agent(
+                    name, iteration
+                )
+            return agent_class(name)(
+                BoundLLM(
+                    spec.model,
+                    model_catalog.spec_for(spec.model),
+                    fake_provider,
+                    event_bus=event_bus,
+                ),
+                spec,
+                prompt_library,
+                **kwargs,
+            )
+
+        return factory
+
     workflow_runner = WorkflowRunner(graph, workflow_config)
     reasoning_runner = ReasoningRunner(
-        agent_for, bundle_repository, reasoning_config, event_bus=event_bus
+        agent_for,
+        bundle_repository,
+        reasoning_config,
+        event_bus=event_bus,
+        agent_for_excluding=agent_excluding,
     )
     audit_trail = AuditTrailBuilder(bundle_repository, evidence_repository)
+    model_usage = ModelUsageTracker(event_bus)
     result_builder = ResearchResultBuilder(bundle_repository, audit_trail)
+    # RACM over the same repositories and agents. The registry is scripted and offline;
+    # every location is under tmp_path.
+    maintenance = build_maintenance(
+        config_loader.load("maintenance", MaintenanceConfig).model_copy(
+            update={
+                "dependency_graph": DependencyGraphSettings(backend="memory"),
+            }
+        ),
+        config_loader.load("integrity", IntegrityConfig),
+        registry=ScriptedIntegrityRegistry(),
+        storage_root=tmp_path / "maintenance",
+        integrity_dir=tmp_path / "maintenance" / "integrity",
+        dependency_graph=InMemoryGraphRepository(),
+        papers=paper_repository,
+        documents=document_repository,
+        knowledge=knowledge_repository,
+        evidence=evidence_repository,
+        bundles=bundle_repository,
+        evidence_service=evidence_service,
+        contradictions=ContradictionDetector(),
+        reasoning_runner=reasoning_runner,
+        agent_for=lambda name, excluded: agent_excluding(excluded)(name, 0),
+        model_usage=model_usage,
+        event_bus=event_bus,
+    )
 
     return Container(
         settings=settings,
@@ -458,10 +521,37 @@ def container(
         reasoning_runner=reasoning_runner,
         result_builder=result_builder,
         research_service=ResearchRunService(
-            workflow_runner, reasoning_runner, result_builder, event_bus
+            workflow_runner,
+            reasoning_runner,
+            result_builder,
+            event_bus,
+            conclusions=maintenance.recorder,
         ),
         workflow_runner=workflow_runner,
+        maintenance=maintenance,
     )
+
+
+class ScriptedIntegrityRegistry(IntegrityRegistry):
+    """Offline registry: answers what a test scripted, and a failed lookup otherwise."""
+
+    name = "crossref"
+
+    def __init__(self) -> None:
+        self.answers: dict[str, RegistryLookup] = {}
+        self.lookups: list[str] = []
+
+    async def lookup(self, doi: str) -> RegistryLookup:
+        self.lookups.append(doi)
+        return self.answers.get(doi) or RegistryLookup(
+            registry=self.name,
+            doi=doi,
+            outcome=LookupOutcome.FAILED,
+            detail="offline test registry has no scripted answer",
+        )
+
+    async def aclose(self) -> None:
+        return None
 
 
 MANUAL_LIBRARY = REPO_ROOT / "storage" / "papers" / "raw" / "manual"
