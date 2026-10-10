@@ -26,9 +26,22 @@ function render(result,run=null){
   document.querySelector("#findings").innerHTML=`<h2>Findings</h2>${cards(result.findings,f=>`<article class="card"><span class="badge ${f.reviewer_accepted?'':'warn'}">${escapeHtml(f.verification_status||f.status)}</span><h3>${escapeHtml(f.statement)}</h3><p class="meta">Supporting papers: ${escapeHtml(f.supporting_sources.join(", ")||"none")}</p>${f.provenance.map(p=>`<p class="citation">${escapeHtml(p)}</p>`).join("")}</article>`)}`;
   document.querySelector("#contradictions").innerHTML=`<h2>Contradictions & disagreements</h2>${cards(result.contradictions,c=>`<article class="card"><h3>${escapeHtml(c.description)}</h3><p><strong>${escapeHtml(c.left_paper_id)}</strong>: ${escapeHtml(c.left_quotes.join(" "))}</p><p><strong>${escapeHtml(c.right_paper_id)}</strong>: ${escapeHtml(c.right_quotes.join(" "))}</p></article>`)}`;
   document.querySelector("#gaps").innerHTML=`<h2>Research gaps & limitations</h2>${[...result.research_gaps,...result.limitations].length?`<ul>${[...result.research_gaps,...result.limitations].map(x=>`<li>${escapeHtml(x)}</li>`).join("")}</ul>`:`<p class="muted">No explicit gaps recorded.</p>`}`;
-  const sections=["Overview","Papers","Evidence","Findings","Contradictions","Gaps"];
+  const sections=["Overview","Papers","Evidence","Findings","Contradictions","Gaps","Maintenance"];
   document.querySelector(".tabs").innerHTML=sections.map(x=>`<a href="#${x.toLowerCase()}">${x}</a>`).join("");
   document.querySelector("#results").classList.remove("hidden");
+  if(!failed)loadMaintenance(result.run_id);
+}
+async function loadMaintenance(topicId){
+  const panel=document.querySelector("#maintenance"); if(!panel||!topicId)return;
+  const response=await fetch(`/maintenance/topics/${encodeURIComponent(topicId)}/diff`).catch(()=>null);
+  const body=response?await response.json().catch(()=>null):null;
+  if(response&&response.status===404&&body?.error?.code==="topic_not_found"){panel.innerHTML=`<h2>Conclusion maintenance</h2><p class="muted">No accepted conclusions were recorded for this run.</p>`;return;}
+  panel.innerHTML=ResearchMaintenance.renderDiffPanel(response&&response.ok?body:null)+`<button type="button" id="run-maintenance">Check for retractions &amp; updates</button>`;
+  document.querySelector("#run-maintenance").addEventListener("click",async event=>{
+    event.target.disabled=true;
+    await fetch(`/maintenance/topics/${encodeURIComponent(topicId)}/run`,{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"}).catch(()=>null);
+    loadMaintenance(topicId);
+  });
 }
 const storageKey="researchagent.activeRun";
 function showRun(goal,stageIndex=0,status="running",failedStage=null){ document.querySelector("#new-research").classList.add("hidden"); document.querySelector("#run").classList.remove("hidden"); document.querySelector("#run-title").textContent=goal; document.querySelector("#run-status").textContent=status==="failed"?"Failed":"Running"; highestStageIndex=Math.max(0,Math.min(stageIndex,phases.length-1)); if(status==="failed")setFailedPhase(failedStage||phases[Math.min(highestStageIndex,phases.length-2)]);else paintPhase(highestStageIndex); }
