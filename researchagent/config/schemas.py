@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from researchagent.core.interfaces.llm import GenerationParams
 from researchagent.core.retry import RetryPolicy
+from researchagent.models.integrity import IntegrityStatus
 from researchagent.models.knowledge import KnowledgeKind
 from researchagent.models.paper import SourceName
 
@@ -502,3 +503,61 @@ class ReasoningConfig(BaseModel):
     budget: ResearchBudget = Field(default_factory=ResearchBudget)
     loop: ReasoningLoopSettings = Field(default_factory=ReasoningLoopSettings)
     review: ReasoningReviewSettings = Field(default_factory=ReasoningReviewSettings)
+
+
+class CrossrefIntegritySettings(BaseModel):
+    """Where and how politely to ask Crossref about editorial updates."""
+
+    works_url: str = Field(min_length=1)
+    requests_per_second: float = Field(default=3.0, gt=0.0, le=50.0)
+    timeout_seconds: float = Field(default=30.0, gt=0.0)
+    # Second query (`filter=updates:{doi}`) cross-checking `updated-by`. Doubles requests.
+    query_update_notices: bool = False
+    notice_rows: int = Field(default=20, ge=1, le=1000)
+
+
+class IntegrityCacheSettings(BaseModel):
+    observations_dir: Path = Path("data/maintenance/integrity")
+    # An informative observation is trusted this long before the registry is asked again.
+    recheck_after_hours: float = Field(default=168.0, ge=0.0)
+    # A failed or unresolvable lookup is retried sooner: it says nothing about the paper.
+    recheck_unknown_after_hours: float = Field(default=24.0, ge=0.0)
+
+
+class PdfNoticeSettings(BaseModel):
+    """Secondary signal: retraction/concern wording in the parsed PDF text."""
+
+    enabled: bool = True
+    patterns: tuple[str, ...] = ()
+    # How much of the document text is scanned; notices sit on the first pages.
+    max_chars: int = Field(default=20_000, ge=100)
+
+
+class IntegrityConfig(BaseModel):
+    """``config/integrity.yaml`` root."""
+
+    registry: Literal["crossref"] = "crossref"
+    crossref: CrossrefIntegritySettings
+    # Registry update type (normalised: lower case, underscores) -> status.
+    update_types: dict[str, IntegrityStatus]
+    # Updates that do not bear on integrity (a new version is not a correction).
+    ignored_update_types: tuple[str, ...] = ()
+    # Most severe first. Decides the status when a work carries several updates.
+    severity: tuple[IntegrityStatus, ...]
+    cache: IntegrityCacheSettings = Field(default_factory=IntegrityCacheSettings)
+    pdf_notice: PdfNoticeSettings = Field(default_factory=PdfNoticeSettings)
+
+    @model_validator(mode="after")
+    def _mapping_is_coherent(self) -> IntegrityConfig:
+        if IntegrityStatus.CURRENT in self.update_types.values():
+            raise ValueError("an update type cannot mean CURRENT; list it as ignored instead")
+        if IntegrityStatus.CURRENT in self.severity:
+            raise ValueError("CURRENT has no severity")
+        missing = {status for status in IntegrityStatus if status is not IntegrityStatus.CURRENT}
+        missing -= set(self.severity)
+        if missing:
+            raise ValueError(f"severity must rank every status; missing {sorted(missing)}")
+        overlap = set(self.update_types) & set(self.ignored_update_types)
+        if overlap:
+            raise ValueError(f"update types both mapped and ignored: {sorted(overlap)}")
+        return self

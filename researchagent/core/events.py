@@ -74,6 +74,11 @@ class EventType(StrEnum):
     CONTRADICTION_DETECTED = "contradiction.detected"
     KNOWLEDGE_REJECTED = "knowledge.rejected"
 
+    # Conclusion maintenance (RACM).
+    INTEGRITY_CHECKED = "integrity.checked"
+    CONCLUSION_CHANGED = "conclusion.changed"
+    MAINTENANCE_COMPLETED = "maintenance.completed"
+
     VALIDATION_PASSED = "validation.passed"
     VALIDATION_FAILED = "validation.failed"
     EVIDENCE_GENERATED = "evidence.generated"
@@ -225,6 +230,30 @@ class GraphPayload(EventPayload):
     rejected_edges: int = 0
     contradictions: int = 0
     provenance_coverage: float = 0.0
+
+
+class IntegrityPayload(EventPayload):
+    paper_id: str
+    status: str
+    basis: str
+    registry: str
+    cached: bool = False
+
+
+class ConclusionChangePayload(EventPayload):
+    topic_id: str
+    conclusion_id: str
+    change_type: str
+    after_version: int
+
+
+class MaintenancePayload(EventPayload):
+    topic_id: str
+    diff_id: str
+    mode: str
+    changes: int = 0
+    affected: int = 0
+    total: int = 0
 
 
 class ValidationPayload(EventPayload):

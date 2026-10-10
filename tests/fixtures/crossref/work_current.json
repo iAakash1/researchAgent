@@ -1,0 +1,11 @@
+{
+  "status": "ok",
+  "message-type": "work",
+  "message": {
+    "DOI": "10.1038/nature14539",
+    "type": "journal-article",
+    "title": [
+      "Deep learning"
+    ]
+  }
+}

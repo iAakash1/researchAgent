@@ -1,0 +1,64 @@
+# Post-publication integrity of supporting papers (retractions, withdrawals, concerns,
+# corrections). Status is read off a registry record, never asked of a language model.
+#
+# Crossref distributes publisher-deposited update notices and the Retraction Watch
+# database through the same REST API fields (`updated-by` on the work, `update-to` on the
+# notice). OpenAlex `is_retracted` is deliberately not used: it folds corrections and
+# expressions of concern into "retracted".
+
+registry: crossref
+
+crossref:
+  works_url: https://api.crossref.org/works
+  requests_per_second: 3.0
+  timeout_seconds: 30
+  # Cross-check `updated-by` with `filter=updates:{doi}`. Off: every record checked so far
+  # carried the same entries in `updated-by`, and this doubles the request count.
+  query_update_notices: false
+  notice_rows: 20
+
+# Crossmark update types (normalised to lower case with underscores) -> status. Types not
+# listed here and not ignored become `unknown` and flag the paper for review.
+update_types:
+  retraction: retracted
+  withdrawal: withdrawn
+  removal: withdrawn
+  expression_of_concern: expression_of_concern
+  correction: corrected
+  corrigendum: corrected
+  erratum: corrected
+  addendum: corrected
+  clarification: corrected
+
+# Updates that do not affect integrity. `partial_retraction` is deliberately NOT here and
+# NOT mapped: it is ambiguous for a whole-paper status, so it surfaces as `unknown`.
+ignored_update_types:
+  - new_version
+  - new_edition
+
+# Most severe first. `unknown` (an unmapped update) outranks `corrected` so an ambiguous
+# notice is never hidden behind a routine correction.
+severity:
+  - retracted
+  - withdrawn
+  - expression_of_concern
+  - unknown
+  - corrected
+
+cache:
+  observations_dir: data/maintenance/integrity
+  recheck_after_hours: 168
+  recheck_unknown_after_hours: 24
+
+# Secondary signal only. A match raises a paper to `unknown` (flagged for review); it can
+# never set `current`, and it never invalidates a conclusion on its own.
+pdf_notice:
+  enabled: true
+  max_chars: 20000
+  patterns:
+    - this article has been retracted
+    - retracted article
+    - notice of retraction
+    - retraction notice
+    - this article has been withdrawn
+    - expression of concern
