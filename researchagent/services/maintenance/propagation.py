@@ -98,6 +98,9 @@ class PropagationEngine:
         self._detector = detector or ContradictionDetector()
         self._rank = {kind: index for index, kind in enumerate(settings.precedence)}
 
+    def with_settings(self, settings: PropagationSettings) -> PropagationEngine:
+        return PropagationEngine(settings, self._detector)
+
     def plan(self, data: PropagationInput) -> PropagationPlan:
         live = {record.conclusion_id: record for record in data.records if record.is_live}
         changed = {change.paper_id: change for change in data.changes if change.is_material}

@@ -675,3 +675,51 @@ class MaintenanceConfig(BaseModel):
     new_papers: NewPaperSettings = Field(default_factory=NewPaperSettings)
     review: MaintenanceReviewSettings = Field(default_factory=MaintenanceReviewSettings)
     full_rerun: FullRerunSettings = Field(default_factory=FullRerunSettings)
+
+
+class LLMJudgeSettings(BaseModel):
+    """Baseline B3 only: ask a model whether a source is retracted. Never used by RACM."""
+
+    alias: str = "fast"
+    prompt_version: str = "v1"
+
+
+class RetractionBenchmarkSettings(BaseModel):
+    k: int = Field(default=3, ge=1)
+    seed: int = 13
+    # Statuses assigned to the K flipped papers, drawn with the seeded generator.
+    statuses: tuple[IntegrityStatus, ...] = (
+        IntegrityStatus.RETRACTED,
+        IntegrityStatus.WITHDRAWN,
+        IntegrityStatus.CORRECTED,
+        IntegrityStatus.EXPRESSION_OF_CONCERN,
+    )
+    strategies: tuple[str, ...] = (
+        "racm",
+        "b1_full_regeneration",
+        "b2_retrieval_filter",
+        "b3_llm_judge",
+        "b4_no_propagation",
+    )
+    results_dir: Path = Path("evaluation/results")
+    llm_judge: LLMJudgeSettings = Field(default_factory=LLMJudgeSettings)
+
+    @model_validator(mode="after")
+    def _flips_are_changes(self) -> RetractionBenchmarkSettings:
+        if not self.statuses or IntegrityStatus.CURRENT in self.statuses:
+            raise ValueError("flip statuses must be non-empty and never CURRENT")
+        return self
+
+
+class SensitivitySettings(BaseModel):
+    # Grounding similarity floors to sweep (knowledge.pipeline.grounding_similarity_threshold).
+    grounding_similarity_floors: tuple[float, ...] = (0.75, 0.85, 0.95)
+
+
+class EvaluationConfig(BaseModel):
+    """``config/evaluation.yaml`` root."""
+
+    retraction_benchmark: RetractionBenchmarkSettings = Field(
+        default_factory=RetractionBenchmarkSettings
+    )
+    sensitivity: SensitivitySettings = Field(default_factory=SensitivitySettings)

@@ -281,9 +281,9 @@ async def test_full_rerun_mode_regenerates_and_accounts_cost(
     exclude: tuple[IntegrityStatus, ...],
     expected_excluded: frozenset[str],
 ) -> None:
-    service = container.maintenance.service
-    service._config = service.config.model_copy(  # per-test config variant
-        update={"full_rerun": FullRerunSettings(exclude_statuses=exclude)}
+    base = container.maintenance.service
+    service = base.with_config(
+        base.config.model_copy(update={"full_rerun": FullRerunSettings(exclude_statuses=exclude)})
     )
     seen: list[frozenset[str]] = []
     runner = MaintenanceRunner(

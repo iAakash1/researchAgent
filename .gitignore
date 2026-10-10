@@ -39,4 +39,7 @@ storage/papers/raw/downloaded/
 # under evaluation/experiments/ are what gets committed.
 evaluation/results/research_*.json
 evaluation/results/graph_*.json
+evaluation/results/racm_*.json
+evaluation/results/real_retractions_*.json
+evaluation/results/temporal_*.json
 pretty_result.json
