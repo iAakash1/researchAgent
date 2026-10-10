@@ -371,3 +371,35 @@ class GraphStoreError(ResearchAgentError):
     http_status = 503
     recoverability = Recoverability.RECOVERABLE
     remedy = "Check Neo4j is reachable; the graph can be rebuilt from the repositories"
+
+
+class TopicNotFoundError(ResearchAgentError):
+    """No saved topic has this id; only completed research runs become topics."""
+
+    code = "topic_not_found"
+    http_status = 404
+    recoverability = Recoverability.RECOVERABLE
+    remedy = "Use the run_id of a completed research run with accepted findings"
+
+
+class ConclusionNotFoundError(ResearchAgentError):
+    code = "conclusion_not_found"
+    http_status = 404
+    recoverability = Recoverability.RECOVERABLE
+
+
+class MaintenanceError(ResearchAgentError):
+    """A conclusion-maintenance step could not be carried out for one conclusion."""
+
+    code = "maintenance_error"
+    http_status = 500
+    recoverability = Recoverability.RECOVERABLE
+
+
+class DiffNotFoundError(ResearchAgentError):
+    """The topic exists but has never been maintained."""
+
+    code = "diff_not_found"
+    http_status = 404
+    recoverability = Recoverability.RECOVERABLE
+    remedy = "POST /maintenance/topics/{topic_id}/run to produce the first diff"

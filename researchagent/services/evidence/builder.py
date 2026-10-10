@@ -33,6 +33,7 @@ from researchagent.models.bundle import (
     BundleCoverage,
     BundledEvidence,
     BundleStatistics,
+    Contradiction,
     EvidenceBundle,
     EvidenceStance,
 )
@@ -73,27 +74,17 @@ class EvidenceBundleBuilder:
 
         objects, considered = await self._collect_objects(query)
         bundled = await self._collect_evidence(objects)
-        contradictions = self._contradictions.detect(objects)
-        applicable_relations = _relations_within(relations, objects)
-
-        coverage = self._coverage(query, objects, bundled, considered)
-        statistics = _statistics(objects, bundled, applicable_relations, len(contradictions))
-        confidence = self._confidence(objects, bundled, coverage, statistics)
-        validation = self._validate(query, objects, bundled, coverage, confidence)
-
-        bundle = EvidenceBundle(
-            id=_bundle_id(query),
-            query=query,
-            knowledge_objects=objects,
-            evidence=bundled,
-            relations=applicable_relations,
-            contradictions=contradictions,
-            coverage=coverage,
-            statistics=statistics,
-            confidence=confidence,
-            validation=validation,
-            built_by=self.name,
+        bundle = self.assemble(
+            query,
+            objects,
+            bundled,
+            contradictions=self._contradictions.detect(objects),
+            relations=relations,
+            considered=considered,
         )
+        coverage = bundle.coverage
+        contradictions = bundle.contradictions
+        confidence = bundle.confidence
 
         logger.info(
             "bundle_built",
@@ -108,6 +99,77 @@ class EvidenceBundleBuilder:
             latency_ms=round((time.perf_counter() - started) * 1000, 1),
         )
         return bundle
+
+    def assemble(
+        self,
+        query: ResearchQuery,
+        objects: tuple[KnowledgeObject, ...],
+        evidence: tuple[BundledEvidence, ...],
+        *,
+        contradictions: tuple[Contradiction, ...] = (),
+        relations: tuple[KnowledgeRelation, ...] = (),
+        considered: int = 0,
+        bundle_id: str | None = None,
+        built_by: str | None = None,
+    ) -> EvidenceBundle:
+        """Coverage, statistics, confidence and validation over already-chosen contents.
+
+        Shared by ``build`` and by callers that assemble a bundle from known objects —
+        so a bundle built any way is scored and validated by the same rules.
+        """
+        applicable_relations = _relations_within(relations, objects)
+        coverage = self._coverage(query, objects, evidence, considered)
+        statistics = _statistics(objects, evidence, applicable_relations, len(contradictions))
+        confidence = self._confidence(objects, evidence, coverage, statistics)
+        return EvidenceBundle(
+            id=bundle_id or _bundle_id(query),
+            query=query,
+            knowledge_objects=objects,
+            evidence=evidence,
+            relations=applicable_relations,
+            contradictions=contradictions,
+            coverage=coverage,
+            statistics=statistics,
+            confidence=confidence,
+            validation=self._validate(query, objects, evidence, coverage, confidence),
+            built_by=built_by or self.name,
+        )
+
+    def exclude_papers(self, bundle: EvidenceBundle, paper_ids: frozenset[str]) -> EvidenceBundle:
+        """The same bundle with every trace of ``paper_ids`` removed, re-scored.
+
+        Gets its own id: bundle ids are derived from the query, and saving a pruned
+        bundle under the original id would rewrite what earlier citations point at.
+        """
+        touched = {item.paper_id for item in bundle.knowledge_objects} | {
+            item.paper_id for item in bundle.evidence
+        }
+        if not paper_ids & touched:
+            return bundle
+        objects = tuple(item for item in bundle.knowledge_objects if item.paper_id not in paper_ids)
+        kept = {item.id for item in objects}
+        evidence = tuple(
+            item
+            for item in bundle.evidence
+            if item.paper_id not in paper_ids
+            and (item.knowledge_object_id is None or item.knowledge_object_id in kept)
+        )
+        contradictions = tuple(
+            item
+            for item in bundle.contradictions
+            if item.left_paper_id not in paper_ids and item.right_paper_id not in paper_ids
+        )
+        digest = hashlib.sha1("|".join(sorted(paper_ids)).encode("utf-8")).hexdigest()[:8]  # noqa: S324
+        return self.assemble(
+            bundle.query,
+            objects,
+            evidence,
+            contradictions=contradictions,
+            relations=bundle.relations,
+            considered=bundle.coverage.papers_considered,
+            bundle_id=f"{bundle.id}~x{digest}",
+            built_by=bundle.built_by,
+        )
 
     async def _collect_objects(
         self, query: ResearchQuery

@@ -100,6 +100,7 @@ class ServiceToolbox(ResearchToolbox):
         event_bus: EventBus | None = None,
         agent: str = "",
         iteration: int = 0,
+        excluded_paper_ids: frozenset[str] = frozenset(),
     ) -> None:
         self._retriever = retriever
         self._evidence_service = evidence_service
@@ -113,6 +114,9 @@ class ServiceToolbox(ResearchToolbox):
         self._event_bus = event_bus
         self._agent = agent
         self._iteration = iteration
+        # Papers this run may not draw on (e.g. retracted). Filtered at retrieval time, so
+        # nothing from them can be bundled, cited or resolved as provenance.
+        self._excluded = excluded_paper_ids
         self._calls: list[ToolCall] = []
 
     @property
@@ -123,7 +127,11 @@ class ServiceToolbox(ResearchToolbox):
     def budget(self) -> ToolBudget:
         return self._budget
 
-    def for_run(self) -> ServiceToolbox:
+    @property
+    def excluded_paper_ids(self) -> frozenset[str]:
+        return self._excluded
+
+    def for_run(self, *, excluded_paper_ids: frozenset[str] = frozenset()) -> ServiceToolbox:
         """A run gets its own call log and hard ceiling, including concurrent runs."""
         return ServiceToolbox(
             self._retriever,
@@ -136,6 +144,7 @@ class ServiceToolbox(ResearchToolbox):
             self._graph_queries,
             budget=ToolBudget(max_tool_calls=self._budget.max_tool_calls),
             event_bus=self._event_bus,
+            excluded_paper_ids=excluded_paper_ids,
         )
 
     def for_agent(self, agent: str, iteration: int) -> ServiceToolbox:
@@ -153,6 +162,7 @@ class ServiceToolbox(ResearchToolbox):
             event_bus=self._event_bus,
             agent=agent,
             iteration=iteration,
+            excluded_paper_ids=self._excluded,
         )
         clone._calls = self._calls
         return clone
@@ -176,7 +186,9 @@ class ServiceToolbox(ResearchToolbox):
             return KnowledgeSearchResult(degraded=True)
 
         found = KnowledgeSearchResult(
-            objects=tuple(hit.item for hit in result.hits),
+            objects=tuple(
+                hit.item for hit in result.hits if hit.item.paper_id not in self._excluded
+            ),
             retrieved_by=result.retrieved_by,
             degraded=result.degraded,
         )
@@ -202,7 +214,7 @@ class ServiceToolbox(ResearchToolbox):
         try:
             for paper_id in await self._knowledge.list_ids():
                 stored = await self._evidence.get_paper(paper_id)
-                if stored is None:
+                if stored is None or stored.paper_id in self._excluded:
                     continue
                 for record in stored.records:
                     if wanted & set(record.knowledge_object_ids):
@@ -236,6 +248,8 @@ class ServiceToolbox(ResearchToolbox):
         )
         try:
             bundle = await self._evidence_service.build_bundle(request)
+            if self._excluded:
+                bundle = self._evidence_service.exclude_papers(bundle, self._excluded)
             # Persisted, not merely returned. Findings cite bundle ids, and an id that
             # cannot be loaded back is an audit trail that dead-ends — the loop's later
             # stages and the audit builder both resolve citations through the repository.
@@ -278,14 +292,16 @@ class ServiceToolbox(ResearchToolbox):
                 depth=_clamp(depth, MAX_DEPTH),
                 limit=_clamp(limit, MAX_LIMIT),
             )
-            nodes = subgraph.nodes
+            nodes = tuple(
+                node for node in subgraph.nodes if not self._excluded_node(node.paper_ids)
+            )
             citations: tuple[str, ...] = ()
             if not nodes:
                 # Fall back to a name lookup: the agent supplied a name, not a node id.
                 matches = await self._graph_repository.find_nodes(
                     name=entity_name, version=versions[0], limit=_clamp(limit, MAX_LIMIT)
                 )
-                nodes = matches
+                nodes = tuple(node for node in matches if not self._excluded_node(node.paper_ids))
             else:
                 citations = tuple(
                     dict.fromkeys(
@@ -309,7 +325,7 @@ class ServiceToolbox(ResearchToolbox):
         try:
             for evidence_id in evidence_ids[:MAX_IDS]:
                 record = await self._evidence.get(evidence_id)
-                if record is not None:
+                if record is not None and record.paper_id not in self._excluded:
                     addresses.append(record.evidence.location.describe())
         except ResearchAgentError as exc:
             await self._complete(self._record(ToolName.GET_PROVENANCE, started, error=exc))
@@ -331,7 +347,12 @@ class ServiceToolbox(ResearchToolbox):
                     objects.extend(stored.value.objects)
             from researchagent.services.evidence import ContradictionDetector
 
-            found = ContradictionDetector().detect(tuple(objects))
+            found = tuple(
+                item
+                for item in ContradictionDetector().detect(tuple(objects))
+                if item.left_paper_id not in self._excluded
+                and item.right_paper_id not in self._excluded
+            )
         except ResearchAgentError as exc:
             await self._complete(self._record(ToolName.FIND_CONTRADICTIONS, started, error=exc))
             return ()
@@ -341,6 +362,11 @@ class ServiceToolbox(ResearchToolbox):
 
     async def get_paper_context(self, paper_id: str) -> PaperContext:
         started = await self._begin(ToolName.GET_PAPER_CONTEXT)
+        if paper_id in self._excluded:
+            await self._complete(
+                self._record(ToolName.GET_PAPER_CONTEXT, started, count=0, paper_id=paper_id)
+            )
+            return PaperContext(paper_id=paper_id, found=False)
         try:
             stored = await self._knowledge.get(paper_id)
             record = await self._papers.get(paper_id)
@@ -368,6 +394,10 @@ class ServiceToolbox(ResearchToolbox):
             )
         )
         return context
+
+    def _excluded_node(self, paper_ids: tuple[str, ...]) -> bool:
+        """A graph node every one of whose papers is excluded."""
+        return bool(paper_ids) and set(paper_ids) <= self._excluded
 
     async def _begin(self, tool: ToolName) -> float:
         """Reserve the call against the ceiling, announce it, and start the clock.

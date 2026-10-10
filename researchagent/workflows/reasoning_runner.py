@@ -16,6 +16,7 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from researchagent.agents.base import BaseAgent
 from researchagent.config.schemas import ReasoningConfig
 from researchagent.core.events import EventBus
+from researchagent.core.exceptions import ConfigurationError
 from researchagent.core.logging import get_logger
 from researchagent.repositories.bundle_repository import JsonBundleRepository
 from researchagent.schemas.reasoning import QuestionState, ReasoningSession
@@ -44,9 +45,12 @@ class ReasoningRunner:
         event_bus: EventBus | None = None,
         checkpointer: BaseCheckpointSaver[Any] | None = None,
         agent_for_run: Callable[[], AgentFactory] | None = None,
+        agent_for_excluding: Callable[[frozenset[str]], AgentFactory] | None = None,
     ) -> None:
         self._agent_for = agent_for
         self._agent_for_run = agent_for_run
+        # Builds agents whose tools cannot see the given papers (retrieval-time exclusion).
+        self._agent_for_excluding = agent_for_excluding
         self._bundles = bundles
         self._config = config
         self._event_bus = event_bus
@@ -67,17 +71,32 @@ class ReasoningRunner:
             checkpointer=self._checkpointer,
         )
 
-    async def run(self, state: ResearchState) -> ResearchState:
+    async def run(
+        self, state: ResearchState, *, excluded_paper_ids: frozenset[str] = frozenset()
+    ) -> ResearchState:
         """Execute the loop from a state that already carries a plan.
 
         The session is seeded here rather than inside a node so the budget comes from
         configuration exactly once, and a caller can override it before starting.
+        ``excluded_paper_ids`` hides papers from every tool the agents can call; it is
+        refused rather than ignored when no excluding factory was wired.
         """
         seeded = state.model_copy(update={"reasoning": state.reasoning or self._new_session(state)})
+        if excluded_paper_ids:
+            if self._agent_for_excluding is None:
+                raise ConfigurationError(
+                    "Paper exclusion requested but no excluding agent factory is wired",
+                    excluded=len(excluded_paper_ids),
+                )
+            graph = self._build_graph(self._agent_for_excluding(excluded_paper_ids))
+            return await self._invoke(graph, seeded)
+        graph = self._build_graph(self._agent_for_run()) if self._agent_for_run else self._graph
+        return await self._invoke(graph, seeded)
+
+    async def _invoke(self, graph: Any, seeded: ResearchState) -> ResearchState:
         # `recursion_limit` is LangGraph's own backstop; the real limit is the budget
         # checked inside the loop. Setting it well above the budget means a hit here
         # signals a routing bug rather than a run that legitimately took many rounds.
-        graph = self._build_graph(self._agent_for_run()) if self._agent_for_run else self._graph
         raw = await graph.ainvoke(
             seeded, config={"recursion_limit": self._config.budget.max_iterations * 8 + 10}
         )

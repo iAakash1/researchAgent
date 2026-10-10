@@ -114,6 +114,8 @@ class TriggerKind(StrEnum):
     CONTRADICTION = "contradiction"
     REVERIFICATION = "reverification"
     REVIEW = "review"
+    # full_rerun only: the conclusion was regenerated from scratch on request.
+    REGENERATION = "regeneration"
 
 
 class ChangeTrigger(BaseModel):
@@ -293,8 +295,10 @@ class ConclusionDiff(BaseModel):
     unhandled: tuple[str, ...] = ()
     failures: tuple[MaintenanceFailure, ...] = ()
     review: ReviewResult | None = None
-    # full_rerun only: conclusions superseded by regeneration rather than by a rule.
+    # full_rerun only: conclusions superseded by regeneration rather than by a rule, and
+    # the derived topic the regenerated conclusions were written to.
     superseded_conclusion_ids: tuple[str, ...] = ()
+    regenerated_topic_id: str | None = None
     usage: MaintenanceUsage = Field(default_factory=MaintenanceUsage)
     dependency_graph_version: str | None = None
     started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

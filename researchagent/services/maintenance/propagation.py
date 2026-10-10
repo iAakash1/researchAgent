@@ -31,15 +31,11 @@ from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 
-from pydantic import BaseModel, Field
-
 from researchagent.config.schemas import PropagationSettings
 from researchagent.core.logging import get_logger
 from researchagent.models.bundle import Contradiction
 from researchagent.models.evidence import EvidenceRole
-from researchagent.models.graph import KnowledgeGraph
-from researchagent.models.integrity import IntegrityChange, IntegrityObservation
-from researchagent.models.knowledge import KnowledgeObject
+from researchagent.models.integrity import IntegrityChange
 from researchagent.models.maintenance import (
     ChangeTrigger,
     ChangeType,
@@ -51,70 +47,18 @@ from researchagent.models.maintenance import (
     VerificationSnapshot,
 )
 from researchagent.models.reasoning import VerificationResult, VerificationVerdict
+from researchagent.schemas.maintenance import (
+    ConclusionOutcome,
+    PropagationInput,
+    PropagationPlan,
+    ReverificationRequest,
+)
 from researchagent.services.evidence.contradictions import ContradictionDetector
 from researchagent.services.maintenance.dependency_graph import dependents_of
 from researchagent.services.maintenance.recorder import snapshot
 from researchagent.utils.text import normalise
 
 logger = get_logger(__name__)
-
-
-class PropagationInput(BaseModel):
-    """Everything one propagation pass needs, gathered by the workflow."""
-
-    model_config = {"frozen": True}
-
-    records: tuple[ConclusionRecord, ...] = ()
-    graph: KnowledgeGraph
-    changes: tuple[IntegrityChange, ...] = ()
-    # Latest informative observation per paper; decides which support is excluded.
-    effective: dict[str, IntegrityObservation] = Field(default_factory=dict)
-    new_objects: tuple[KnowledgeObject, ...] = ()
-    # The knowledge objects existing conclusions rest on, by id.
-    supporting_objects: dict[str, KnowledgeObject] = Field(default_factory=dict)
-    dois: dict[str, str | None] = Field(default_factory=dict)
-
-
-class ReverificationRequest(BaseModel):
-    """A conclusion that lost support but still has some: the verifier must look again."""
-
-    model_config = {"frozen": True}
-
-    record: ConclusionRecord
-    remaining: tuple[SupportLink, ...] = Field(min_length=1)
-    excluded: tuple[ExcludedSupport, ...] = ()
-    added: tuple[SupportLink, ...] = ()
-    triggers: tuple[ChangeTrigger, ...] = Field(min_length=1)
-    # Other rules that fired too; combined with the verdict by precedence.
-    also: tuple[ChangeType, ...] = ()
-    contradictions: tuple[Contradiction, ...] = ()
-    review_flags: tuple[str, ...] = ()
-
-
-class ConclusionOutcome(BaseModel):
-    """What happens to one conclusion, before it is written."""
-
-    model_config = {"frozen": True}
-
-    record: ConclusionRecord
-    change_type: ChangeType
-    supports: tuple[SupportLink, ...] = ()
-    excluded: tuple[ExcludedSupport, ...] = ()
-    added: tuple[SupportLink, ...] = ()
-    contradictions: tuple[Contradiction, ...] = ()
-    review_flags: tuple[str, ...] = ()
-    triggers: tuple[ChangeTrigger, ...] = Field(min_length=1)
-    verification: VerificationSnapshot | None = None
-    reasons: tuple[str, ...] = ()
-
-
-class PropagationPlan(BaseModel):
-    model_config = {"frozen": True}
-
-    outcomes: tuple[ConclusionOutcome, ...] = ()
-    reverify: tuple[ReverificationRequest, ...] = ()
-    affected_ids: tuple[str, ...] = ()
-    unhandled: tuple[str, ...] = ()
 
 
 class _Hits:

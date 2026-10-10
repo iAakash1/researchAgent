@@ -66,6 +66,14 @@ class EvidenceIntelligenceService:
         """
         return await self._builder.build(query)
 
+    @property
+    def builder(self) -> EvidenceBundleBuilder:
+        return self._builder
+
+    def exclude_papers(self, bundle: EvidenceBundle, paper_ids: frozenset[str]) -> EvidenceBundle:
+        """A re-scored copy of ``bundle`` without the given papers (new id when changed)."""
+        return self._builder.exclude_papers(bundle, paper_ids)
+
     async def process(
         self, plan: ResearchPlan, paper_ids: tuple[str, ...], *, run_id: str | None = None
     ) -> EvidenceBatchResult:
