@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/app/styles.css" />
   </head>
   <body>
-    <header><a href="/app/">ResearchAgent</a><span>Evidence-backed research</span></header>
+    <header><a id="home-link" href="/app/">ResearchAgent</a><span>Evidence-backed research</span></header>
     <main>
       <section id="new-research" class="hero">
         <p class="eyebrow">LOCAL RESEARCH WORKSPACE</p>
@@ -25,6 +25,7 @@
       </section>
 
       <section id="run" class="hidden">
+        <button type="button" id="new-research-button" class="back-button">← New research</button>
         <div class="run-heading"><div><p class="eyebrow">RESEARCH RUN</p><h1 id="run-title"></h1></div><span id="run-status" class="status">Running</span></div>
         <ol id="progress" class="progress"></ol>
         <div id="error" class="error hidden"></div>
@@ -42,6 +43,7 @@
     </main>
     <script src="/app/progress.js"></script>
     <script src="/app/maintenance.js"></script>
+    <script src="/app/navigation.js"></script>
     <script src="/app/app.js"></script>
   </body>
 </html>

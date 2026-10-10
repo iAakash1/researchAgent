@@ -4,6 +4,9 @@ const phaseByAgent = {"planner":"Planning","retrieval":"Reasoning","reasoning":"
 const escapeHtml = value => String(value ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[c]);
 const progress = document.querySelector("#progress");
 let highestStageIndex=0;
+// Bumped whenever the user leaves the run page, so work started for the old view (a pending
+// request, a late stream event) cannot redraw it or bring the old run back.
+let viewToken=0, activeSource=null;
 phases.forEach(name => progress.insertAdjacentHTML("beforeend", `<li data-phase="${name}">${name}</li>`));
 function paintPhase(index,failed=false){ const classes=classesAt(phases[index],failed); [...progress.children].forEach((el,i)=>{el.className=classes[i];}); }
 function setPhase(name){ const index=phases.indexOf(name); if(index<highestStageIndex||index<0)return; highestStageIndex=index; paintPhase(index); }
@@ -31,10 +34,20 @@ function render(result,run=null){
   document.querySelector("#results").classList.remove("hidden");
   if(!failed)loadMaintenance(result.run_id);
 }
+function goHome(){
+  viewToken++;
+  ResearchNavigation.resetToStart(document,{storage:localStorage,source:activeSource,key:storageKey});
+  activeSource=null; highestStageIndex=0;
+  history.replaceState(null,"","/app/"); window.scrollTo(0,0);
+}
+document.querySelector("#home-link").addEventListener("click",event=>{ if(!ResearchNavigation.isPlainClick(event))return; event.preventDefault(); goHome(); });
+document.querySelector("#new-research-button").addEventListener("click",goHome);
 async function loadMaintenance(topicId){
   const panel=document.querySelector("#maintenance"); if(!panel||!topicId)return;
+  const token=viewToken;
   const response=await fetch(`/maintenance/topics/${encodeURIComponent(topicId)}/diff`).catch(()=>null);
   const body=response?await response.json().catch(()=>null):null;
+  if(token!==viewToken)return;
   if(response&&response.status===404&&body?.error?.code==="topic_not_found"){panel.innerHTML=`<h2>Conclusion maintenance</h2><p class="muted">No accepted conclusions were recorded for this run.</p>`;return;}
   panel.innerHTML=ResearchMaintenance.renderDiffPanel(response&&response.ok?body:null)+`<button type="button" id="run-maintenance">Check for retractions &amp; updates</button>`;
   document.querySelector("#run-maintenance").addEventListener("click",async event=>{
@@ -51,6 +64,7 @@ function fail(message,stage=phases[highestStageIndex]){ document.querySelector("
 function handleProgress(item,run){ const phase=phaseByAgent[item.payload?.agent]||phaseByEvent[item.type]; if(!phase)return; const index=phases.indexOf(phase); if(item.type==="agent.failed"){run.status="failed";run.failedStage=phase;run.stageIndex=index;saveRun(run);setFailedPhase(phase);return;} if(index>(run.stageIndex||0)){run.stageIndex=index;saveRun(run);} setPhase(phase); }
 function attach(run){
   const source=new EventSource(`/research/runs/${encodeURIComponent(run.runId)}/stream?after=${run.lastSequence||0}`);
+  activeSource=source;
   source.onopen=()=>{if(run.status!=="failed")document.querySelector("#run-status").textContent="Running";};
   source.addEventListener("progress",message=>{ const sequence=Number(message.lastEventId); if(sequence&&sequence<=(run.lastSequence||0))return; if(sequence)run.lastSequence=sequence; saveRun(run); handleProgress(JSON.parse(message.data),run); });
   source.addEventListener("result",message=>{ render(JSON.parse(message.data),run); source.close(); });
@@ -59,21 +73,26 @@ function attach(run){
 }
 async function restore(){
   const run=loadRun(); if(!run?.runId||!run.goal)return; showRun(run.goal,run.stageIndex||0,run.status,run.failedStage);
+  const token=viewToken;
   const response=await fetch(`/research/results/${encodeURIComponent(run.runId)}`);
+  if(token!==viewToken)return;
   if(response.status===404){localStorage.removeItem(storageKey);window.location.reload();return;}
   if(!response.ok)throw new Error(`Could not restore run (${response.status})`);
   const snapshot=await response.json();
+  if(token!==viewToken)return;
   if(snapshot.result)render(snapshot.result,run); else if(snapshot.error)fail(snapshot.error,run.failedStage||phases[run.stageIndex||0]); else attach(run);
 }
 document.querySelector("#research-form").addEventListener("submit",async event=>{
   event.preventDefault(); const button=event.target.querySelector("button"); button.disabled=true;
+  const token=viewToken;
   const goal=document.querySelector("#goal").value.trim(); showRun(goal);
   const year=Number(document.querySelector("#year-from").value)||null;
   const payload={goal,constraints:{max_research_questions:Number(document.querySelector("#max-questions").value),year_from:year}};
   try{
     const response=await fetch("/research/run",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}); if(!response.ok)throw new Error(`Request failed (${response.status})`);
-    const created=await response.json(), run={runId:created.run_id,goal,lastSequence:0,stageIndex:0,status:created.status}; saveRun(run); attach(run);
-  }catch(error){fail(error.message);}
+    const created=await response.json(); if(token!==viewToken)return;
+    const run={runId:created.run_id,goal,lastSequence:0,stageIndex:0,status:created.status}; saveRun(run); attach(run);
+  }catch(error){if(token===viewToken)fail(error.message);}
   finally{button.disabled=false;}
 });
 restore().catch(error=>fail(error.message));

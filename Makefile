@@ -17,7 +17,7 @@ test: ## Run the test suite
 	$(UV) run pytest
 
 test-js: ## Run dependency-free frontend state tests
-	node --test tests/web/test_progress.js tests/web/test_maintenance.js
+	node --test tests/web/test_progress.js tests/web/test_maintenance.js tests/web/test_navigation.js
 
 lint: ## Lint
 	$(UV) run ruff check .
