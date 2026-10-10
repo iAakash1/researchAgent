@@ -1,0 +1,5 @@
+{
+  "version": "template",
+  "description": "Fill `entries` with real DOIs whose integrity status you have checked yourself, e.g. {\"doi\": \"10.xxxx/...\", \"expected_status\": \"retracted\", \"source\": \"Retraction Watch record <id>\", \"notes\": \"\"}. Allowed statuses: current, retracted, withdrawn, expression_of_concern, corrected, unknown. Copy this file before editing; nothing here is real data.",
+  "entries": []
+}

@@ -1,0 +1,20 @@
+# Conclusion-maintenance evaluation (RACM). Offline and code-only by default: nothing
+# here runs unless scripts/run_retraction_benchmark.py is invoked.
+
+retraction_benchmark:
+  # K supporting papers are flipped, chosen with this seed; same seed, same flips.
+  k: 3
+  seed: 13
+  statuses: [retracted, withdrawn, corrected, expression_of_concern]
+  # racm is the system under test. b1 regenerates with no maintenance; b2 drops flipped
+  # papers at retrieval time and regenerates; b3 asks a model whether each source is
+  # retracted (paid, live only when you run it); b4 is RACM with propagation disabled.
+  strategies: [racm, b1_full_regeneration, b2_retrieval_filter, b3_llm_judge, b4_no_propagation]
+  results_dir: evaluation/results
+  llm_judge:
+    alias: fast
+    prompt_version: v1
+
+sensitivity:
+  # The benchmark is repeated with the corpus re-extracted at each grounding floor.
+  grounding_similarity_floors: [0.75, 0.85, 0.95]

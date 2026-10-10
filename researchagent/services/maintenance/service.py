@@ -121,6 +121,33 @@ class ConclusionMaintenanceService:
     def config(self) -> MaintenanceConfig:
         return self._config
 
+    def with_config(self, config: MaintenanceConfig) -> ConclusionMaintenanceService:
+        """The same collaborators under another configuration — how the evaluation harness
+        runs a baseline (propagation off, a full rerun with or without filtering) on the
+        same corpus, index and repositories as the system under test."""
+        return ConclusionMaintenanceService(
+            self._conclusions,
+            self._diffs,
+            self._integrity,
+            self._recorder,
+            self._engine.with_settings(config.propagation),
+            self._mapper,
+            self._graph_store,
+            self._knowledge,
+            self._contexts,
+            config,
+            usage=self._usage,
+            event_bus=self._event_bus,
+        )
+
+    @property
+    def usage(self) -> ModelUsageTracker | None:
+        return self._usage
+
+    @property
+    def conclusions(self) -> ConclusionRepository:
+        return self._conclusions
+
     # --- reads --------------------------------------------------------------------------
 
     async def topic(self, topic_id: str) -> MaintainedTopic:
