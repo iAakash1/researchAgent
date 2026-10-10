@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from researchagent.models.integrity import IntegrityObservation
 from researchagent.models.reasoning import ResearchFinding, ReviewResult, VerificationResult
 from researchagent.models.research import ResearchQuestion
 
@@ -23,6 +24,9 @@ class ReviewerInput(BaseModel):
     findings: tuple[ResearchFinding, ...] = ()
     verifications: tuple[VerificationResult, ...] = ()
     resolved_evidence_ids: frozenset[str] = frozenset()
+    # Registry integrity observations for cited papers. Empty in an ordinary run; the
+    # maintenance workflow supplies them so retracted support is rejected mechanically.
+    integrity: tuple[IntegrityObservation, ...] = ()
     iteration: int = Field(default=0, ge=0)
 
     model_config = {"arbitrary_types_allowed": True}

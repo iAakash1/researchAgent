@@ -53,5 +53,9 @@ agents:
 
   reviewer:
     model: reasoning
-    prompt_version: v2
+    # v3 adds registry integrity status (retractions, withdrawals, concerns, corrections).
+    prompt_version: v3
     timeout_seconds: 600
+    options:
+      # Support from papers with these statuses is rejected deterministically.
+      integrity_excluded_statuses: [retracted, withdrawn]

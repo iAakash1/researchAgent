@@ -31,6 +31,7 @@ from uuid import uuid4
 from pydantic import BaseModel, Field, model_validator
 
 from researchagent.core.validation import Confidence
+from researchagent.models.integrity import IntegrityStatus
 
 
 class Citation(BaseModel):
@@ -53,6 +54,21 @@ class Citation(BaseModel):
     @property
     def is_traceable(self) -> bool:
         return bool(self.bundle_id and self.evidence_ids)
+
+
+class IntegrityDisclosure(BaseModel):
+    """An explicit statement that a source the finding mentions has been retracted,
+    withdrawn or otherwise updated.
+
+    The only way a finding may mention such a source at all. It never makes that source
+    *support*: a disclosed retraction is still a retraction.
+    """
+
+    model_config = {"frozen": True}
+
+    paper_id: str = Field(min_length=1)
+    status: IntegrityStatus
+    statement: str = Field(min_length=10, description="The disclosure as the report states it")
 
 
 class FindingStatus(StrEnum):
@@ -129,6 +145,9 @@ class ResearchFinding(BaseModel):
     # Caveats the reasoning agent stated itself; kept because a finding that names its own
     # limits is more useful than one that does not.
     limitations: tuple[str, ...] = ()
+
+    # Sources this finding mentions despite a retraction or other update, each disclosed.
+    integrity_disclosures: tuple[IntegrityDisclosure, ...] = ()
 
     derived_from_hypothesis: str | None = None
     produced_by: str = Field(min_length=1)

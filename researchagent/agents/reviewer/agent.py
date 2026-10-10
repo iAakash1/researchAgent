@@ -24,6 +24,7 @@ from researchagent.agents.base import AgentContext, BaseAgent
 from researchagent.agents.reviewer.prompt import ReviewerPrompt
 from researchagent.agents.reviewer.schemas import CritiqueDraft, ReviewerInput, ReviewerOutput
 from researchagent.core.exceptions import ResearchAgentError
+from researchagent.models.integrity import IntegrityStatus
 from researchagent.models.reasoning import (
     ResearchFinding,
     ReviewDecision,
@@ -34,6 +35,7 @@ from researchagent.models.reasoning import (
 from researchagent.services.validation.findings import (
     CitationValidator,
     ContradictionValidator,
+    RetractedSupportValidator,
     SourceDiversityValidator,
     VerificationRequiredValidator,
 )
@@ -50,6 +52,10 @@ class ReviewerAgent(BaseAgent[ReviewerInput, ReviewerOutput]):
         diversity = SourceDiversityValidator()
         verified = VerificationRequiredValidator()
         contradiction = ContradictionValidator()
+        integrity = RetractedSupportValidator(
+            {item.paper_id: item for item in payload.integrity},
+            self._excluded_statuses(),
+        )
 
         accepted: list[str] = []
         rejected: list[str] = []
@@ -65,6 +71,7 @@ class ReviewerAgent(BaseAgent[ReviewerInput, ReviewerOutput]):
                 diversity.validate(finding),
                 verified.validate(finding, verification),
                 contradiction.validate(finding, verification),
+                integrity.validate(finding),
             ]
             completeness_scores.append(checks[0].confidence.score)
             diversity_scores.append(checks[1].confidence.score)
@@ -131,6 +138,13 @@ class ReviewerAgent(BaseAgent[ReviewerInput, ReviewerOutput]):
             blocking_issues=len(result.blocking_issues),
         )
         return ReviewerOutput(result=result)
+
+    def _excluded_statuses(self) -> tuple[IntegrityStatus, ...]:
+        """Statuses that disqualify a source, from ``config/agents.yaml`` reviewer options."""
+        configured = self.spec.options.get("integrity_excluded_statuses")
+        if not isinstance(configured, list | tuple):
+            return (IntegrityStatus.RETRACTED, IntegrityStatus.WITHDRAWN)
+        return tuple(IntegrityStatus(str(value)) for value in configured)
 
     def _verification_for(
         self, finding: ResearchFinding, verifications: tuple[VerificationResult, ...]
