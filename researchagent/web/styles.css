@@ -14,6 +14,7 @@ textarea { min-height:128px; resize:vertical; font-size:18px; }
 .form-row { display:grid; grid-template-columns:1fr 1fr auto; gap:16px; align-items:end; margin-top:18px; }
 button { min-height:48px; padding:0 24px; border:0; border-radius:7px; color:white; background:var(--green); font-weight:750; cursor:pointer; }
 button:disabled { opacity:.55; cursor:wait; }
+.back-button { min-height:40px; padding:0 16px; margin-bottom:22px; color:var(--green); background:transparent; border:1px solid var(--green); }
 .hidden { display:none!important; } .run-heading { display:flex; gap:20px; justify-content:space-between; align-items:flex-start; }
 .run-heading h1 { font-size:38px; max-width:800px; } .status { padding:7px 13px; border-radius:99px; background:var(--pale); color:var(--green); font-weight:750; }
 .progress { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; padding:0; margin:30px 0 42px; list-style:none; }
